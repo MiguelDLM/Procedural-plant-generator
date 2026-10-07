@@ -372,6 +372,21 @@ def _assign(obj, mat):
         mats[0] = mat
 
 
+def _tree_flowers(context, root, props, result):
+    from .flowers import update_flowers_on_plant, hide_flowers, flower_from_props, flower_site_count
+    from ..core.inflorescence import tree_flower_sites
+    for c in root.children:
+        if c.name.endswith("_Bloom"):
+            c.hide_viewport = c.hide_render = True
+    if not props.show_flowers:
+        hide_flowers(root)
+        return
+    _, ip = flower_from_props(props)
+    every = tree_flower_sites(result.skeleton_graph, ip, 10 ** 9, seed=props.seed)
+    sites = tree_flower_sites(result.skeleton_graph, ip, flower_site_count(props, len(every)), seed=props.seed)
+    update_flowers_on_plant(context, root, props, sites)
+
+
 def update_tree_geometry(context):
     """Regenerates the active plant in place (no bpy.ops, safe inside update callbacks)."""
     if not BLENDER_AVAILABLE:
@@ -379,10 +394,20 @@ def update_tree_geometry(context):
     props = getattr(context.scene, "ppg_properties", None)
     if not props:
         return
+    find = lambda ctx, name: BlenderMeshBuilder._find_root(None, ctx, name)  # noqa: E731
+    if getattr(props, "growth_form", 'Tree') == 'Flower':
+        try:
+            from .flowers import update_flower_geometry
+            update_flower_geometry(context, props, find)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PPG Error] Failed to update flower geometry: {e}")
+        return
     if getattr(props, "growth_form", 'Tree') != 'Tree':
         try:
             from .succulents import update_succulent_geometry
-            update_succulent_geometry(context, props, lambda ctx, name: BlenderMeshBuilder._find_root(None, ctx, name))
+            update_succulent_geometry(context, props, find)
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -420,6 +445,7 @@ def update_tree_geometry(context):
             if props.show_leaves:
                 _assign(built["foliage"], _ensure_leaf_material(root, preset, props, result.leaf_engine.shape_model,
                                                                 result.leaf_engine.shoot_leaves))
+        _tree_flowers(context, built["root"], props, result)
     except Exception as e:  # Keep the UI responsive; report in console
         import traceback
         traceback.print_exc()

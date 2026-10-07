@@ -23,6 +23,9 @@ try:
                           apply_leaf_template, apply_crown_shape, apply_succulent_preset)
     from ..core.succulent_db import GrowthForm, CATALOGS, preset_items
     from .succulents import profile_properties, LAYOUT, PREFIX
+    from ..core.flower_db import FLOWER_CATALOG, flower_items
+    from .flowers import flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props, sync_flowers_to_plant
+    from .runtime import set_updating
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -34,6 +37,10 @@ except (ImportError, ValueError):
                                  apply_leaf_template, apply_crown_shape, apply_succulent_preset)
     from core.succulent_db import GrowthForm, CATALOGS, preset_items
     from blender.succulents import profile_properties, LAYOUT, PREFIX
+    from core.flower_db import FLOWER_CATALOG, flower_items
+    from blender.flowers import (flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props,
+                                 sync_flowers_to_plant)
+    from blender.runtime import set_updating
 
 
 def on_param_update(self, context):
@@ -42,9 +49,18 @@ def on_param_update(self, context):
     schedule_update()
 
 
+def _sync_flowers(props):
+    set_updating(True)
+    try:
+        sync_flowers_to_plant(props)
+    finally:
+        set_updating(False)
+
+
 def on_species_change(self, context):
     if is_updating():
         return
+    _sync_flowers(self)
     apply_species_preset_to_props(self, self.species_enum, context)
 
 
@@ -52,14 +68,31 @@ def on_form_change(self, context):
     if is_updating():
         return
     if self.growth_form == 'Tree':
+        _sync_flowers(self)
         apply_species_preset_to_props(self, self.species_enum, context)
+    elif self.growth_form == 'Flower':
+        on_flower_species(self, context)
     else:
+        _sync_flowers(self)
         apply_succulent_preset(self, context)
+
+
+def on_flower_species(self, context):
+    if is_updating():
+        return
+    set_updating(True)
+    try:
+        write_flower_to_props(self, self.flower_species)
+    finally:
+        set_updating(False)
+    if getattr(self, "auto_update", True):
+        schedule_update()
 
 
 def on_succulent_species(self, context):
     if is_updating():
         return
+    _sync_flowers(self)
     apply_succulent_preset(self, context)
 
 
@@ -295,7 +328,24 @@ if BLENDER_AVAILABLE:
             ('Cactus', "Cactus / Stem Succulent", "Ribbed or tuberculate succulent stems with areoles and spines",
              'MESH_CYLINDER', 1),
             ('Rosette', "Rosette Succulent", "Agave, Aloe, Echeveria: thick leaves in a Fibonacci rosette",
-             'MESH_CIRCLE', 2)]),
+             'MESH_CIRCLE', 2),
+            ('Flower', "Flower / Inflorescence", "An isolated flower or inflorescence built from its floral diagram",
+             'FREEZE', 3)]),
+        "flower_species": EnumProperty(name="Flower", items=flower_items(), default="rosa_canina",
+                                       update=on_flower_species),
+        "show_flowers": BoolProperty(name="Show Flowers", default=False, update=U,
+                                     description="Place the selected inflorescence on the plant"),
+        "flower_blend": EnumProperty(name="Blend With", items=flower_items(), default="hibiscus_rosa_sinensis"),
+        "flower_single": BoolProperty(name="Single Flower", default=False, update=U,
+                                      description="Show one flower instead of the whole inflorescence"),
+        "flower_density": FloatProperty(name="Flowering Density", default=0.35, min=0.0, max=1.0, update=U,
+                                        description="Fraction of the possible sites (shoot tips, axils, areoles) "
+                                                    "that bear an inflorescence"),
+        "flower_max": IntProperty(name="Max Inflorescences", default=2000, min=1, max=20000, update=U),
+        "flower_scale": FloatProperty(name="Flower Scale", default=1.0, min=0.1, max=10.0, update=U),
+        "flower_bloom": FloatProperty(name="Bloom Stage", default=0.5, min=0.0, max=1.0, update=U,
+                                      description="0 buds .. 0.5 peak (acropetal gradient) .. 1 all open"),
+        "flower_detail": FloatProperty(name="Flower Detail", default=1.0, min=0.3, max=3.0, update=U),
         "cactus_species": EnumProperty(name="Cactus", items=preset_items(GrowthForm.CACTUS),
                                        default="carnegiea_gigantea", update=on_succulent_species),
         "rosette_species": EnumProperty(name="Rosette", items=preset_items(GrowthForm.ROSETTE),
@@ -311,6 +361,7 @@ if BLENDER_AVAILABLE:
     })
     for _form in (GrowthForm.CACTUS, GrowthForm.ROSETTE):
         PPG_Properties.__annotations__.update(profile_properties(_form, U))
+    PPG_Properties.__annotations__.update(flower_properties(U))
 else:
     PPG_Properties = None
 
@@ -345,6 +396,16 @@ class PPG_PT_MainPanel(Panel):
 
         layout.prop(props, "growth_form", text="")
         box = layout.box()
+        if props.growth_form == 'Flower':
+            box.prop(props, "flower_species", text="")
+            spec = FLOWER_CATALOG[props.flower_species]
+            col = box.column(align=True)
+            col.scale_y = 0.8
+            col.label(text=f"{spec.family}", icon='FREEZE')
+            col.label(text=spec.formula)
+            box.operator("ppg.apply_species_preset", text="Reload Flower", icon='IMPORT')
+            layout.operator("ppg.export_traits", text="Export Traits (JSON)", icon='TEXT')
+            return
         if props.growth_form == 'Tree':
             box.prop(props, "species_enum", text="")
             spec = get_species_preset(props.species_enum)
@@ -367,13 +428,13 @@ class PPG_PT_Variation(_PPGSub, Panel):
     bl_label = "Variants (Trait Space)"
     bl_idname = "PPG_PT_variation"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower')
 
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        col.prop(p, {"Tree": "blend_species", "Cactus": "cactus_blend", "Rosette": "rosette_blend"}[p.growth_form],
-                 text="")
+        col.prop(p, {"Tree": "blend_species", "Cactus": "cactus_blend", "Rosette": "rosette_blend",
+                     "Flower": "flower_blend"}[p.growth_form], text="")
         col.prop(p, "blend_factor", slider=True)
         col.separator()
         col.prop(p, "variation_amount", slider=True)
@@ -565,6 +626,10 @@ class PPG_PT_Topology(_PPGSub, Panel):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
+        if p.growth_form == 'Flower':
+            col.prop(p, "seed")
+            col.prop(p, "assign_materials")
+            return
         if p.growth_form != 'Tree':
             col.prop(p, "seed")
             col.prop(p, "succ_detail")
@@ -599,8 +664,55 @@ def _succulent_panel(form, index, title, names):
         "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw})
 
 
+class PPG_PT_Flowers(_PPGSub, Panel):
+    bl_label = "Flowers"
+    bl_idname = "PPG_PT_flowers"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower')
+
+    def draw_header(self, context):
+        p = context.scene.ppg_properties
+        if p.growth_form != 'Flower':
+            self.layout.prop(p, "show_flowers", text="")
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        if p.growth_form != 'Flower':
+            col.prop(p, "flower_species", text="")
+            spec = FLOWER_CATALOG[p.flower_species]
+            col.label(text=spec.formula)
+            col.separator()
+            col.prop(p, "flower_density", slider=True)
+            col.prop(p, "flower_max")
+        else:
+            col.prop(p, "flower_single")
+        col.prop(p, "flower_bloom", slider=True)
+        col.prop(p, "flower_scale")
+        col.prop(p, "flower_detail")
+
+
+def _flower_panel(index, title, prefix, names):
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        for n in names:
+            col.prop(p, prefix + n)
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        return p is not None and (p.growth_form == 'Flower' or p.show_flowers)
+    return type(f"PPG_PT_Flower_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_flower_{index}", "bl_parent_id": "PPG_PT_flowers",
+        "bl_options": {'DEFAULT_CLOSED'}, "draw": draw, "poll": poll})
+
+
+FLOWER_PANELS = tuple(_flower_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(FLOWER_LAYOUT))
+
 SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTUS, GrowthForm.ROSETTE)
                          for i, (t, n) in enumerate(LAYOUT[f]))
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
-                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + (PPG_PT_Topology,)
+                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + \
+                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Topology,)

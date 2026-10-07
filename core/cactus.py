@@ -134,6 +134,9 @@ class CactusResult:
     spine_count: int
     height_m: float
     roots: MeshData = None
+    flower_pos: np.ndarray = None      # Areoles able to flower, with outward normals and weights
+    flower_normal: np.ndarray = None
+    flower_weight: np.ndarray = None
 
 
 # -----------------------------------------------------------------------------
@@ -288,6 +291,7 @@ class CactusEngine:
         ar_tan = np.concatenate([a["tangent"] for a in spines]) if spines else np.zeros((0, 3))
         ar_scale = np.concatenate([a["scale"] for a in spines]) if spines else np.zeros(0)
         ar_apex = np.concatenate([a["apex"] for a in spines]) if spines else np.zeros(0)
+        ar_flw = np.concatenate([a.get("flower", np.zeros(len(a["pos"]))) for a in spines]) if spines else np.zeros(0)
         spine_mesh, n_sp = self._spines(ar_pos, ar_nrm, ar_tan, ar_scale, ar_apex, rng, spine_budget)
         height = float(max(stem.vertices[:, 2].max(), 0.0)) if len(stem.vertices) else 0.0
         roots = None
@@ -300,7 +304,7 @@ class CactusEngine:
                 root_radius_mm=max(0.5, 0.06 * R0 * 1000 * p.root_core_ratio * 4),
                 tuber_length_m=p.tuber_length_cm * 0.01, tuber_radius_m=p.tuber_radius_ratio * R0,
                 display_depth_m=root_display_depth, seed=seed)
-        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots)
+        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots, ar_pos, ar_nrm, ar_flw)
 
     # ------------------------------------------------------------------
     def _arm_collides(self, ax1: StemAxis, r1: float, ax2: StemAxis, r2: float, start1: float = 0.10) -> bool:
@@ -569,10 +573,14 @@ class CactusEngine:
             flip = np.sum(nrm * (P0 - centre), axis=1) < 0
             nrm[flip] *= -1
             apex_w = np.clip((ar_sig / gen.length - 0.85) / 0.15, 0.0, 1.0)
-            areoles = {"pos": P0, "normal": nrm, "tangent": ts, "scale": 1.0 - 0.6 * apex_w, "apex": apex_w}
+            # Flowering zone: areoles of the youngest growth, in a ring just below the apex (not the very tip)
+            flw = apex_w ** 0.7 * (1.0 - 0.7 * apex_w ** 4)
+            areoles = {"pos": P0, "normal": nrm, "tangent": ts, "scale": 1.0 - 0.6 * apex_w, "apex": apex_w,
+                       "flower": flw}
         else:
             z = np.zeros((0, 3))
-            areoles = {"pos": z, "normal": z, "tangent": z, "scale": np.zeros(0), "apex": np.zeros(0)}
+            areoles = {"pos": z, "normal": z, "tangent": z, "scale": np.zeros(0), "apex": np.zeros(0),
+                       "flower": np.zeros(0)}
         return stem, areoles
 
     # ------------------------------------------------------------------
@@ -855,8 +863,10 @@ class CactusEngine:
         for phi in np.linspace(0.15 * math.pi, 0.85 * math.pi, 9):
             q = centre + 0.5 * W * 0.9 * math.cos(phi) * e1 * 1.1 + 0.5 * L * 0.92 * math.sin(phi) * e2
             rim_pts.append((q, _normalize(q - centre)))
+        # Opuntia flowers arise from areoles on the distal margin of the cladode
+        fw = np.clip((rk - 0.65) / 0.25, 0.0, 1.0) * np.clip(ys / (0.5 * L) * 1.4, 0.0, 1.0)
         ar = {"pos": np.vstack(pos), "normal": np.vstack(nrm), "tangent": np.vstack(tan),
-              "scale": np.ones(2 * N), "apex": np.zeros(2 * N)}
+              "scale": np.ones(2 * N), "apex": np.zeros(2 * N), "flower": np.concatenate([fw, fw])}
         return mesh, ar, rim_pts
 
     # ------------------------------------------------------------------

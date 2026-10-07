@@ -118,6 +118,8 @@ class RosetteResult:
     leaf_count: int
     diameter_m: float
     roots: MeshData = None
+    terminal_sites: tuple = None     # (positions, directions): rosette apices (Agave scape)
+    axillary_sites: tuple = None     # (positions, directions): axils of mature leaves (Echeveria, Dudleya)
 
 
 class RosetteEngine:
@@ -139,6 +141,7 @@ class RosetteEngine:
             centres.append((np.array([d * math.cos(az), d * math.sin(az), 0.0]), p.offset_scale * rng.uniform(0.7, 1.1)))
         n_total = 0
         diam = 0.0
+        self._term, self._axil = [], []
         for ci, (c, scale) in enumerate(centres):
             lv, ar, st, n, dm = self._rosette(c, scale, rng, detail, primary=ci == 0)
             leaves.append(lv)
@@ -152,8 +155,12 @@ class RosetteEngine:
             roots = succulent_roots(p.root_system, p.stem_radius_m, max(0.05, p.root_spread_ratio * diam),
                                     p.root_depth_m, p.root_count, core_ratio=0.9,
                                     root_radius_mm=p.root_radius_mm, display_depth_m=root_display_depth, seed=seed)
+        def pack(lst):
+            if not lst:
+                return np.zeros((0, 3)), np.zeros((0, 3))
+            return np.array([a for a, _ in lst]), np.array([d for _, d in lst])
         return RosetteResult(MeshData.concatenate(leaves), MeshData.concatenate(arm), MeshData.concatenate(stems),
-                             n_total, diam, roots)
+                             n_total, diam, roots, pack(self._term), pack(self._axil))
 
     # ------------------------------------------------------------------
     def _rosette(self, centre, scale, rng, detail, primary):
@@ -258,10 +265,13 @@ class RosetteEngine:
             diam = max(diam, 2 * float(np.hypot(*(mid[-1] - centre)[:2])))
             if not dead:
                 arm_parts.append(self._armature(mid, dirs, lateral, normal, half_w, L, rng))
+                if 0.15 < age < 0.6:      # Axil of a mature leaf: lateral inflorescences emerge here
+                    self._axil.append((base + UP * 0.01 * scale, _normalize(radial * 0.6 + UP)))
         V = np.vstack(verts)
         Q = np.vstack(quads)
         attrs = {k: np.concatenate(vv).astype(np.float32) for k, vv in attrs.items()}
         leaves = _mesh(V, Q, None, None, None, attrs)
+        self._term.append((stem_top.copy(), UP.copy()))
         w0 = 0.5 * p.leaf_length_cm * 0.01 * scale / max(0.5, p.leaf_aspect) * hw[0]
         stem = self._stem(centre, stem_top, scale, az0, step, w0, rng)
         return leaves, MeshData.concatenate([a for a in arm_parts if a is not None]), stem, n, diam

@@ -4,6 +4,7 @@ auto-generated properties from the core profiles, materials and geometry updates
 """
 
 import copy
+import math
 import hashlib
 from dataclasses import fields
 from enum import Enum
@@ -458,6 +459,35 @@ def _root_material(name):
     return mat
 
 
+def _succulent_flowers(context, root, props, form, res):
+    from .flowers import update_flowers_on_plant, hide_flowers, flower_from_props, flower_site_count
+    from ..core.inflorescence import surface_flower_sites, FlowerSites, FlowerSiteMode
+    for c in root.children:
+        if c.name.endswith("_Bloom"):
+            c.hide_viewport = c.hide_render = True
+    if not props.show_flowers:
+        hide_flowers(root)
+        return
+    _, ip = flower_from_props(props)
+    if form == GrowthForm.CACTUS:
+        w = res.flower_weight
+        n = flower_site_count(props, int(np.count_nonzero(w > 0.05)) // 12 + 1)
+        sites = surface_flower_sites(res.flower_pos, res.flower_normal, w, n, seed=props.seed,
+                                     lean=0.3 + 0.5 * ip.orientation)
+    else:
+        pos, dirs = res.terminal_sites if ip.site_mode == FlowerSiteMode.TERMINAL else res.axillary_sites
+        rng = np.random.default_rng(props.seed + 3)
+        if ip.site_mode == FlowerSiteMode.TERMINAL:
+            n = max(1 if len(pos) else 0, flower_site_count(props, len(pos)))
+        else:     # Only a few axils bolt per season (1-3 lateral inflorescences per rosette)
+            n = max(1 if len(pos) else 0, flower_site_count(props, int(math.ceil(len(pos) / 12))))
+        idx = rng.choice(len(pos), min(n, len(pos)), replace=False) if len(pos) else np.zeros(0, int)
+        up = np.array([0.0, 0.0, 1.0])
+        d = dirs[idx] * (1 - ip.orientation) + up * ip.orientation
+        sites = FlowerSites(pos[idx], d, np.ones(len(idx)))
+    update_flowers_on_plant(context, root, props, sites)
+
+
 def update_succulent_geometry(context, props, find_root):
     form = GrowthForm(props.growth_form)
     key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
@@ -503,6 +533,7 @@ def update_succulent_geometry(context, props, find_root):
             _child(context, root, suffix, None, None)
         root["leaf_count"] = res.leaf_count
     _child(context, root, "_SuccRoots", res.roots if props.show_roots else None, _root_material(root.name))
+    _succulent_flowers(context, root, props, form, res)
     root["scientific_name"] = preset.scientific_name
     root["common_name"] = preset.common_name
     root["family"] = preset.family

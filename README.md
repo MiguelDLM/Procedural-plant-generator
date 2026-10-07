@@ -30,7 +30,7 @@
 
 ### Growth forms
 
-A selector at the top of the panel switches between three generators that share materials, caching, the
+A selector at the top of the panel switches between four generators that share materials, caching, the
 trait-space arithmetic (blend / variation) and the UI:
 
 | Form | Model | Key parameters |
@@ -41,6 +41,45 @@ trait-space arithmetic (blend / variation) and the UI:
 
 The 15 cactus and 11 rosette presets include several Mexican species (órgano, garambullo, cardón, candelabro, viejito,
 biznaga dorada, bonete de obispo, peyote, nopal, maguey, agave azul, *Echeveria*). Algae are out of scope.
+
+### Flowers and inflorescences
+
+Flowers are built from their **floral diagram** (Ijiri et al. 2005; Ronse De Craene 2010) and can be generated alone
+(growth form **Flower / Inflorescence**) or placed on any tree, cactus or rosette (**Flowers** panel). Every plant
+preset has a default flower (catkins for Fagaceae, Betulaceae, Salicaceae and Juglandaceae; none for conifers).
+
+- **Organs and arrangement.** Calyx, corolla, androecium and gynoecium on a receptacle (ABC model, Coen &
+  Meyerowitz 1991). Organs are whorled with merosity *m* (successive whorls alternate by π/m) or spiral at the
+  golden angle (*Magnolia*, cactus flowers, double roses). Both come from one generator, as in the sequential
+  initiation-with-repulsion model of Kitazawa & Fujimoto (2015). Double flowers add petal whorls in place of stamens.
+- **Symmetry.** Zygomorphy is a continuous dorsiventral modulation of organ size, elevation and azimuth along
+  d = cos(θ − θ<sub>dorsal</sub>) (Endress 2001): standard-dominated pea flowers (`lip_bias` > 0) or
+  lip-dominated bilabiate flowers (`lip_bias` < 0), plus declinate stamens.
+- **Petal shape.** The petal outline reuses the leaf half-width model (aspect, widest point, base and apex
+  angles and curvatures), written along the proximodistal growth axis (Rolland-Lagan et al. 2003). Extra
+  descriptors cover the claw, apex truncation, emargination (cherry) and fringing (*Dianthus*, toothed ligules).
+  Posture comes from the opening angle, reflexion (turk's-cap lilies), cup, twist (convolute *Plumeria*) and
+  undulation.
+- **Sympetaly.** A corolla tube is a surface of revolution r(t) = r₀ + (r₁ − r₀)·t<sup>flare</sup>. With
+  `limb_fusion`, each lobe widens to at least its sector π·r/m, so the limb becomes continuous (*Ipomoea*,
+  *Petunia*). Stamens and style rise inside the tube following its profile.
+- **Capitula.** Disc florets sit on Vogel's spiral r = c√k, θ = 137.508°·k and mature centripetally. Ray
+  florets form one rim row or fill the head for double forms (*Dahlia*, *Tagetes*); phyllaries sit beneath.
+- **Inflorescences.** Solitary, raceme, spike, catkin, umbel, corymb (pedicels lengthening basipetally to a
+  flat top) and panicle, optionally with umbellate laterals (*Agave* scape). Flowers open acropetally, with the
+  `Bloom Stage` slider shifting the whole gradient (Prusinkiewicz et al. 2007; Weberling 1989). Flowers are
+  built at four opening stages, from closed bud to anthesis, and transformed into place.
+- **Placement on plants.** On trees, flowers sit at the tips of the youngest shoots or along them (axillary
+  spurs, cauliflory), oriented upright (candles), along the shoot, or pendent (catkins, *Robinia*). On cacti
+  they grow from areoles in a ring below each apex, or on the distal margin of Opuntia pads. On rosettes they
+  form a terminal scape (*Agave*, *Aloe*) or a few lateral inflorescences from mature leaf axils (*Echeveria*,
+  *Dudleya*). One prototype inflorescence is instanced with Geometry Nodes, so thousands of sites cost little.
+- **Colour.** Base-to-tip gradient, a contrasting eye, nectar guides, spots (*Lilium*), a tint on outer tepals,
+  per-flower value jitter and a velvety sheen.
+
+The 50 flower presets each carry a floral formula. They include Mexican flowers such as dalia, cempasúchil,
+mirasol (*Cosmos*), nochebuena, cacaloxóchitl (*Plumeria*), manto de la virgen (*Ipomoea*), and the flowers
+of saguaro, nopal, cardón and other cacti, plus the maguey quiote.
 
 ### Trait space
 
@@ -110,6 +149,15 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Vogel, H. (1979). A better way to construct the sunflower head. *Mathematical Biosciences* 44: 179–189. doi:10.1016/0025-5564(79)90080-4
 - Robberecht, R. & Nobel, P. S. (1983). A Fibonacci sequence in rib number for a barrel cactus. *Annals of Botany* 51: 153–155. doi:10.1093/oxfordjournals.aob.a086440
 - Mauseth, J. D. (2006). Structure–function relationships in highly modified shoots of Cactaceae. *Annals of Botany* 98: 901–926. doi:10.1093/aob/mcl133
+- Ijiri, T., Owada, S., Okabe, M. & Igarashi, T. (2005). Floral diagrams and inflorescences: interactive flower modeling using botanical structural constraints. *ACM Transactions on Graphics* 24(3): 720–726.
+- Ronse De Craene, L. P. (2010). *Floral Diagrams: An Aid to Understanding Flower Morphology and Evolution.* Cambridge University Press.
+- Weberling, F. (1989). *Morphology of Flowers and Inflorescences.* Cambridge University Press.
+- Coen, E. S. & Meyerowitz, E. M. (1991). The war of the whorls: genetic interactions controlling flower development. *Nature* 353: 31–37.
+- Endress, P. K. (2001). Evolution of floral symmetry. *Current Opinion in Plant Biology* 4: 86–91.
+- Kitazawa, M. S. & Fujimoto, K. (2015). A dynamical phyllotaxis model to determine floral organ number. *PLoS Computational Biology* 11(5): e1004145.
+- Rolland-Lagan, A.-G., Bangham, J. A. & Coen, E. (2003). Growth dynamics underlying petal shape and asymmetry. *Nature* 422: 161–163.
+- Prusinkiewicz, P., Erasmus, Y., Lane, B., Harder, L. D. & Coen, E. (2007). Evolution and development of inflorescence architectures. *Science* 316: 1452–1456.
+- Owens, A., Cieslak, M., Hart, J., Classen-Bockhoff, R. & Prusinkiewicz, P. (2016). Modeling dense inflorescences. *ACM Transactions on Graphics* 35(4): 136.
 - Cannon, W. A. (1911). *The Root Habits of Desert Plants.* Carnegie Institution of Washington, Publ. 131.
 - Snyman, H. A. (2005). A case study on in situ rooting profiles and water-use efficiency of cactus pears, *Opuntia ficus-indica* and *O. robusta*. *Journal of the Professional Association for Cactus Development* 7: 1–21.
 - Franco, A. C. & Nobel, P. S. (1990). Influences of root distribution and growth on predicted water uptake and interspecific competition. *Oecologia* 82: 151–157. doi:10.1007/BF00323528

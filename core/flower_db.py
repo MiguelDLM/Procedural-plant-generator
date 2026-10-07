@@ -1,0 +1,601 @@
+"""
+Flower and inflorescence presets, with floral formulae, and the default flowers of
+the tree, cactus and rosette presets.
+
+Floral formula notation (Ronse De Craene 2010): K calyx, C corolla, P perianth of
+tepals, A androecium, G gynoecium (underlined / "inf" = inferior ovary), (n) fused,
+inf = many. Sizes are in cm at anthesis.
+"""
+
+from dataclasses import dataclass, field
+
+from .flower import FlowerProfile, Arrangement
+from .inflorescence import InflorescenceProfile, InflorescenceType, FlowerSiteMode
+
+SP, WH = Arrangement.SPIRAL, Arrangement.WHORLED
+I = InflorescenceType
+TERM, AX = FlowerSiteMode.TERMINAL, FlowerSiteMode.AXILLARY
+
+
+@dataclass
+class FlowerPreset:
+    scientific_name: str
+    common_name: str
+    family: str
+    formula: str
+    notes: str
+    flower: FlowerProfile
+    infl: InflorescenceProfile = field(default_factory=InflorescenceProfile)
+
+
+def fl(sci, common, family, formula, notes, infl=None, **kw) -> FlowerPreset:
+    return FlowerPreset(sci, common, family, formula, notes, FlowerProfile(**kw), infl or InflorescenceProfile())
+
+
+def inf(kind, **kw) -> InflorescenceProfile:
+    return InflorescenceProfile(kind=kind, **kw)
+
+
+WHITE = (0.97, 0.96, 0.93)
+YELLOW_ANTHER = (0.97, 0.78, 0.15)
+
+FLOWER_CATALOG = {
+    # --- Rosaceae ----------------------------------------------------------------------------------
+    "rosa_canina": fl(
+        "Rosa canina", "Dog rose (rosa silvestre)", "Rosaceae", "K5 C5 A∞ G∞ (hypanthium)",
+        "Five obcordate petals, reflexed sepals, a ring of many stamens round the hip.",
+        inf(I.CORYMB, flower_count=3, peduncle_cm=1.0, rachis_cm=2.0, pedicel_cm=2.0, pedicel_angle_deg=35),
+        petal_length_cm=2.3, petal_aspect=0.95, widest_position=0.75, base_angle_deg=50, apex_angle_deg=170,
+        apex_curvature=0.9, truncation=0.5, notch=0.12, opening_deg=10, reflex_deg=-5, cup=0.35, undulation=0.1,
+        sepal_length_ratio=0.75, sepal_aspect=4.0, sepal_opening_deg=-25, hypanthium_cm=0.7,
+        receptacle_radius_cm=0.45, stamen_count=90, stamen_length_ratio=0.28, stamen_spread_deg=35,
+        anther_size_mm=1.0, carpels=1, style_length_ratio=0.06, stigma_size_mm=3.0,
+        petal_color=(0.95, 0.62, 0.76), tip_color=(0.93, 0.52, 0.70), eye_color=(0.99, 0.96, 0.92), eye_size=0.35,
+        pistil_color=(0.90, 0.85, 0.55)),
+    "rosa_hybrida": fl(
+        "Rosa × hybrida", "Garden rose (rosa de jardín)", "Rosaceae", "K5 C∞ (stamens → petals) G∞",
+        "Double flower: stamens converted to petals (ABC model) in a golden-angle spiral, inner petals cupped.",
+        inf(I.SOLITARY, peduncle_cm=30.0, stem_radius_mm=3.0),
+        arrangement=SP, spiral_tepals=45, petal_length_cm=4.2, petal_aspect=0.9, widest_position=0.7,
+        base_angle_deg=55, apex_angle_deg=170, apex_curvature=0.9, truncation=0.5, opening_deg=35,
+        inner_opening_deg=88, inner_scale=0.5, reflex_deg=-35, cup=0.9, undulation=0.05,
+        sepal_length_ratio=0.5, sepal_aspect=5.0, sepal_opening_deg=-30, hypanthium_cm=0.9,
+        receptacle_radius_cm=0.6, stamen_count=0, style_length_ratio=0.0,
+        petal_color=(0.72, 0.04, 0.09), tip_color=(0.60, 0.03, 0.07), sheen=0.6),
+    "prunus_avium": fl(
+        "Prunus avium", "Wild cherry (cerezo)", "Rosaceae", "K5 C5 A~30 G1",
+        "Umbellate fascicles of white emarginate flowers on short spurs, before the leaves.",
+        inf(I.UMBEL, flower_count=4, peduncle_cm=0.3, pedicel_cm=3.0, pedicel_angle_deg=35, site_mode=AX,
+            orientation=0.2, stem_radius_mm=0.6),
+        petal_length_cm=1.4, petal_aspect=1.0, widest_position=0.75, apex_angle_deg=170, apex_curvature=0.9,
+        truncation=0.5, notch=0.15, opening_deg=5, reflex_deg=0, cup=0.25, sepal_length_ratio=0.35,
+        sepal_opening_deg=-40, hypanthium_cm=0.4, receptacle_radius_cm=0.25, stamen_count=30,
+        stamen_length_ratio=0.55, stamen_spread_deg=30, anther_size_mm=0.8, carpels=1, style_length_ratio=0.6,
+        petal_color=WHITE, tip_color=WHITE, eye_color=(0.85, 0.88, 0.55), eye_size=0.1,
+        sepal_color=(0.45, 0.30, 0.15)),
+    "malus_domestica": fl(
+        "Malus domestica", "Apple (manzano)", "Rosaceae", "K5 C5 A~20 G(5) inf",
+        "Corymbs of white flowers flushed pink from the bud; the king flower opens first.",
+        inf(I.CORYMB, flower_count=5, peduncle_cm=0.5, rachis_cm=1.0, pedicel_cm=2.5, pedicel_angle_deg=40,
+            stem_radius_mm=0.8, orientation=0.5),
+        petal_length_cm=1.9, petal_aspect=1.15, widest_position=0.65, apex_angle_deg=160, apex_curvature=0.8,
+        truncation=0.3, opening_deg=12, reflex_deg=-5, cup=0.35, undulation=0.12, sepal_length_ratio=0.35,
+        hypanthium_cm=0.5, receptacle_radius_cm=0.3, stamen_count=20, stamen_length_ratio=0.45,
+        stamen_spread_deg=20, carpels=5, style_length_ratio=0.45, petal_color=(0.98, 0.93, 0.94),
+        tip_color=(0.93, 0.66, 0.78), tip_start=0.45),
+    # --- Magnoliids / early-diverging ---------------------------------------------------------------
+    "magnolia_grandiflora": fl(
+        "Magnolia grandiflora", "Southern magnolia", "Magnoliaceae", "P9-12 A∞ G∞ (spiral)",
+        "Spiral, undifferentiated tepals around an elongated receptacle with spiral stamens and carpels.",
+        inf(I.SOLITARY, peduncle_cm=2.0, stem_radius_mm=5.0, orientation=0.6),
+        arrangement=SP, spiral_tepals=11, petal_length_cm=9.0, petal_aspect=1.3, widest_position=0.65,
+        apex_angle_deg=140, apex_curvature=0.7, opening_deg=30, inner_opening_deg=70, inner_scale=0.85,
+        reflex_deg=-10, cup=0.8, sepal_length_ratio=0.0, hypanthium_cm=0.0, receptacle_radius_cm=1.0,
+        receptacle_height_cm=4.0, stamen_count=180, stamen_length_ratio=0.18, stamen_spread_deg=70,
+        anther_size_mm=6.0, style_length_ratio=0.0, petal_color=(0.97, 0.95, 0.88),
+        tip_color=(0.96, 0.93, 0.84), stamen_color=(0.80, 0.55, 0.50), anther_color=(0.88, 0.80, 0.62),
+        pistil_color=(0.75, 0.70, 0.45), sheen=0.15, translucency=0.4),
+    "liriodendron_tulipifera": fl(
+        "Liriodendron tulipifera", "Tulip tree", "Magnoliaceae", "K3 C3+3 A∞ G∞",
+        "Cup of six greenish-yellow petals with an orange basal band, three reflexed sepals, conical gynoecium.",
+        inf(I.SOLITARY, peduncle_cm=1.5, stem_radius_mm=3.0, orientation=0.8),
+        merosity=3, petal_whorls=2, petal_length_cm=4.5, petal_aspect=1.3, widest_position=0.6,
+        apex_angle_deg=150, opening_deg=65, inner_opening_deg=72, inner_scale=0.95, reflex_deg=5, cup=0.8,
+        sepal_length_ratio=0.8, sepal_aspect=1.6, sepal_opening_deg=-40, hypanthium_cm=0.0,
+        receptacle_radius_cm=0.5, receptacle_height_cm=3.0, stamen_count=40, stamen_length_ratio=0.5,
+        stamen_spread_deg=15, anther_size_mm=8.0, style_length_ratio=0.0,
+        petal_color=(0.82, 0.86, 0.52), tip_color=(0.85, 0.88, 0.58), eye_color=(0.95, 0.48, 0.08),
+        eye_size=0.35, sepal_color=(0.55, 0.65, 0.40)),
+    # --- Monocots -----------------------------------------------------------------------------------
+    "tulipa_gesneriana": fl(
+        "Tulipa gesneriana", "Tulip (tulipán)", "Liliaceae", "P3+3 A3+3 G(3)",
+        "Two whorls of three tepals forming an erect cup; six stamens with dark anthers; trilobed stigma.",
+        inf(I.SOLITARY, peduncle_cm=35.0, stem_radius_mm=3.5),
+        merosity=3, petal_whorls=2, petal_length_cm=6.0, petal_aspect=1.55, widest_position=0.55,
+        base_angle_deg=40, apex_angle_deg=110, apex_curvature=0.5, opening_deg=74, inner_opening_deg=78,
+        inner_scale=0.95, reflex_deg=10, cup=0.85, sepal_length_ratio=0.0, hypanthium_cm=0.0,
+        receptacle_radius_cm=0.45, stamen_count=6, stamen_length_ratio=0.35, stamen_spread_deg=6,
+        anther_size_mm=6.0, carpels=3, style_length_ratio=0.25, stigma_size_mm=4.0,
+        petal_color=(0.86, 0.08, 0.07), tip_color=(0.80, 0.06, 0.08), eye_color=(0.15, 0.10, 0.12),
+        eye_size=0.12, anther_color=(0.12, 0.10, 0.12), stamen_color=(0.15, 0.12, 0.12),
+        pistil_color=(0.75, 0.80, 0.45), sheen=0.15),
+    "lilium_lancifolium": fl(
+        "Lilium lancifolium", "Tiger lily", "Liliaceae", "P3+3 A3+3 G(3)",
+        "Nodding flowers; tepals strongly recurved (turk's-cap) and spotted; long exserted stamens and style.",
+        inf(I.RACEME, flower_count=8, peduncle_cm=60.0, rachis_cm=30.0, pedicel_cm=7.0, pedicel_angle_deg=60,
+            nodding=0.6, maturation=0.7, stem_radius_mm=5.0),
+        merosity=3, petal_whorls=2, petal_length_cm=8.0, petal_aspect=4.2, widest_position=0.45,
+        base_angle_deg=25, apex_angle_deg=60, apex_curvature=0.3, opening_deg=40, inner_opening_deg=40,
+        inner_scale=0.98, reflex_deg=-125, cup=0.3, undulation=0.12, sepal_length_ratio=0.0, hypanthium_cm=0.0,
+        stamen_count=6, stamen_length_ratio=0.9, stamen_spread_deg=30, anther_size_mm=10.0, carpels=3,
+        style_length_ratio=1.0, stigma_size_mm=3.0, petal_color=(0.96, 0.42, 0.08), tip_color=(0.95, 0.38, 0.06),
+        spots=0.85, spot_color=(0.18, 0.05, 0.04), anther_color=(0.40, 0.15, 0.08),
+        stamen_color=(0.92, 0.50, 0.15), pistil_color=(0.92, 0.55, 0.20)),
+    "lilium_longiflorum": fl(
+        "Lilium longiflorum", "Easter lily (azucena)", "Liliaceae", "P(3+3) A3+3 G(3)",
+        "Trumpet: tepals coherent into a long tube that flares into recurved lobes; flowers horizontal.",
+        inf(I.UMBEL, flower_count=3, peduncle_cm=60.0, pedicel_cm=4.0, pedicel_angle_deg=80, stem_radius_mm=5.0),
+        merosity=6, tube_length_cm=9.0, tube_radius_cm=0.5, tube_flare=2.5, petal_length_cm=6.0, petal_aspect=2.2,
+        widest_position=0.4, apex_angle_deg=80, opening_deg=10, reflex_deg=-45, cup=0.2, undulation=0.1,
+        sepal_length_ratio=0.0, hypanthium_cm=0.0, stamen_count=6, stamen_length_ratio=1.9, stamen_spread_deg=5,
+        anther_size_mm=10.0, carpels=3, style_length_ratio=2.0, stigma_size_mm=3.0, petal_color=(0.98, 0.98, 0.95),
+        tip_color=(0.98, 0.98, 0.96), eye_color=(0.70, 0.82, 0.55), eye_size=0.35, limb_fusion=0.35),
+    # --- Asteraceae (capitula) ----------------------------------------------------------------------
+    "helianthus_annuus": fl(
+        "Helianthus annuus", "Sunflower (girasol)", "Asteraceae", "head: ray florets 21-34 (sterile), disc florets ∞",
+        "Capitulum with ~1000 disc florets on Vogel's golden-angle spiral, maturing centripetally.",
+        inf(I.SOLITARY, peduncle_cm=30.0, nodding=0.35, stem_radius_mm=12.0),
+        capitulum=True, disc_florets=1200, disc_radius_cm=10.0, disc_dome=0.05, ray_count=34, petal_length_cm=9.0,
+        petal_aspect=3.0, widest_position=0.45, base_angle_deg=40, apex_angle_deg=60, opening_deg=0, reflex_deg=-12,
+        cup=0.3, undulation=0.15, involucre_bracts=40, petal_color=(0.98, 0.74, 0.04), tip_color=(0.98, 0.72, 0.04),
+        disc_color=(0.22, 0.12, 0.05), disc_center_color=(0.33, 0.30, 0.08), sepal_color=(0.28, 0.42, 0.15)),
+    "bellis_perennis": fl(
+        "Bellis perennis", "Daisy (margarita)", "Asteraceae", "head: ray florets ~50, disc florets ∞",
+        "Narrow white ligules tipped pink around a domed yellow disc.",
+        inf(I.SOLITARY, peduncle_cm=10.0, stem_radius_mm=1.2),
+        capitulum=True, disc_florets=180, disc_radius_cm=0.55, disc_dome=0.35, ray_count=55, petal_length_cm=1.0,
+        petal_aspect=6.0, widest_position=0.5, apex_angle_deg=120, opening_deg=8, reflex_deg=-5, cup=0.2,
+        involucre_bracts=13, petal_color=(0.97, 0.97, 0.96), tip_color=(0.90, 0.50, 0.62), tip_start=0.78,
+        disc_color=(0.98, 0.78, 0.10), disc_center_color=(0.95, 0.85, 0.25)),
+    "cosmos_bipinnatus": fl(
+        "Cosmos bipinnatus", "Mexican aster (mirasol)", "Asteraceae", "head: ray florets 8, disc florets ∞",
+        "Eight broad, toothed ligules (truncate, three-toothed apex) around a small yellow disc; native to Mexico.",
+        inf(I.SOLITARY, peduncle_cm=25.0, stem_radius_mm=1.8),
+        capitulum=True, disc_florets=90, disc_radius_cm=0.8, disc_dome=0.3, ray_count=8, petal_length_cm=3.2,
+        petal_aspect=1.5, widest_position=0.75, base_angle_deg=30, apex_angle_deg=175, apex_curvature=1.0,
+        truncation=0.8, fringe=0.12, fringe_count=3, opening_deg=5, reflex_deg=-5, cup=0.15, undulation=0.1,
+        involucre_bracts=8, petal_color=(0.92, 0.40, 0.70), tip_color=(0.95, 0.55, 0.78),
+        eye_color=(0.75, 0.15, 0.45), eye_size=0.2, disc_color=(0.97, 0.75, 0.10),
+        disc_center_color=(0.90, 0.70, 0.15)),
+    "tagetes_erecta": fl(
+        "Tagetes erecta", "Mexican marigold (cempasúchil)", "Asteraceae", "head (double): ligules ∞",
+        "Double head: ruffled, fringed ligules fill the whole receptacle in a golden-angle spiral.",
+        inf(I.SOLITARY, peduncle_cm=15.0, stem_radius_mm=3.0),
+        capitulum=True, disc_florets=20, disc_radius_cm=2.5, disc_dome=0.4, ray_count=180, ray_fill=1.0,
+        petal_length_cm=2.4, petal_aspect=1.1, widest_position=0.8, apex_angle_deg=175, apex_curvature=1.0,
+        truncation=0.6, fringe=0.12, fringe_count=5, undulation=0.5, cup=0.6, opening_deg=20,
+        inner_opening_deg=80, inner_scale=0.55, reflex_deg=-10, involucre_bracts=8,
+        petal_color=(0.98, 0.48, 0.02), tip_color=(1.0, 0.60, 0.05), tip_start=0.5,
+        disc_color=(0.85, 0.40, 0.02), disc_center_color=(0.85, 0.45, 0.05)),
+    "dahlia_pinnata": fl(
+        "Dahlia pinnata", "Dahlia (dalia, flor nacional de México)", "Asteraceae", "head (double): ligules ∞",
+        "Decorative double head: involute (rolled) ligules decreasing in size toward the centre.",
+        inf(I.SOLITARY, peduncle_cm=30.0, stem_radius_mm=4.0),
+        capitulum=True, disc_florets=12, disc_radius_cm=3.5, disc_dome=0.5, ray_count=120, ray_fill=1.0,
+        petal_length_cm=5.0, petal_aspect=2.2, widest_position=0.6, apex_angle_deg=90, apex_curvature=0.4,
+        opening_deg=5, inner_opening_deg=85, inner_scale=0.35, reflex_deg=-20, cup=0.95, involucre_bracts=10,
+        petal_color=(0.75, 0.10, 0.40), tip_color=(0.86, 0.22, 0.52), tip_start=0.5,
+        disc_color=(0.95, 0.75, 0.15), disc_center_color=(0.90, 0.70, 0.20)),
+    # --- Asterids with fused corollas ---------------------------------------------------------------
+    "petunia_hybrida": fl(
+        "Petunia × atkinsiana", "Petunia", "Solanaceae", "K(5) C(5) A5 G(2)",
+        "Funnelform-salverform sympetalous corolla with five fused lobes and dark nectar guides.",
+        inf(I.SOLITARY, peduncle_cm=3.0, stem_radius_mm=1.5),
+        tube_length_cm=3.0, tube_radius_cm=0.25, tube_flare=1.6, petal_length_cm=2.4, petal_aspect=0.8,
+        widest_position=0.75, apex_angle_deg=175, apex_curvature=1.0, truncation=0.7, notch=0.05, opening_deg=5,
+        reflex_deg=-8, cup=0.1, undulation=0.25, sepal_length_ratio=0.6, sepal_aspect=5.0, hypanthium_cm=0.2,
+        stamen_count=5, stamen_length_ratio=0.3, carpels=2, style_length_ratio=0.3,
+        petal_color=(0.50, 0.10, 0.60), tip_color=(0.55, 0.12, 0.65), eye_color=(0.18, 0.02, 0.22), eye_size=0.4,
+        guide_lines=5, guide_contrast=0.8, sheen=0.7, limb_fusion=0.95),
+    "ipomoea_purpurea": fl(
+        "Ipomoea purpurea", "Morning glory (manto de la virgen)", "Convolvulaceae", "K5 C(5) A5 G(2)",
+        "Funnel corolla fused to the rim (pentagonal), white throat with five star-like midpetaline bands.",
+        inf(I.UMBEL, flower_count=3, peduncle_cm=5.0, pedicel_cm=1.5, pedicel_angle_deg=50, stem_radius_mm=1.2),
+        tube_length_cm=3.0, tube_radius_cm=0.2, tube_flare=2.5, petal_length_cm=2.6, petal_aspect=0.65,
+        widest_position=0.9, apex_angle_deg=178, apex_curvature=1.0, truncation=1.0, opening_deg=25, reflex_deg=-5,
+        cup=0.1, undulation=0.08, sepal_length_ratio=0.4, stamen_count=5, stamen_length_ratio=0.25,
+        style_length_ratio=0.3, petal_color=(0.45, 0.15, 0.72), tip_color=(0.40, 0.18, 0.75),
+        eye_color=(0.97, 0.95, 0.97), eye_size=0.45, guide_lines=1, guide_contrast=0.6, sheen=0.5, limb_fusion=1.0),
+    "plumeria_rubra": fl(
+        "Plumeria rubra", "Frangipani (cacaloxóchitl)", "Apocynaceae", "K5 C(5) A5 G2",
+        "Salverform corolla: narrow tube and five obovate, overlapping lobes twisted like a pinwheel.",
+        inf(I.CORYMB, flower_count=12, peduncle_cm=10.0, rachis_cm=4.0, pedicel_cm=2.0, pedicel_angle_deg=40,
+            stem_radius_mm=3.0),
+        tube_length_cm=2.2, tube_radius_cm=0.15, tube_flare=1.0, petal_length_cm=3.2, petal_aspect=1.8,
+        widest_position=0.72, base_angle_deg=30, apex_angle_deg=150, apex_curvature=0.8, opening_deg=5,
+        reflex_deg=-15, cup=0.3, twist_deg=30, sepal_length_ratio=0.1, stamen_count=0, style_length_ratio=0.0,
+        petal_color=(0.98, 0.97, 0.94), tip_color=(0.98, 0.95, 0.90), eye_color=(0.98, 0.80, 0.15), eye_size=0.5,
+        sheen=0.2, translucency=0.35),
+    "antirrhinum_majus": fl(
+        "Antirrhinum majus", "Snapdragon (perrito)", "Plantaginaceae", "↑ K5 C(5) A4 G(2)",
+        "Zygomorphic personate corolla: two-lobed upper lip, three-lobed lower lip; declinate stamens.",
+        inf(I.RACEME, flower_count=18, peduncle_cm=25.0, rachis_cm=22.0, pedicel_cm=0.6, pedicel_angle_deg=55,
+            maturation=0.9, stem_radius_mm=3.0),
+        zygomorphy=1.0, lip_bias=-0.5, tube_length_cm=2.2, tube_radius_cm=0.35, tube_flare=1.0, petal_length_cm=1.4,
+        petal_aspect=0.9, widest_position=0.7, apex_angle_deg=170, apex_curvature=0.9, truncation=0.5,
+        opening_deg=35, reflex_deg=-10, cup=0.55, sepal_length_ratio=0.4, stamen_count=4,
+        stamen_length_ratio=0.8, stamen_declination=0.7, style_length_ratio=0.8,
+        petal_color=(0.92, 0.30, 0.45), tip_color=(0.90, 0.28, 0.45), eye_color=(0.98, 0.85, 0.20), eye_size=0.25, limb_fusion=0.4),
+    "lavandula_angustifolia": fl(
+        "Lavandula angustifolia", "Lavender (lavanda)", "Lamiaceae", "↑ K(5) C(5) A4 G(2)",
+        "Small bilabiate flowers in whorls (verticillasters) forming a dense terminal spike.",
+        inf(I.SPIKE, flower_count=36, peduncle_cm=20.0, rachis_cm=6.0, pedicel_angle_deg=55, divergence_deg=60,
+            maturation=0.7, stem_radius_mm=1.0, stem_color=(0.40, 0.48, 0.30)),
+        zygomorphy=0.8, lip_bias=-0.5, tube_length_cm=0.7, tube_radius_cm=0.07, tube_flare=1.2,
+        petal_length_cm=0.35, petal_aspect=1.0, apex_angle_deg=170, opening_deg=20, cup=0.3,
+        sepal_length_ratio=1.6, sepal_aspect=3.5, sepal_opening_deg=80, hypanthium_cm=0.15, stamen_count=4,
+        stamen_length_ratio=0.3, style_length_ratio=0.3, petal_color=(0.52, 0.42, 0.82),
+        tip_color=(0.55, 0.45, 0.85), sepal_color=(0.45, 0.40, 0.58)),
+    # --- Caryophyllales / Malvaceae / others --------------------------------------------------------
+    "dianthus_caryophyllus": fl(
+        "Dianthus caryophyllus", "Carnation (clavel)", "Caryophyllaceae", "K(5) C5 (double) A10 G(2)",
+        "Clawed petals with a fringed (laciniate) blade, doubled into several whorls; tubular calyx.",
+        inf(I.SOLITARY, peduncle_cm=35.0, stem_radius_mm=2.5, stem_color=(0.40, 0.52, 0.45)),
+        petal_whorls=4, petal_length_cm=3.0, petal_aspect=1.1, widest_position=0.85, apex_angle_deg=178,
+        apex_curvature=1.0, truncation=0.85, claw=0.35, fringe=0.12, fringe_count=9, undulation=0.35,
+        opening_deg=25, inner_opening_deg=75, inner_scale=0.75, reflex_deg=-15, cup=0.4,
+        sepal_length_ratio=0.8, sepal_aspect=3.0, sepal_opening_deg=85, hypanthium_cm=0.6, stamen_count=0,
+        style_length_ratio=0.0, petal_color=(0.92, 0.35, 0.50), tip_color=(0.95, 0.45, 0.58),
+        sepal_color=(0.42, 0.55, 0.45)),
+    "hibiscus_rosa_sinensis": fl(
+        "Hibiscus rosa-sinensis", "Hibiscus (tulipán de jardín)", "Malvaceae", "K(5) C5 A(∞) G(5)",
+        "Five convolute petals around a long monadelphous staminal column ending in five stigmas.",
+        inf(I.SOLITARY, peduncle_cm=4.0, nodding=0.1, stem_radius_mm=2.0, orientation=0.2),
+        petal_length_cm=6.5, petal_aspect=0.9, widest_position=0.72, base_angle_deg=40, apex_angle_deg=170,
+        apex_curvature=0.9, truncation=0.4, undulation=0.3, opening_deg=15, reflex_deg=-15, cup=0.2, twist_deg=15,
+        sepal_length_ratio=0.35, sepal_aspect=2.5, hypanthium_cm=0.3, stamen_count=60, stamen_length_ratio=1.25,
+        staminal_column=0.9, carpels=5, style_length_ratio=1.45, stigma_size_mm=2.0,
+        petal_color=(0.90, 0.07, 0.10), tip_color=(0.92, 0.10, 0.12), eye_color=(0.40, 0.00, 0.05), eye_size=0.22,
+        stamen_color=(0.92, 0.15, 0.15), anther_color=(0.98, 0.80, 0.25), pistil_color=(0.75, 0.05, 0.10)),
+    "euphorbia_pulcherrima": fl(
+        "Euphorbia pulcherrima", "Poinsettia (nochebuena)", "Euphorbiaceae", "cyathium: ♂ A1 ×∞, ♀ G(3); red bracts",
+        "The 'flower' is a whorl of red leaf-like bracts around small cyathia with yellow nectar glands.",
+        inf(I.SOLITARY, peduncle_cm=4.0, stem_radius_mm=4.0),
+        arrangement=SP, spiral_tepals=14, petal_length_cm=9.0, petal_aspect=2.6, widest_position=0.4,
+        base_angle_deg=40, apex_angle_deg=45, apex_curvature=0.1, opening_deg=8, inner_opening_deg=30,
+        inner_scale=0.45, reflex_deg=-8, cup=0.15, undulation=0.1, sepal_length_ratio=0.0, hypanthium_cm=0.0,
+        receptacle_radius_cm=0.9, stamen_count=14, stamen_length_ratio=0.05, stamen_spread_deg=10,
+        anther_size_mm=4.0, style_length_ratio=0.0, petal_color=(0.80, 0.05, 0.08), tip_color=(0.75, 0.04, 0.07),
+        guide_lines=3, guide_contrast=0.3, stamen_color=(0.45, 0.55, 0.25), anther_color=(0.95, 0.80, 0.10),
+        sheen=0.1),
+    # --- Tree flowers -------------------------------------------------------------------------------
+    "aesculus_hippocastanum": fl(
+        "Aesculus hippocastanum", "Horse chestnut (castaño de Indias)", "Sapindaceae", "↑ K(5) C4-5 A7 G(3)",
+        "Erect pyramidal thyrses ('candles'); clawed, frilled white petals with a yellow-to-red blotch.",
+        inf(I.PANICLE, flower_count=60, peduncle_cm=3.0, rachis_cm=22.0, branches=15, branch_length_ratio=0.22,
+            branch_angle_deg=70, pedicel_cm=1.0, pedicel_angle_deg=50, orientation=0.95, stem_radius_mm=3.0),
+        zygomorphy=0.6, lip_bias=0.4, petal_length_cm=1.3, petal_aspect=1.0, widest_position=0.75,
+        apex_angle_deg=170, apex_curvature=1.0, truncation=0.5, claw=0.3, undulation=0.45, opening_deg=40,
+        reflex_deg=-20, cup=0.2, sepal_length_ratio=0.3, stamen_count=7, stamen_length_ratio=1.3,
+        stamen_declination=0.6, style_length_ratio=1.2, petal_color=WHITE, tip_color=WHITE,
+        eye_color=(0.92, 0.55, 0.15), eye_size=0.3, anther_color=(0.75, 0.20, 0.15)),
+    "robinia_pseudoacacia": fl(
+        "Robinia pseudoacacia", "Black locust (falsa acacia)", "Fabaceae", "↑ K(5) C1+2+(2) A(9)+1 G1",
+        "Papilionaceous flowers (large standard, wings, keel) in pendulous axillary racemes.",
+        inf(I.RACEME, flower_count=18, peduncle_cm=2.0, rachis_cm=12.0, pedicel_cm=0.8, pedicel_angle_deg=60,
+            droop=0.9, nodding=0.3, site_mode=AX, orientation=0.6, stem_radius_mm=1.0),
+        zygomorphy=1.0, lip_bias=1.0, petal_length_cm=1.0, petal_aspect=1.0, widest_position=0.6,
+        apex_angle_deg=160, apex_curvature=0.8, opening_deg=45, reflex_deg=10, cup=0.6, sepal_length_ratio=0.4,
+        hypanthium_cm=0.2, stamen_count=10, stamen_length_ratio=0.6, stamen_declination=0.8,
+        style_length_ratio=0.6, petal_color=WHITE, tip_color=WHITE, eye_color=(0.95, 0.85, 0.35), eye_size=0.2),
+    "cercis_canadensis": fl(
+        "Cercis canadensis", "Eastern redbud", "Fabaceae", "↑ K(5) C5 A10 G1",
+        "Small magenta pea-like flowers in fascicles straight from old wood (cauliflory).",
+        inf(I.UMBEL, flower_count=6, peduncle_cm=0.1, pedicel_cm=1.2, pedicel_angle_deg=60, site_mode=AX,
+            orientation=0.0, stem_radius_mm=0.4),
+        zygomorphy=0.8, lip_bias=-0.3, petal_length_cm=0.7, petal_aspect=1.1, apex_angle_deg=150,
+        opening_deg=40, reflex_deg=5, cup=0.6, sepal_length_ratio=0.35, hypanthium_cm=0.25,
+        stamen_count=10, stamen_length_ratio=0.5, stamen_declination=0.6, style_length_ratio=0.5,
+        petal_color=(0.85, 0.32, 0.62), tip_color=(0.88, 0.40, 0.68), sepal_color=(0.55, 0.15, 0.30)),
+    "tilia_cordata": fl(
+        "Tilia cordata", "Small-leaved lime (tilo)", "Malvaceae", "K5 C5 A∞ G(5)",
+        "Pendent cymes of fragrant yellowish flowers with many stamens.",
+        inf(I.CORYMB, flower_count=7, peduncle_cm=3.0, rachis_cm=1.5, pedicel_cm=1.2, droop=0.7, nodding=0.6,
+            site_mode=AX, orientation=0.3, stem_radius_mm=0.6),
+        petal_length_cm=0.6, petal_aspect=2.0, opening_deg=30, reflex_deg=-10, cup=0.3, sepal_length_ratio=0.8,
+        stamen_count=30, stamen_length_ratio=1.0, stamen_spread_deg=45, style_length_ratio=0.8,
+        petal_color=(0.93, 0.92, 0.65), tip_color=(0.93, 0.92, 0.65), stamen_color=(0.93, 0.90, 0.60)),
+    "olea_europaea": fl(
+        "Olea europaea", "Olive (olivo)", "Oleaceae", "K(4) C(4) A2 G(2)",
+        "Small white four-lobed flowers with two stamens in axillary panicles.",
+        inf(I.PANICLE, flower_count=18, peduncle_cm=1.0, rachis_cm=3.5, branches=5, branch_length_ratio=0.35,
+            pedicel_cm=0.3, site_mode=AX, orientation=0.3, stem_radius_mm=0.4),
+        merosity=4, tube_length_cm=0.15, tube_radius_cm=0.06, petal_length_cm=0.3, petal_aspect=1.3,
+        opening_deg=5, reflex_deg=-20, cup=0.3, sepal_length_ratio=0.3, stamen_count=2, stamen_length_ratio=0.8,
+        anther_size_mm=1.0, carpels=2, style_length_ratio=0.4, petal_color=WHITE, tip_color=WHITE),
+    "eucalyptus_globulus": fl(
+        "Eucalyptus globulus", "Blue gum (eucalipto)", "Myrtaceae", "K0 C0 (operculum) A∞ G(4) inf",
+        "Petals fused into a cap shed at anthesis: the visible flower is a brush of radiating stamens.",
+        inf(I.SOLITARY, peduncle_cm=0.3, site_mode=AX, orientation=0.2, stem_radius_mm=1.5),
+        petals_visible=False, merosity=4, petal_length_cm=1.6, sepal_length_ratio=0.0, hypanthium_cm=1.0,
+        receptacle_radius_cm=0.8, stamen_count=280, stamen_length_ratio=0.85, stamen_spread_deg=80,
+        anther_size_mm=0.6, carpels=1, style_length_ratio=0.3, stamen_color=(0.97, 0.95, 0.86),
+        anther_color=(0.95, 0.88, 0.55), sepal_color=(0.45, 0.55, 0.55), pistil_color=(0.80, 0.80, 0.55)),
+    "ceiba_pentandra": fl(
+        "Ceiba pentandra", "Kapok (ceiba, pochote)", "Malvaceae", "K(5) C5 A(5) G(5)",
+        "Bat-pollinated flowers with five strongly reflexed petals and long stamens, in axillary fascicles.",
+        inf(I.UMBEL, flower_count=6, peduncle_cm=0.5, pedicel_cm=3.0, pedicel_angle_deg=50, site_mode=AX,
+            orientation=0.5, stem_radius_mm=1.0),
+        petal_length_cm=3.2, petal_aspect=2.6, opening_deg=10, reflex_deg=-80, cup=0.3, sepal_length_ratio=0.3,
+        hypanthium_cm=0.6, stamen_count=5, stamen_length_ratio=0.9, stamen_spread_deg=15, staminal_column=0.3,
+        style_length_ratio=1.0, petal_color=(0.97, 0.88, 0.88), tip_color=(0.92, 0.80, 0.85),
+        anther_color=(0.90, 0.80, 0.50)),
+    "acer_flowers": fl(
+        "Acer spp.", "Maple flowers (arce)", "Sapindaceae", "K5 C5 A8 G(2)",
+        "Small yellow-green flowers in drooping corymbs, appearing with the leaves.",
+        inf(I.CORYMB, flower_count=12, peduncle_cm=2.0, rachis_cm=2.0, pedicel_cm=2.0, droop=0.7, nodding=0.5,
+            site_mode=TERM, orientation=0.2, stem_radius_mm=0.5),
+        petal_length_cm=0.35, petal_aspect=1.8, opening_deg=40, cup=0.3, sepal_length_ratio=0.9,
+        stamen_count=8, stamen_length_ratio=1.0, style_length_ratio=0.6, carpels=2,
+        petal_color=(0.80, 0.85, 0.35), tip_color=(0.80, 0.85, 0.35), sepal_color=(0.62, 0.72, 0.30)),
+    "catkin_amentum": fl(
+        "Amentum", "Catkin (amento: Quercus, Betula, Salix, Juglans)", "Fagales / Salicaceae", "♂ P4-6 A4-12",
+        "Wind-pollinated reduced flowers on a pendulous spike; tiny perianth, exserted stamens.",
+        inf(I.CATKIN, flower_count=30, peduncle_cm=0.4, rachis_cm=6.0, droop=0.95, site_mode=AX, orientation=0.3,
+            stem_radius_mm=0.5, stem_color=(0.45, 0.48, 0.25)),
+        merosity=4, petal_length_cm=0.18, petal_aspect=1.2, opening_deg=50, cup=0.4, sepal_length_ratio=0.0,
+        hypanthium_cm=0.0, receptacle_radius_cm=0.05, stamen_count=6, stamen_length_ratio=1.8,
+        stamen_spread_deg=30, anther_size_mm=0.9, style_length_ratio=0.0, petal_color=(0.62, 0.62, 0.30),
+        tip_color=(0.60, 0.60, 0.28), anther_color=(0.90, 0.80, 0.25), stamen_color=(0.75, 0.72, 0.40)),
+    # --- Cactaceae ----------------------------------------------------------------------------------
+    "carnegiea_gigantea": fl(
+        "Carnegiea gigantea", "Saguaro flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Waxy white funnelform flowers near the stem tips; scaly pericarpel, hundreds of stamens.",
+        inf(I.SOLITARY, peduncle_cm=0.0, stem_radius_mm=1.0),
+        arrangement=SP, spiral_tepals=30, merosity=12, tube_length_cm=3.5, tube_radius_cm=0.9, tube_flare=2.0,
+        petal_length_cm=3.5, petal_aspect=1.6, widest_position=0.65, apex_angle_deg=140, opening_deg=35,
+        inner_opening_deg=55, inner_scale=0.8, reflex_deg=-20, cup=0.4, sepal_length_ratio=0.0,
+        hypanthium_cm=2.0, hypanthium_scales=12, receptacle_radius_cm=0.9, stamen_count=300,
+        stamen_length_ratio=0.5, stamen_spread_deg=25, anther_size_mm=1.2, carpels=10, style_length_ratio=0.95,
+        stigma_size_mm=3.0, petal_color=(0.98, 0.97, 0.93), tip_color=(0.97, 0.96, 0.92),
+        outer_color=(0.55, 0.60, 0.40), outer_tint=0.6, stamen_color=(0.97, 0.95, 0.85),
+        anther_color=(0.95, 0.85, 0.40), pistil_color=(0.95, 0.95, 0.80), sepal_color=(0.35, 0.50, 0.30),
+        sheen=0.1, translucency=0.45),
+    "opuntia_ficus_indica": fl(
+        "Opuntia ficus-indica", "Prickly pear (flor de nopal)", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Yellow cup-shaped flowers on the pad margins; long areolate pericarpel (future tuna), green stigma.",
+        inf(I.SOLITARY, peduncle_cm=0.0, stem_radius_mm=1.0),
+        arrangement=SP, spiral_tepals=18, petal_length_cm=3.0, petal_aspect=1.0, widest_position=0.75,
+        apex_angle_deg=170, apex_curvature=0.9, truncation=0.4, opening_deg=30, inner_opening_deg=60,
+        inner_scale=0.9, reflex_deg=-5, cup=0.7, sepal_length_ratio=0.0, hypanthium_cm=4.0, hypanthium_scales=16,
+        receptacle_radius_cm=1.2, stamen_count=250, stamen_length_ratio=0.4, stamen_spread_deg=30,
+        anther_size_mm=1.0, carpels=8, style_length_ratio=0.55, stigma_size_mm=3.0,
+        petal_color=(0.98, 0.80, 0.10), tip_color=(0.98, 0.82, 0.12), outer_color=(0.85, 0.50, 0.15),
+        outer_tint=0.3, stamen_color=(0.97, 0.88, 0.40), anther_color=(0.98, 0.85, 0.30),
+        pistil_color=(0.30, 0.70, 0.25), sepal_color=(0.35, 0.55, 0.30), sheen=0.2),
+    "echinopsis_pachanoi": fl(
+        "Echinopsis pachanoi", "San Pedro flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Huge nocturnal white trumpet: long hairy tube flaring into spiral tepals.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=24, merosity=12, tube_length_cm=14.0, tube_radius_cm=0.6, tube_flare=3.0,
+        petal_length_cm=7.0, petal_aspect=2.2, widest_position=0.6, apex_angle_deg=110, opening_deg=15,
+        inner_opening_deg=40, inner_scale=0.85, reflex_deg=-20, cup=0.3, sepal_length_ratio=0.0,
+        hypanthium_cm=2.5, hypanthium_scales=14, receptacle_radius_cm=0.8, stamen_count=200,
+        stamen_length_ratio=0.5, stamen_spread_deg=10, carpels=12, style_length_ratio=0.8,
+        petal_color=(0.98, 0.98, 0.96), tip_color=(0.98, 0.98, 0.96), outer_color=(0.55, 0.45, 0.35),
+        outer_tint=0.6, sepal_color=(0.30, 0.38, 0.25)),
+    "echinocactus_grusonii": fl(
+        "Echinocactus grusonii", "Golden barrel flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Ring of small yellow, narrow-tepaled flowers sunk in the woolly apex.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=22, petal_length_cm=2.5, petal_aspect=3.2, widest_position=0.6,
+        apex_angle_deg=60, opening_deg=65, inner_opening_deg=80, inner_scale=0.85, reflex_deg=-5, cup=0.3,
+        sepal_length_ratio=0.0, hypanthium_cm=1.5, hypanthium_scales=15, receptacle_radius_cm=0.6,
+        stamen_count=120, stamen_length_ratio=0.45, stamen_spread_deg=10, carpels=8, style_length_ratio=0.6,
+        petal_color=(0.98, 0.85, 0.20), tip_color=(0.95, 0.80, 0.25), outer_color=(0.75, 0.55, 0.25),
+        outer_tint=0.4, sepal_color=(0.85, 0.75, 0.50), sheen=0.6),
+    "ferocactus_wislizeni": fl(
+        "Ferocactus wislizeni", "Fishhook barrel flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Crown of orange-red cup-shaped flowers around the apex.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=24, petal_length_cm=3.0, petal_aspect=2.6, widest_position=0.6,
+        apex_angle_deg=70, opening_deg=55, inner_opening_deg=75, inner_scale=0.85, reflex_deg=-5, cup=0.35,
+        sepal_length_ratio=0.0, hypanthium_cm=1.5, hypanthium_scales=18, receptacle_radius_cm=0.8,
+        stamen_count=150, stamen_length_ratio=0.4, carpels=10, style_length_ratio=0.55,
+        petal_color=(0.92, 0.38, 0.12), tip_color=(0.95, 0.55, 0.15), outer_color=(0.65, 0.35, 0.15),
+        outer_tint=0.5, sepal_color=(0.55, 0.45, 0.20)),
+    "mammillaria_hahniana": fl(
+        "Mammillaria hahniana", "Old lady cactus flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Crown of small magenta flowers between the tubercles near the apex.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=14, petal_length_cm=0.9, petal_aspect=3.5, apex_angle_deg=60,
+        opening_deg=45, inner_opening_deg=70, inner_scale=0.85, cup=0.3, sepal_length_ratio=0.0,
+        hypanthium_cm=0.3, receptacle_radius_cm=0.2, stamen_count=30, stamen_length_ratio=0.5,
+        carpels=5, style_length_ratio=0.7, petal_color=(0.85, 0.18, 0.55), tip_color=(0.88, 0.25, 0.60),
+        outer_color=(0.60, 0.30, 0.35), outer_tint=0.4, pistil_color=(0.90, 0.60, 0.70)),
+    "lophophora_williamsii": fl(
+        "Lophophora williamsii", "Peyote flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Single pale pink flower from the woolly apex.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=16, petal_length_cm=1.1, petal_aspect=3.0, apex_angle_deg=70,
+        opening_deg=35, inner_opening_deg=60, inner_scale=0.85, cup=0.3, sepal_length_ratio=0.0,
+        hypanthium_cm=0.4, receptacle_radius_cm=0.25, stamen_count=40, stamen_length_ratio=0.45, carpels=5,
+        style_length_ratio=0.6, petal_color=(0.96, 0.75, 0.82), tip_color=(0.97, 0.80, 0.86),
+        outer_color=(0.75, 0.55, 0.55), outer_tint=0.3),
+    "pachycereus_columnar": fl(
+        "Pachycereus spp.", "Columnar cactus flower (cardón, órgano, candelabro)", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Nocturnal cream funnelform flowers near the branch tips; pericarpel with felted, bristly areoles.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=20, merosity=10, tube_length_cm=4.0, tube_radius_cm=0.8, tube_flare=2.0,
+        petal_length_cm=2.4, petal_aspect=2.0, apex_angle_deg=110, opening_deg=30, inner_opening_deg=50,
+        inner_scale=0.85, reflex_deg=-15, cup=0.3, sepal_length_ratio=0.0, hypanthium_cm=3.0,
+        hypanthium_scales=16, receptacle_radius_cm=0.9, stamen_count=200, stamen_length_ratio=0.5, carpels=10,
+        style_length_ratio=0.9, petal_color=(0.96, 0.93, 0.82), tip_color=(0.96, 0.92, 0.80),
+        outer_color=(0.55, 0.38, 0.30), outer_tint=0.6, sepal_color=(0.40, 0.30, 0.22)),
+    "myrtillocactus_geometrizans": fl(
+        "Myrtillocactus geometrizans", "Garambullo flower", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Several small, nearly rotate cream flowers per areole.",
+        inf(I.UMBEL, flower_count=4, peduncle_cm=0.0, pedicel_cm=0.3, pedicel_angle_deg=50),
+        arrangement=SP, spiral_tepals=14, petal_length_cm=1.1, petal_aspect=3.0, apex_angle_deg=70,
+        opening_deg=5, inner_opening_deg=25, inner_scale=0.9, reflex_deg=-20, cup=0.2, sepal_length_ratio=0.0,
+        hypanthium_cm=0.4, hypanthium_scales=6, receptacle_radius_cm=0.25, stamen_count=40,
+        stamen_length_ratio=0.5, carpels=5, style_length_ratio=0.6, petal_color=(0.95, 0.95, 0.85),
+        tip_color=(0.95, 0.95, 0.86), outer_color=(0.55, 0.45, 0.45), outer_tint=0.4),
+    "euphorbia_cyathia": fl(
+        "Euphorbia spp.", "Cyathia (succulent Euphorbia)", "Euphorbiaceae", "cyathium: ♂ A1 ×∞, ♀ G(3)",
+        "Tiny yellow-green cyathia with nectar glands along the rib crests.",
+        inf(I.UMBEL, flower_count=3, peduncle_cm=0.3, pedicel_cm=0.4, pedicel_angle_deg=50, stem_radius_mm=1.0),
+        merosity=5, petal_length_cm=0.25, petal_aspect=0.8, opening_deg=40, cup=0.6, sepal_length_ratio=0.0,
+        hypanthium_cm=0.2, receptacle_radius_cm=0.15, stamen_count=6, stamen_length_ratio=0.8, carpels=3,
+        style_length_ratio=0.8, petal_color=(0.90, 0.85, 0.20), tip_color=(0.90, 0.85, 0.20)),
+    # --- Rosette succulents -------------------------------------------------------------------------
+    "agave_americana": fl(
+        "Agave americana", "Maguey inflorescence (quiote)", "Asparagaceae", "P(3+3) A3+3 G(3) inf",
+        "Monocarpic paniculate scape several metres tall; upward-facing yellow flowers in umbellate clusters "
+        "on short laterals, with long exserted stamens.",
+        inf(I.PANICLE, flower_count=220, peduncle_cm=250.0, rachis_cm=350.0, branches=22, branch_start=0.35,
+            branch_length_ratio=0.16, branch_angle_deg=75, branch_umbels=True, pedicel_cm=1.5,
+            pedicel_angle_deg=35, maturation=0.5, stem_radius_mm=55.0, stem_color=(0.42, 0.48, 0.30),
+            orientation=1.0),
+        merosity=6, tube_length_cm=1.4, tube_radius_cm=0.45, tube_flare=1.0, petal_length_cm=2.5, petal_aspect=4.0,
+        widest_position=0.4, apex_angle_deg=50, opening_deg=80, reflex_deg=8, cup=0.5, sepal_length_ratio=0.0,
+        hypanthium_cm=3.0, receptacle_radius_cm=0.45, stamen_count=6, stamen_length_ratio=2.6,
+        stamen_spread_deg=12, anther_size_mm=25.0, carpels=3, style_length_ratio=2.5, stigma_size_mm=2.0,
+        petal_color=(0.92, 0.82, 0.25), tip_color=(0.95, 0.85, 0.30), stamen_color=(0.90, 0.85, 0.40),
+        anther_color=(0.95, 0.78, 0.20), sepal_color=(0.40, 0.55, 0.25)),
+    "agave_spicata": fl(
+        "Agave (spicate)", "Spicate agave inflorescence", "Asparagaceae", "P(3+3) A3+3 G(3) inf",
+        "Dense spike of paired cream flowers tinged purple (Agave victoriae-reginae, A. lechuguilla).",
+        inf(I.SPIKE, flower_count=160, peduncle_cm=60.0, rachis_cm=200.0, pedicel_angle_deg=65, maturation=0.6,
+            stem_radius_mm=15.0, stem_color=(0.40, 0.42, 0.28), orientation=1.0),
+        merosity=6, tube_length_cm=0.5, tube_radius_cm=0.25, petal_length_cm=1.6, petal_aspect=4.0,
+        apex_angle_deg=50, opening_deg=75, cup=0.4, sepal_length_ratio=0.0, hypanthium_cm=1.5,
+        receptacle_radius_cm=0.3, stamen_count=6, stamen_length_ratio=2.5, anther_size_mm=12.0, carpels=3,
+        style_length_ratio=2.4, petal_color=(0.92, 0.88, 0.70), tip_color=(0.60, 0.30, 0.45), tip_start=0.55,
+        stamen_color=(0.60, 0.30, 0.45), anther_color=(0.95, 0.80, 0.30)),
+    "aloe_vera": fl(
+        "Aloe vera", "Aloe inflorescence (sábila)", "Asphodelaceae", "P(3+3) A3+3 G(3)",
+        "Erect raceme of pendulous tubular yellow flowers on a tall scape.",
+        inf(I.RACEME, flower_count=34, peduncle_cm=55.0, rachis_cm=25.0, pedicel_cm=0.5, pedicel_angle_deg=70,
+            nodding=0.85, maturation=0.9, stem_radius_mm=6.0, stem_color=(0.45, 0.52, 0.35), orientation=1.0),
+        merosity=6, tube_length_cm=2.2, tube_radius_cm=0.32, tube_flare=1.0, petal_length_cm=0.5, petal_aspect=1.5,
+        apex_angle_deg=90, opening_deg=70, reflex_deg=-10, cup=0.3, sepal_length_ratio=0.0, hypanthium_cm=0.0,
+        stamen_count=6, stamen_length_ratio=1.5, stamen_spread_deg=4, carpels=3, style_length_ratio=1.5,
+        petal_color=(0.98, 0.80, 0.15), tip_color=(0.85, 0.80, 0.30), limb_fusion=0.5),
+    "echeveria": fl(
+        "Echeveria spp.", "Echeveria inflorescence", "Crassulaceae", "K5 C(5) A10 G5",
+        "Lateral arching cincinnus of pentagonal urn-shaped coral flowers with yellow tips.",
+        inf(I.RACEME, flower_count=12, peduncle_cm=14.0, rachis_cm=14.0, pedicel_cm=0.4, pedicel_angle_deg=60,
+            droop=0.6, nodding=0.7, maturation=0.9, site_mode=AX, orientation=0.6, stem_radius_mm=2.5,
+            stem_color=(0.75, 0.45, 0.40)),
+        tube_length_cm=0.9, tube_radius_cm=0.3, tube_flare=0.7, petal_length_cm=0.45, petal_aspect=2.0,
+        apex_angle_deg=60, opening_deg=80, reflex_deg=-25, cup=0.5, sepal_length_ratio=0.8, sepal_aspect=2.0,
+        sepal_opening_deg=60, hypanthium_cm=0.0, stamen_count=10, stamen_length_ratio=0.9, stamen_spread_deg=3,
+        petal_color=(0.95, 0.42, 0.30), tip_color=(0.98, 0.82, 0.30), tip_start=0.55,
+        sepal_color=(0.70, 0.55, 0.50), limb_fusion=0.6),
+    "aeonium_arboreum": fl(
+        "Aeonium arboreum", "Aeonium inflorescence", "Crassulaceae", "K9 C9 A18 G9",
+        "Terminal pyramidal panicle of starry yellow flowers (merosity 6-12).",
+        inf(I.PANICLE, flower_count=150, peduncle_cm=6.0, rachis_cm=20.0, branches=20, branch_length_ratio=0.45,
+            branch_angle_deg=60, pedicel_cm=0.4, stem_radius_mm=4.0, orientation=1.0),
+        merosity=9, petal_length_cm=0.6, petal_aspect=4.0, apex_angle_deg=60, opening_deg=0, cup=0.2,
+        sepal_length_ratio=0.3, stamen_count=18, stamen_length_ratio=0.7, style_length_ratio=0.5, carpels=9,
+        petal_color=(0.98, 0.88, 0.25), tip_color=(0.98, 0.88, 0.25)),
+    "sempervivum": fl(
+        "Sempervivum tectorum", "Houseleek flowers", "Crassulaceae", "K12 C12 A24 G12",
+        "Starry pink flowers with 12 narrow petals in a flat cyme on a leafy stalk.",
+        inf(I.CORYMB, flower_count=14, peduncle_cm=15.0, rachis_cm=4.0, pedicel_cm=1.0, stem_radius_mm=4.0,
+            stem_color=(0.55, 0.50, 0.40), orientation=1.0),
+        merosity=12, petal_length_cm=1.1, petal_aspect=5.5, apex_angle_deg=50, opening_deg=0, reflex_deg=-5,
+        cup=0.2, sepal_length_ratio=0.5, stamen_count=24, stamen_length_ratio=0.6, carpels=12,
+        style_length_ratio=0.5, petal_color=(0.88, 0.45, 0.62), tip_color=(0.92, 0.60, 0.72),
+        guide_lines=1, guide_contrast=0.5),
+    "haworthia": fl(
+        "Haworthiopsis spp.", "Haworthia inflorescence", "Asphodelaceae", "P(3+3) A6 G(3)",
+        "Thin, tall raceme of small bilabiate whitish tubular flowers.",
+        inf(I.RACEME, flower_count=14, peduncle_cm=22.0, rachis_cm=14.0, pedicel_cm=0.2, pedicel_angle_deg=60,
+            nodding=0.2, stem_radius_mm=1.0, orientation=1.0),
+        merosity=6, zygomorphy=0.5, lip_bias=-0.3, tube_length_cm=0.8, tube_radius_cm=0.12, petal_length_cm=0.3,
+        petal_aspect=1.8, opening_deg=30, reflex_deg=-20, cup=0.3, sepal_length_ratio=0.0, stamen_count=6,
+        stamen_length_ratio=0.4, petal_color=(0.95, 0.94, 0.90), tip_color=(0.90, 0.88, 0.85), guide_lines=1,
+        guide_contrast=0.5, eye_color=(0.45, 0.45, 0.35)),
+    "dudleya": fl(
+        "Dudleya spp.", "Dudleya inflorescence", "Crassulaceae", "K5 C5 A10 G5",
+        "Lateral, red-stalked panicle of erect pale-yellow flowers.",
+        inf(I.PANICLE, flower_count=36, peduncle_cm=30.0, rachis_cm=12.0, branches=4, branch_length_ratio=0.6,
+            pedicel_cm=0.3, site_mode=AX, orientation=0.7, stem_radius_mm=3.0, stem_color=(0.70, 0.35, 0.35)),
+        petal_length_cm=0.9, petal_aspect=3.0, opening_deg=70, reflex_deg=10, cup=0.4, sepal_length_ratio=0.5,
+        stamen_count=10, stamen_length_ratio=0.8, petal_color=(0.95, 0.90, 0.55), tip_color=(0.96, 0.92, 0.60)),
+    "graptopetalum": fl(
+        "Graptopetalum paraguayense", "Ghost plant flowers", "Crassulaceae", "K5 C5 A10 G5",
+        "Star-shaped white flowers with red speckles in a lax lateral cyme.",
+        inf(I.CORYMB, flower_count=8, peduncle_cm=10.0, rachis_cm=3.0, pedicel_cm=1.2, site_mode=AX,
+            orientation=0.6, stem_radius_mm=1.5, stem_color=(0.60, 0.55, 0.50)),
+        petal_length_cm=0.8, petal_aspect=3.0, apex_angle_deg=60, opening_deg=0, reflex_deg=-10, cup=0.15,
+        sepal_length_ratio=0.5, stamen_count=10, stamen_length_ratio=0.5, petal_color=(0.97, 0.95, 0.92),
+        tip_color=(0.95, 0.90, 0.88), spots=0.6, spot_color=(0.75, 0.15, 0.15)),
+}
+
+# Default flowers of the plant presets (None = no showy flowers: conifers, ginkgo, wind-pollinated without catkins)
+TREE_FLOWERS = {
+    "quercus_robur": "catkin_amentum", "quercus_rubra": "catkin_amentum", "quercus_agrifolia": "catkin_amentum",
+    "fagus_sylvatica": "catkin_amentum", "castanea_sativa": "catkin_amentum", "betula_pendula": "catkin_amentum",
+    "populus_tremula": "catkin_amentum", "populus_nigra_italica": "catkin_amentum",
+    "salix_babylonica": "catkin_amentum", "juglans_regia": "catkin_amentum",
+    "acer_palmatum": "acer_flowers", "acer_pseudoplatanus": "acer_flowers", "acer_saccharum": "acer_flowers",
+    "aesculus_hippocastanum": "aesculus_hippocastanum", "tilia_cordata": "tilia_cordata",
+    "liriodendron_tulipifera": "liriodendron_tulipifera", "prunus_avium": "prunus_avium",
+    "malus_domestica": "malus_domestica", "magnolia_grandiflora": "magnolia_grandiflora",
+    "olea_europaea": "olea_europaea", "cercis_canadensis": "cercis_canadensis",
+    "eucalyptus_globulus": "eucalyptus_globulus", "ceiba_pentandra": "ceiba_pentandra",
+    "robinia_pseudoacacia": "robinia_pseudoacacia", "platanus_hispanica": "catkin_amentum",
+}
+CACTUS_FLOWERS = {
+    "carnegiea_gigantea": "carnegiea_gigantea", "pachycereus_pringlei": "pachycereus_columnar",
+    "pachycereus_weberi": "pachycereus_columnar", "pachycereus_marginatus": "pachycereus_columnar",
+    "myrtillocactus_geometrizans": "myrtillocactus_geometrizans", "echinopsis_pachanoi": "echinopsis_pachanoi",
+    "cephalocereus_senilis": "pachycereus_columnar", "ferocactus_wislizeni": "ferocactus_wislizeni",
+    "echinocactus_grusonii": "echinocactus_grusonii", "mammillaria_hahniana": "mammillaria_hahniana",
+    "lophophora_williamsii": "lophophora_williamsii", "astrophytum_myriostigma": "echinocactus_grusonii",
+    "opuntia_ficus_indica": "opuntia_ficus_indica", "opuntia_microdasys": "opuntia_ficus_indica",
+    "euphorbia_ingens": "euphorbia_cyathia",
+}
+ROSETTE_FLOWERS = {
+    "echeveria_elegans": "echeveria", "echeveria_agavoides": "echeveria", "agave_americana": "agave_americana",
+    "agave_tequilana": "agave_americana", "agave_victoriae_reginae": "agave_spicata", "aloe_vera": "aloe_vera",
+    "haworthiopsis_attenuata": "haworthia", "sempervivum_tectorum": "sempervivum",
+    "aeonium_arboreum": "aeonium_arboreum", "graptopetalum_paraguayense": "graptopetalum",
+    "dudleya_brittonii": "dudleya",
+}
+
+FLOWER_RANGES = {
+    "merosity": (2, 16), "petal_whorls": (1, 8), "spiral_tepals": (0, 200), "zygomorphy": (0.0, 1.0),
+    "lip_bias": (-1.0, 1.0), "petal_length_cm": (0.05, 30.0), "petal_aspect": (0.3, 12.0),
+    "widest_position": (0.05, 0.95), "base_angle_deg": (5.0, 179.0), "apex_angle_deg": (5.0, 179.0),
+    "apex_curvature": (-1.0, 1.0), "claw": (0.0, 0.8), "truncation": (0.0, 1.0), "notch": (0.0, 0.5),
+    "fringe": (0.0, 0.5), "fringe_count": (0, 40), "undulation": (0.0, 1.0), "opening_deg": (-60.0, 90.0),
+    "reflex_deg": (-220.0, 120.0), "cup": (-1.0, 2.0), "twist_deg": (-90.0, 90.0), "inner_scale": (0.1, 1.5),
+    "inner_opening_deg": (-30.0, 95.0), "tube_length_cm": (0.0, 30.0), "tube_radius_cm": (0.01, 5.0),
+    "tube_flare": (0.3, 5.0), "limb_fusion": (0.0, 1.0), "sepal_length_ratio": (0.0, 2.0), "sepal_aspect": (0.5, 10.0),
+    "sepal_opening_deg": (-80.0, 90.0), "hypanthium_cm": (0.0, 10.0), "hypanthium_scales": (0, 60),
+    "stamen_count": (0, 600), "stamen_length_ratio": (0.0, 4.0), "stamen_spread_deg": (0.0, 90.0),
+    "anther_size_mm": (0.1, 40.0), "staminal_column": (0.0, 1.0), "stamen_declination": (0.0, 1.0),
+    "carpels": (1, 20), "style_length_ratio": (0.0, 4.0), "stigma_size_mm": (0.1, 10.0),
+    "receptacle_radius_cm": (0.0, 5.0), "receptacle_height_cm": (0.0, 10.0), "disc_florets": (0, 3000),
+    "disc_radius_cm": (0.1, 25.0), "disc_dome": (0.0, 1.0), "ray_count": (0, 400), "ray_fill": (0.0, 1.0),
+    "involucre_bracts": (0, 80), "tip_start": (0.0, 1.0), "eye_size": (0.0, 1.0), "guide_lines": (0, 12),
+    "guide_contrast": (0.0, 1.0), "spots": (0.0, 1.0), "outer_tint": (0.0, 1.0), "sheen": (0.0, 1.0),
+    "translucency": (0.0, 1.0),
+}
+INFL_RANGES = {
+    "flower_count": (1, 600), "peduncle_cm": (0.0, 800.0), "rachis_cm": (0.0, 800.0), "pedicel_cm": (0.0, 30.0),
+    "pedicel_angle_deg": (0.0, 120.0), "divergence_deg": (30.0, 180.0), "branches": (0, 60),
+    "branch_start": (0.0, 0.95), "branch_length_ratio": (0.02, 1.0), "branch_angle_deg": (5.0, 110.0),
+    "maturation": (0.0, 1.0), "nodding": (0.0, 1.0), "droop": (0.0, 1.0), "stem_radius_mm": (0.1, 120.0),
+    "orientation": (0.0, 1.0),
+}
+
+
+def flower_items() -> list[tuple[str, str, str]]:
+    return [(k, f"{v.scientific_name} ({v.common_name})", f"{v.family}: {v.formula}. {v.notes}")
+            for k, v in sorted(FLOWER_CATALOG.items(), key=lambda kv: kv[1].scientific_name)]

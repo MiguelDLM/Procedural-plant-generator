@@ -84,6 +84,17 @@ class PPG_OT_ApplySpeciesPreset(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
+        if props.growth_form == 'Flower':
+            from .flowers import write_flower_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_flower_to_props(props, props.flower_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded flower preset")
+            return {'FINISHED'}
         if props.growth_form != 'Tree':
             from .runtime import apply_succulent_preset
             apply_succulent_preset(props, context)
@@ -102,6 +113,11 @@ class PPG_OT_ApplyVariant(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
+        if props.growth_form == 'Flower':
+            from .flowers import flower_variant
+            flower_variant(props)
+            self.report({'INFO'}, "Flower variant written to the sliders")
+            return {'FINISHED'}
         apply_variant_to_props(props, context)
         if props.growth_form != 'Tree':
             self.report({'INFO'}, "Variant written to the sliders")
@@ -127,6 +143,21 @@ class PPG_OT_ExportTraits(Operator):
         def plain(v):
             return v.value if hasattr(v, "value") else (list(v) if isinstance(v, tuple) else v)
 
+        if props.growth_form == 'Flower':
+            from dataclasses import fields as dc_fields
+            from .flowers import flower_from_props
+            from ..core.flower_db import FLOWER_CATALOG
+            f, ip = flower_from_props(props)
+            sp = FLOWER_CATALOG[props.flower_species]
+            data = {"growth_form": "Flower", "species": sp.scientific_name, "common_name": sp.common_name,
+                    "family": sp.family, "floral_formula": sp.formula,
+                    "flower": {x.name: plain(getattr(f, x.name)) for x in dc_fields(f)},
+                    "inflorescence": {x.name: plain(getattr(ip, x.name)) for x in dc_fields(ip)}}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
         if props.growth_form != 'Tree':
             from dataclasses import fields as dc_fields
             from .succulents import profile_from_props

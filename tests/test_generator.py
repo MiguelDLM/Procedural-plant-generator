@@ -572,5 +572,119 @@ class TestCatalog(unittest.TestCase):
         self.assertEqual(get_po_term("PO:0005022").name, "leaf vein")
 
 
+class TestFlowers(unittest.TestCase):
+    """Floral diagrams, capitula, inflorescences and flower sites on plants."""
+
+    def _organs(self, mesh, code):
+        from core.flower import PETAL
+        A = mesh.point_attributes
+        return len(np.unique(A["orand"][A["organ"] == code]))
+
+    def test_whorled_and_spiral_organ_counts(self):
+        from core.flower import FlowerEngine, FlowerProfile, Arrangement, PETAL, SEPAL
+        f = FlowerProfile(merosity=5, petal_whorls=1, sepal_length_ratio=0.5, hypanthium_cm=0.0)
+        m = FlowerEngine(f).generate(1.0, 0.5, 3).mesh
+        self.assertEqual(self._organs(m, PETAL), 5)
+        self.assertEqual(self._organs(m, SEPAL), 5)
+        f2 = FlowerProfile(merosity=3, petal_whorls=2, sepal_length_ratio=0.0, hypanthium_cm=0.0)
+        self.assertEqual(self._organs(FlowerEngine(f2).generate(1.0, 0.5, 3).mesh, PETAL), 6)
+        f3 = FlowerProfile(arrangement=Arrangement.SPIRAL, spiral_tepals=21, sepal_length_ratio=0.0, hypanthium_cm=0.0)
+        self.assertEqual(self._organs(FlowerEngine(f3).generate(1.0, 0.5, 3).mesh, PETAL), 21)
+
+    def test_bud_is_closed_and_smaller(self):
+        from core.flower_db import FLOWER_CATALOG
+        from core.flower import FlowerEngine
+        eng = FlowerEngine(FLOWER_CATALOG["rosa_canina"].flower)
+        bud, open_ = eng.generate(0.1, 0.5, 1), eng.generate(1.0, 0.5, 1)
+        self.assertLess(bud.diameter_m, 0.5 * open_.diameter_m)
+
+    def test_capitulum_vogel_spiral(self):
+        from core.flower_db import FLOWER_CATALOG
+        from core.flower import FlowerEngine, FLORET
+        f = FLOWER_CATALOG["helianthus_annuus"].flower
+        m = FlowerEngine(f).generate(1.0, 0.5, 1).mesh
+        A = m.point_attributes
+        V = m.vertices[A["organ"] == FLORET].reshape(-1, 13, 3)
+        self.assertEqual(len(V), f.disc_florets)
+        r = np.hypot(V[:, 12, 0], V[:, 12, 1])                    # Floret apex radius
+        k = np.arange(len(r))
+        # Vogel: r_k = c sqrt(k + 1/2) -> r^2 linear in k
+        self.assertGreater(np.corrcoef(r ** 2, k)[0, 1], 0.999)
+
+    def test_zygomorphy_is_bilateral(self):
+        from core.flower import FlowerEngine, FlowerProfile, PETAL
+        f = FlowerProfile(zygomorphy=1.0, lip_bias=-0.8, sepal_length_ratio=0.0, hypanthium_cm=0.0, stamen_count=0,
+                          style_length_ratio=0.0)
+        V = FlowerEngine(f).generate(1.0, 0.6, 1).mesh.vertices
+        self.assertAlmostEqual(float(V[:, 0].max()), float(-V[:, 0].min()), delta=0.08 * float(np.ptp(V[:, 0])))
+        self.assertGreater(abs(float(V[:, 1].max()) + float(V[:, 1].min())), 0.1 * float(np.ptp(V[:, 1])))
+
+    def test_fused_limb_covers_rim(self):
+        from core.flower_db import FLOWER_CATALOG
+        from core.flower import FlowerEngine, PETAL
+        m = FlowerEngine(FLOWER_CATALOG["ipomoea_purpurea"].flower).generate(1.0, 1.5, 1).mesh
+        V, A = m.vertices, m.point_attributes
+        sel = (A["organ"] == PETAL) & (A["pu"] > 0.6)
+        az = np.degrees(np.arctan2(V[sel, 1], V[sel, 0])) % 360
+        h, _ = np.histogram(az, bins=36, range=(0, 360))
+        self.assertTrue(np.all(h > 0))                             # No gaps between fused lobes
+
+    def test_inflorescence_types(self):
+        from core.flower_db import FLOWER_CATALOG
+        from core.inflorescence import InflorescenceEngine, InflorescenceProfile, InflorescenceType as T
+        f = FLOWER_CATALOG["prunus_avium"].flower
+        for kind, n in ((T.SOLITARY, 1), (T.RACEME, 12), (T.SPIKE, 12), (T.UMBEL, 6), (T.CORYMB, 7)):
+            r = InflorescenceEngine(f, InflorescenceProfile(kind=kind, flower_count=n, rachis_cm=10)).generate(seed=2)
+            self.assertEqual(r.flower_count, n, kind)
+            self.assertTrue(np.isfinite(r.mesh.vertices).all())
+        pan = InflorescenceEngine(f, InflorescenceProfile(kind=T.PANICLE, flower_count=40, branches=8,
+                                                          rachis_cm=20)).generate(seed=2)
+        self.assertGreaterEqual(pan.flower_count, 40)
+        # Corymb: flowers reach a common level
+        cor = InflorescenceEngine(f, InflorescenceProfile(kind=T.CORYMB, flower_count=7, rachis_cm=10,
+                                                          peduncle_cm=2)).generate(seed=2, max_flowers=7)
+        self.assertGreater(cor.width_m, 0.0)
+
+    def test_catalog_and_plant_mappings(self):
+        from core.flower_db import FLOWER_CATALOG, TREE_FLOWERS, CACTUS_FLOWERS, ROSETTE_FLOWERS
+        from core.species_db import SPECIES_CATALOG
+        from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
+        from core.inflorescence import InflorescenceEngine
+        for mapping, cat in ((TREE_FLOWERS, SPECIES_CATALOG), (CACTUS_FLOWERS, CACTUS_CATALOG),
+                             (ROSETTE_FLOWERS, ROSETTE_CATALOG)):
+            for plant, flower in mapping.items():
+                self.assertIn(plant, cat)
+                self.assertIn(flower, FLOWER_CATALOG)
+        self.assertEqual(set(CACTUS_FLOWERS), set(CACTUS_CATALOG))
+        self.assertEqual(set(ROSETTE_FLOWERS), set(ROSETTE_CATALOG))
+        for key, sp in FLOWER_CATALOG.items():
+            r = InflorescenceEngine(sp.flower, sp.infl).generate(seed=1, detail=0.4, max_flowers=30)
+            self.assertTrue(np.isfinite(r.mesh.vertices).all(), key)
+            self.assertGreater(len(r.mesh.vertices), 50, key)
+
+    def test_flower_sites_on_plants(self):
+        from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
+        from core.cactus import CactusEngine
+        from core.rosette import RosetteEngine
+        from core.inflorescence import surface_flower_sites, tree_flower_sites, InflorescenceProfile
+        from core.species_db import get_species_preset
+        from core.plant_pipeline import BotanicalPlantPipeline
+        sag = CactusEngine(CACTUS_CATALOG["echinocactus_grusonii"].profile).generate(seed=1, detail=0.4,
+                                                                                    spine_budget=50)
+        s = surface_flower_sites(sag.flower_pos, sag.flower_normal, sag.flower_weight, 12, seed=1)
+        self.assertEqual(len(s), 12)
+        self.assertGreater(float(s.positions[:, 2].min()), 0.6 * sag.height_m)   # Crown of the barrel
+        op = CactusEngine(CACTUS_CATALOG["opuntia_ficus_indica"].profile).generate(seed=1, detail=0.4)
+        self.assertGreater(int((op.flower_weight > 0).sum()), 10)                 # Pad-margin areoles
+        ros = RosetteEngine(ROSETTE_CATALOG["agave_americana"].profile).generate(seed=1, detail=0.4)
+        self.assertEqual(len(ros.terminal_sites[0]), 1)
+        self.assertGreater(len(ros.axillary_sites[0]), 3)
+        res = BotanicalPlantPipeline(get_species_preset("prunus_avium")).generate(seed=1, leaf_density=0.0,
+                                                                                 roots=False)
+        ts = tree_flower_sites(res.skeleton_graph, InflorescenceProfile(), 200, seed=1)
+        self.assertEqual(len(ts), 200)
+        self.assertGreater(float(ts.positions[:, 2].mean()), 0.4 * res.total_height_m)
+
+
 if __name__ == "__main__":
     unittest.main()
