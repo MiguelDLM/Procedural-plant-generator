@@ -1,0 +1,30 @@
+schema_version = "1.0.0"
+
+id = "procedural_plant_generator"
+version = "0.1.0"
+name = "Procedural Plant Generator"
+tagline = "Empirical data-driven botanical 3D plant generator"
+maintainer = "Miguel Diaz de Leon-Munoz <migueldlm1307@gmail.com>"
+type = "add-on"
+
+tags = ["Add Mesh", "Modeling", "Animation"]
+
+blender_version_min = "4.2.0"
+
+description = """
+Procedural Plant Generator is a scientifically grounded botanical 3D asset generator for Blender.
+Unlike conventional plant generators that rely on purely artistic heuristics or arbitrary sliders,
+this tool couples procedural geometric synthesis with real-world empirical botanical datasets:
+- Global Tree Allometry (TALLO & Awesome-Forests): Height, DBH, crown radius, and Leonardo/pipe tapering.
+- Architectural Growth Models (Hallé-Oldeman): Rauh, Massart, Troll, and Attims branching dynamics.
+- Leaf Morphometrics (LeavesBank & PlantCLEF): Fourier boundary descriptors and serration modeling.
+- Leaf Venation Networks & Biomechanics (Dryad doi:10.5061/dryad.1g1jwsv36 / Matos, Duarte et al. 2025 & LVD2021):
+  Hierarchical venation topology, vein density (VLA), and physical leaf drooping.
+"""
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+platforms = ["windows-x64", "macos-arm64", "macos-x64", "linux-x64"]
+
+[permissions]
+files = "Import/export botanical presets and trait data"
