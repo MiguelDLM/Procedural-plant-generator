@@ -20,7 +20,9 @@ try:
     from ..core.bark import BarkPattern
     from ..core.roots import RootSystemType
     from .runtime import (is_updating, schedule_update, apply_species_preset_to_props, apply_allometry,
-                          apply_leaf_template, apply_crown_shape)
+                          apply_leaf_template, apply_crown_shape, apply_succulent_preset)
+    from ..core.succulent_db import GrowthForm, CATALOGS, preset_items
+    from .succulents import profile_properties, LAYOUT, PREFIX
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -29,7 +31,9 @@ except (ImportError, ValueError):
     from core.bark import BarkPattern
     from core.roots import RootSystemType
     from blender.runtime import (is_updating, schedule_update, apply_species_preset_to_props, apply_allometry,
-                                 apply_leaf_template, apply_crown_shape)
+                                 apply_leaf_template, apply_crown_shape, apply_succulent_preset)
+    from core.succulent_db import GrowthForm, CATALOGS, preset_items
+    from blender.succulents import profile_properties, LAYOUT, PREFIX
 
 
 def on_param_update(self, context):
@@ -42,6 +46,21 @@ def on_species_change(self, context):
     if is_updating():
         return
     apply_species_preset_to_props(self, self.species_enum, context)
+
+
+def on_form_change(self, context):
+    if is_updating():
+        return
+    if self.growth_form == 'Tree':
+        apply_species_preset_to_props(self, self.species_enum, context)
+    else:
+        apply_succulent_preset(self, context)
+
+
+def on_succulent_species(self, context):
+    if is_updating():
+        return
+    apply_succulent_preset(self, context)
 
 
 def on_dbh_change(self, context):
@@ -269,6 +288,29 @@ if BLENDER_AVAILABLE:
         hero_max_junctions: IntProperty(name="Max Fused Junctions", default=400, min=10, max=20000, update=U,
                                         description="Thickest insertions fused first; bounds Hero cost")
         assign_materials: BoolProperty(name="Materials", default=True, update=U)
+    # Growth form selector and succulent properties (generated from the core profiles)
+    PPG_Properties.__annotations__.update({
+        "growth_form": EnumProperty(name="Growth Form", default='Tree', update=on_form_change, items=[
+            ('Tree', "Tree / Shrub", "Woody plants: trunk, branches, leaves, roots", 'OUTLINER_OB_FORCE_FIELD', 0),
+            ('Cactus', "Cactus / Stem Succulent", "Ribbed or tuberculate succulent stems with areoles and spines",
+             'MESH_CYLINDER', 1),
+            ('Rosette', "Rosette Succulent", "Agave, Aloe, Echeveria: thick leaves in a Fibonacci rosette",
+             'MESH_CIRCLE', 2)]),
+        "cactus_species": EnumProperty(name="Cactus", items=preset_items(GrowthForm.CACTUS),
+                                       default="carnegiea_gigantea", update=on_succulent_species),
+        "rosette_species": EnumProperty(name="Rosette", items=preset_items(GrowthForm.ROSETTE),
+                                        default="echeveria_elegans", update=on_succulent_species),
+        "cactus_blend": EnumProperty(name="Blend With", items=preset_items(GrowthForm.CACTUS),
+                                     default="echinocactus_grusonii"),
+        "rosette_blend": EnumProperty(name="Blend With", items=preset_items(GrowthForm.ROSETTE),
+                                      default="agave_americana"),
+        "succ_detail": FloatProperty(name="Mesh Detail", default=1.0, min=0.3, max=3.0, update=U,
+                                     description="Surface sampling density of stems and leaves"),
+        "spine_budget": IntProperty(name="Max Spines", default=60000, min=0, max=1000000, update=U,
+                                    description="Radial spines are thinned evenly above this count"),
+    })
+    for _form in (GrowthForm.CACTUS, GrowthForm.ROSETTE):
+        PPG_Properties.__annotations__.update(profile_properties(_form, U))
 else:
     PPG_Properties = None
 
@@ -278,6 +320,12 @@ class _PPGSub:
     bl_region_type = 'UI'
     bl_category = 'Plant Gen'
     bl_parent_id = "PPG_PT_main_panel"
+    forms = ('Tree',)
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        return p is not None and p.growth_form in cls.forms
 
 
 class PPG_PT_MainPanel(Panel):
@@ -295,13 +343,22 @@ class PPG_PT_MainPanel(Panel):
         row.operator("ppg.generate_plant", text="Update", icon='FILE_REFRESH')
         row.operator("ppg.new_plant", text="New", icon='ADD')
 
+        layout.prop(props, "growth_form", text="")
         box = layout.box()
-        box.prop(props, "species_enum", text="")
-        spec = get_species_preset(props.species_enum)
+        if props.growth_form == 'Tree':
+            box.prop(props, "species_enum", text="")
+            spec = get_species_preset(props.species_enum)
+            family, habit, biome = spec.family, spec.growth_habit, spec.biome
+        else:
+            form = GrowthForm(props.growth_form)
+            key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
+            box.prop(props, "cactus_species" if form == GrowthForm.CACTUS else "rosette_species", text="")
+            spec = CATALOGS[form][key]
+            family, habit, biome = spec.family, form.value, spec.biome
         col = box.column(align=True)
         col.scale_y = 0.8
-        col.label(text=f"{spec.family} · {spec.growth_habit}", icon='OUTLINER_OB_FORCE_FIELD')
-        col.label(text=spec.biome)
+        col.label(text=f"{family} · {habit}", icon='OUTLINER_OB_FORCE_FIELD')
+        col.label(text=biome)
         box.operator("ppg.apply_species_preset", text="Reload Species", icon='IMPORT')
         layout.operator("ppg.export_traits", text="Export Traits (JSON)", icon='TEXT')
 
@@ -310,11 +367,13 @@ class PPG_PT_Variation(_PPGSub, Panel):
     bl_label = "Variants (Trait Space)"
     bl_idname = "PPG_PT_variation"
     bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Cactus', 'Rosette')
 
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        col.prop(p, "blend_species", text="")
+        col.prop(p, {"Tree": "blend_species", "Cactus": "cactus_blend", "Rosette": "rosette_blend"}[p.growth_form],
+                 text="")
         col.prop(p, "blend_factor", slider=True)
         col.separator()
         col.prop(p, "variation_amount", slider=True)
@@ -501,10 +560,18 @@ class PPG_PT_Topology(_PPGSub, Panel):
     bl_label = "Topology & Shading"
     bl_idname = "PPG_PT_topology"
     bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Cactus', 'Rosette')
 
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
+        if p.growth_form != 'Tree':
+            col.prop(p, "seed")
+            col.prop(p, "succ_detail")
+            if p.growth_form == 'Cactus':
+                col.prop(p, "spine_budget")
+            col.prop(p, "assign_materials")
+            return
         col.prop(p, "junction_quality")
         if p.junction_quality != 'TUBES':
             col.prop(p, "fuse_detail")
@@ -518,5 +585,19 @@ class PPG_PT_Topology(_PPGSub, Panel):
             col.prop(p, name)
 
 
+def _succulent_panel(form, index, title, names):
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        for n in names:
+            col.prop(p, PREFIX[form] + n)
+    return type(f"PPG_PT_{form.value}_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_{form.value.lower()}_{index}",
+        "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw})
+
+
+SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTUS, GrowthForm.ROSETTE)
+                         for i, (t, n) in enumerate(LAYOUT[f]))
+
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
-                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark, PPG_PT_Topology)
+                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + (PPG_PT_Topology,)

@@ -18,6 +18,7 @@ Procedural Plant Generator builds trees from measurable botanical traits:
 - Leaf-architecture descriptors (base/apex angles, lobes, teeth, compound leaves, needles) with
   hierarchical venation rendered into leaf textures (VLA-sized areoles, seasonal senescence).
 - Leaf-area-index driven foliage, procedural bark, and a trait space for blending species and variants.
+- Cacti (ribs, spiral tubercles, areoles, spines, arms, cladodes) and rosette succulents (Agave, Aloe, Echeveria).
 """
 
 license = ["SPDX:GPL-3.0-or-later"]

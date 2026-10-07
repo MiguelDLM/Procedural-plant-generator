@@ -126,6 +126,9 @@ class BlenderMeshBuilder:
             raise RuntimeError("Blender (bpy) is not available.")
         root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
         root_obj = existing_root or self._find_root(context, root_name)
+        for c in root_obj.children:   # Objects of the succulent growth forms on a reused root
+            if c.name.endswith(("_Stem", "_Spines", "_Leaves", "_Armature", "_RosetteBase")):
+                c.hide_viewport = c.hide_render = True
 
         # Wood (stem flutes aligned with the main roots)
         self.config.flute_azimuth = getattr(self.result, "flute_azimuth", None)
@@ -144,6 +147,7 @@ class BlenderMeshBuilder:
                                                          self.config.buttress_profile)
         wood_obj = self._child(context, root_obj, "_Wood", f"{root_obj.name}_Wood")
         populate_mesh(wood_obj.data, wood_data)
+        wood_obj.hide_viewport = wood_obj.hide_render = False
         self._assign_vertex_groups(wood_obj, wood_data.point_attributes.get("branch_order"))
         mod = wood_obj.modifiers.get("PPG_Subsurf")
         if use_subsurf and mod is None:

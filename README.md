@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://python.org)
 [![Pure Python](https://img.shields.io/badge/Dependencies-NumPy%20only-brightgreen.svg)]()
 
-**Procedural Plant Generator** is a Blender 4.2+ / 5.x extension that builds trees from **measurable botanical traits** instead of artistic sliders. Every species is a point in a normalised *trait space*: allometry, crown envelope, branching architecture, leaf-architecture descriptors, venation, leaf area index and bark. New plants are made by editing traits, blending species, or sampling intraspecific variation.
+**Procedural Plant Generator** is a Blender 4.2+ / 5.x extension that builds trees, cacti and rosette succulents from **measurable botanical traits** instead of artistic sliders. Every species is a point in a normalised *trait space*: allometry, crown envelope, branching architecture, leaf-architecture descriptors, venation, leaf area index and bark. New plants are made by editing traits, blending species, or sampling intraspecific variation.
 
 ---
 
@@ -27,6 +27,20 @@
 | **Bark coordinates** | Seam-free 3D bark coordinates (`bark_base + k·bark_along`, metres) on every wood vertex — tubes and fused surfaces alike — so the procedural bark keeps a constant world scale and stays continuous across forks, cuts and root flares; k sets the anisotropy per bark type (fissures along the axis, lenticels around it). UVs are still provided. | — |
 | **Roots** | Root-system types after Köstler et al. (1968): taproot, heart, plate, plus buttress and fibrous (palms). Collar flow shared by Leonardo's rule (verified for coarse roots by Oppelt et al. 2001); zone of rapid taper ≈ 2.2 × DBH; lateral/sinker depths sampled from Y(d) = 1 − β<sup>d</sup> with biome β from Jackson et al. (1996, Table 1); maximum depth after Canadell et al. (1996). Near the stem, main laterals have vertically elongated (plank) sections and a concave top edge, so flares and buttresses grow out of the trunk; stem flutes are aligned with them, and buttress ends carry sinkers (Crook et al. 1997). | system, laterals, spread/crown, max depth, β, taproot share, ZRT, sinker spacing, surface exposure, plank, collar height, knees |
 | **Bark** | Procedural shader per rhytidome type: fissured, plated, peeling, lenticelled, fibrous, smooth, annulated. | colours, feature size, relief |
+
+### Growth forms
+
+A selector at the top of the panel switches between three generators that share materials, caching, the
+trait-space arithmetic (blend / variation) and the UI:
+
+| Form | Model | Key parameters |
+| :--- | :--- | :--- |
+| **Tree / Shrub** | Everything above. | — |
+| **Cactus / stem succulent** | Stems are surfaces of revolution around an axis: a generatrix (basal taper, body, superellipse apical dome, optional apical depression) gives columnar, barrel and globose habits. Ribs modulate the cross-section, r = ρ·(1 − depth·(1 − \|cos(mθ′/2)\|<sup>p</sup>)), with optional helical twist; rib numbers default to Fibonacci numbers, as measured in barrel cacti (Robberecht & Nobel 1983). Areoles sit on rib crests (offset by half a step on neighbouring ribs) or, for tuberculate species, on an equal-area spiral lattice at 137.5° (Vogel 1979, generalised from the disc to a surface of revolution); each raises a tubercle (ribs and tubercles as joined vs free podaria, Mauseth 2006). Radial and central spines (gravity curvature, terminal hooks), areolar and apical wool, saguaro/candelabra arms, basal offsets and Opuntia cladode chains. | habit, height, diameter, dome, ribs (count, depth, sharpness, twist), tubercles, areole spacing, spines, wool, arms, offsets, pads, colours, wax bloom, flecks |
+| **Rosette succulent** | Leaves on near-zero internodes at the golden divergence (or distichous), oldest outermost; elevation, size and curvature change with leaf age. Each leaf is a closed volume: bent midline, half-width profile from the lamina descriptors (aspect, widest point, base/apex angles), thickness profile, superellipse cross-section with adaxial channel and abaxial keel; terminal spine and hooked marginal teeth; blushed margins/tips, glaucous bloom, spots and tubercle bands. | leaf count, elevation outer/inner, size gradient, leaf length/aspect/thickness, curvature, section, armature, offsets, colours |
+
+The 13 cactus and 11 rosette presets include several Mexican species (órgano, garambullo, cardón, viejito,
+biznaga dorada, bonete de obispo, nopal, maguey, agave azul, *Echeveria*). Algae are out of scope.
 
 ### Trait space
 
@@ -73,7 +87,7 @@ cd procedural-plant-generator
 python3 -m unittest discover -s tests -v
 ```
 
-The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth), venation hierarchy and VLA, textures and senescence, skeleton connectivity, apical dominance, fork collars, root depth distributions, root–stem merging, junction splitting, hand-overs, hero sleeves and seam-free bark coordinates, mesh consistency, trait-space round-trips/blends/mutations, and generation of every catalogue species.
+The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth), venation hierarchy and VLA, textures and senescence, skeleton connectivity, apical dominance, fork collars, root depth distributions, root–stem merging, junction splitting, hand-overs, hero sleeves and seam-free bark coordinates, mesh consistency, trait-space round-trips/blends/mutations, cactus ribs and spiral areole lattices, rosette age gradients, and generation of every catalogue species (trees, cacti and rosettes).
 
 ---
 
@@ -93,4 +107,7 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Oppelt, A. L., Kurth, W. & Godbold, D. L. (2001). Topology, scaling relations and Leonardo's rule in root systems from African tree species. *Tree Physiology* 21: 117–128. doi:10.1093/treephys/21.2-3.117
 - Crook, M. J., Ennos, A. R. & Banks, J. R. (1997). The function of buttress roots. *Journal of Experimental Botany* 48: 1703–1716. doi:10.1093/jxb/48.9.1703
 - Danjon, F., Khuder, H. & Stokes, A. (2013). Deep phenotyping of coarse root architecture in *R. pseudoacacia*. *PLoS ONE* 8: e83548. doi:10.1371/journal.pone.0083548
+- Vogel, H. (1979). A better way to construct the sunflower head. *Mathematical Biosciences* 44: 179–189. doi:10.1016/0025-5564(79)90080-4
+- Robberecht, R. & Nobel, P. S. (1983). A Fibonacci sequence in rib number for a barrel cactus. *Annals of Botany* 51: 153–155. doi:10.1093/oxfordjournals.aob.a086440
+- Mauseth, J. D. (2006). Structure–function relationships in highly modified shoots of Cactaceae. *Annals of Botany* 98: 901–926. doi:10.1093/aob/mcl133
 - Cooper, L. et al. (2018). The Planteome database. *Nucleic Acids Research* 46: D1168–D1180.

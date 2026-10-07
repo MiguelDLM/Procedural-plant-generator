@@ -26,7 +26,8 @@ try:
     from ..core.leaf_texture import LeafTextureEngine
     from ..core.gielis import GielisProfile
     from ..core.plant_pipeline import BotanicalPlantPipeline
-    from ..core.trait_space import get_path, set_path, blend, mutate
+    from ..core.trait_space import get_path, set_path, blend, mutate, blend_profile, mutate_profile
+    from ..core.succulent_db import GrowthForm, CATALOGS, RANGES
     from .mesh_builder import BlenderMeshBuilder
     from .materials import create_bark_material, create_leaf_material, leaf_images_from_texture
 except (ImportError, ValueError):
@@ -36,7 +37,8 @@ except (ImportError, ValueError):
     from core.leaf_texture import LeafTextureEngine
     from core.gielis import GielisProfile
     from core.plant_pipeline import BotanicalPlantPipeline
-    from core.trait_space import get_path, set_path, blend, mutate
+    from core.trait_space import get_path, set_path, blend, mutate, blend_profile, mutate_profile
+    from core.succulent_db import GrowthForm, CATALOGS, RANGES
     from blender.mesh_builder import BlenderMeshBuilder
     from blender.materials import create_bark_material, create_leaf_material, leaf_images_from_texture
 
@@ -218,8 +220,47 @@ def build_custom_preset_from_props(props):
     return preset, gielis
 
 
+def _succulent_key(props):
+    form = GrowthForm(props.growth_form)
+    return form, (props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species)
+
+
+def apply_succulent_preset(props, context=None):
+    """Loads the selected cactus / rosette preset into its sliders."""
+    from .succulents import write_profile_to_props
+    form, key = _succulent_key(props)
+    global _IS_UPDATING
+    was = _IS_UPDATING
+    _IS_UPDATING = True
+    try:
+        write_profile_to_props(props, form, CATALOGS[form][key].profile)
+    finally:
+        _IS_UPDATING = was
+    if context and getattr(props, "auto_update", True):
+        schedule_update()
+
+
 def apply_variant_to_props(props, context=None):
     """Writes a blended and/or mutated variant (trait-space arithmetic) into the sliders."""
+    if props.growth_form != 'Tree':
+        from .succulents import profile_from_props, write_profile_to_props
+        form, key = _succulent_key(props)
+        prof = profile_from_props(props, form, key)
+        other_key = props.cactus_blend if form == GrowthForm.CACTUS else props.rosette_blend
+        if props.blend_factor > 0.0 and other_key != key:
+            prof = blend_profile(prof, CATALOGS[form][other_key].profile, props.blend_factor, RANGES[form])
+        if props.variation_amount > 0.0:
+            prof = mutate_profile(prof, props.variation_amount, props.variation_seed, RANGES[form])
+        global _IS_UPDATING
+        was = _IS_UPDATING
+        _IS_UPDATING = True
+        try:
+            write_profile_to_props(props, form, prof)
+        finally:
+            _IS_UPDATING = was
+        if getattr(props, "auto_update", True):
+            schedule_update()
+        return
     base, _ = build_custom_preset_from_props(props)
     if props.blend_factor > 0.0 and props.blend_species != props.species_enum:
         other = get_species_preset(props.blend_species)
@@ -337,6 +378,15 @@ def update_tree_geometry(context):
         return
     props = getattr(context.scene, "ppg_properties", None)
     if not props:
+        return
+    if getattr(props, "growth_form", 'Tree') != 'Tree':
+        try:
+            from .succulents import update_succulent_geometry
+            update_succulent_geometry(context, props, lambda ctx, name: BlenderMeshBuilder._find_root(None, ctx, name))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PPG Error] Failed to update succulent geometry: {e}")
         return
     try:
         preset, gielis = build_custom_preset_from_props(props)

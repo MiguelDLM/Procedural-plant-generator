@@ -84,6 +84,11 @@ class PPG_OT_ApplySpeciesPreset(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
+        if props.growth_form != 'Tree':
+            from .runtime import apply_succulent_preset
+            apply_succulent_preset(props, context)
+            self.report({'INFO'}, "Loaded succulent preset")
+            return {'FINISHED'}
         apply_species_preset_to_props(props, props.species_enum, context)
         self.report({'INFO'}, f"Loaded {get_species_preset(props.species_enum).scientific_name}")
         return {'FINISHED'}
@@ -98,6 +103,9 @@ class PPG_OT_ApplyVariant(Operator):
     def execute(self, context):
         props = context.scene.ppg_properties
         apply_variant_to_props(props, context)
+        if props.growth_form != 'Tree':
+            self.report({'INFO'}, "Variant written to the sliders")
+            return {'FINISHED'}
         preset, _ = build_custom_preset_from_props(props)
         near = nearest_species(preset, SPECIES_CATALOG)[:3]
         self.report({'INFO'}, "Closest species: " + ", ".join(f"{SPECIES_CATALOG[k].scientific_name} ({d:.3f})"
@@ -115,6 +123,25 @@ class PPG_OT_ExportTraits(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
+
+        def plain(v):
+            return v.value if hasattr(v, "value") else (list(v) if isinstance(v, tuple) else v)
+
+        if props.growth_form != 'Tree':
+            from dataclasses import fields as dc_fields
+            from .succulents import profile_from_props
+            from .runtime import _succulent_key
+            from ..core.succulent_db import CATALOGS
+            form, key = _succulent_key(props)
+            prof = profile_from_props(props, form, key)
+            sp = CATALOGS[form][key]
+            data = {"growth_form": form.value, "species": sp.scientific_name, "common_name": sp.common_name,
+                    "family": sp.family, "traits": {f.name: plain(getattr(prof, f.name)) for f in dc_fields(prof)}}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as f:
+                json.dump(data, f, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
         preset, _ = build_custom_preset_from_props(props)
 
         def plain(v):

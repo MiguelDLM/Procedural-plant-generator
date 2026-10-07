@@ -217,3 +217,40 @@ def distance(a, b) -> float:
 def nearest_species(preset, catalog: dict, exclude: str = None) -> list[tuple[str, float]]:
     ranked = [(k, distance(preset, v)) for k, v in catalog.items() if k != exclude]
     return sorted(ranked, key=lambda kv: kv[1])
+
+
+# -----------------------------------------------------------------------------
+# Generic trait arithmetic for flat profiles (succulents): numeric fields are normalised by
+# their UI ranges, colours interpolate per channel, categorical fields switch at t = 0.5.
+# -----------------------------------------------------------------------------
+def blend_profile(a, b, t: float, ranges: dict):
+    from dataclasses import fields as dc_fields, replace as dc_replace
+    t = float(np.clip(t, 0.0, 1.0))
+    out = {}
+    for f in dc_fields(a):
+        va, vb = getattr(a, f.name), getattr(b, f.name)
+        if isinstance(va, tuple):
+            out[f.name] = tuple(float((1 - t) * x + t * y) for x, y in zip(va, vb))
+        elif isinstance(va, bool) or not isinstance(va, (int, float)):
+            out[f.name] = va if t < 0.5 else vb
+        else:
+            v = (1 - t) * va + t * vb
+            out[f.name] = int(round(v)) if isinstance(va, int) else float(v)
+    return dc_replace(a, **out)
+
+
+def mutate_profile(p, amount: float, seed: int, ranges: dict, cv: float = 0.06):
+    from dataclasses import fields as dc_fields, replace as dc_replace
+    rng = np.random.default_rng(seed)
+    out = {}
+    for f in dc_fields(p):
+        v = getattr(p, f.name)
+        if f.name in ranges and isinstance(v, (int, float)) and not isinstance(v, bool):
+            lo, hi = ranges[f.name]
+            # Counts (ribs, spines, leaves) vary relative to their value; continuous traits by range
+            sigma = cv * amount * (abs(v) if isinstance(v, int) else (hi - lo))
+            nv = float(np.clip(v + rng.normal(0.0, sigma), lo, hi))
+            out[f.name] = int(round(nv)) if isinstance(v, int) else nv
+        elif isinstance(v, tuple):
+            out[f.name] = tuple(float(np.clip(x + rng.normal(0.0, 0.02 * amount), 0.0, 1.0)) for x in v)
+    return dc_replace(p, **out)

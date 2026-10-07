@@ -326,6 +326,75 @@ class TestJunctions(unittest.TestCase):
         self.assertEqual(float(u_repeats(0.5, 0.6)), 5.0)
 
 
+class TestSucculents(unittest.TestCase):
+    def test_catalogs_generate(self):
+        from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
+        from core.cactus import CactusEngine
+        from core.rosette import RosetteEngine
+        self.assertGreaterEqual(len(CACTUS_CATALOG), 10)
+        self.assertGreaterEqual(len(ROSETTE_CATALOG), 8)
+        for k, sp in CACTUS_CATALOG.items():
+            r = CactusEngine(sp.profile).generate(seed=1, detail=0.5, spine_budget=5000)
+            self.assertGreater(len(r.stem.vertices), 100, k)
+            self.assertEqual(len(r.stem.loop_vertex), int(r.stem.loop_total.sum()), k)
+            self.assertLessEqual(int(r.stem.loop_vertex.max()), len(r.stem.vertices) - 1, k)
+        for k, sp in ROSETTE_CATALOG.items():
+            r = RosetteEngine(sp.profile).generate(seed=1, detail=0.5)
+            self.assertGreaterEqual(r.leaf_count, sp.profile.leaf_count, k)
+
+    def test_rib_count_and_areoles_on_crests(self):
+        from core.cactus import CactusEngine, CactusProfile, CactusHabit
+        p = CactusProfile(habit=CactusHabit.COLUMNAR, height_m=1.0, diameter_m=0.3, rib_count=13, rib_depth=0.3,
+                          radial_spines=0, central_spines=0, wool=0.0)
+        r = CactusEngine(p).generate(seed=2)
+        # Around a mid-height ring the radius has exactly 13 maxima (ribs)
+        V = r.stem.vertices.astype(float)
+        ring = V[np.abs(V[:, 2] - 0.5) < 0.01]
+        ang = np.arctan2(ring[:, 1], ring[:, 0])
+        rad = np.hypot(ring[:, 0], ring[:, 1])
+        order = np.argsort(ang)
+        rr = rad[order]
+        peaks = np.sum((rr > np.roll(rr, 1)) & (rr > np.roll(rr, -1)) & (rr > rr.mean()))
+        self.assertEqual(int(peaks), 13)
+        # Areoles sit on the crests: their distance to the axis is near the ring maximum
+        self.assertGreater(r.areole_count, 50)
+
+    def test_spiral_areoles_follow_golden_angle(self):
+        from core.cactus import CactusEngine, CactusProfile, CactusHabit, AreoleArrangement, Generatrix
+        p = CactusProfile(habit=CactusHabit.GLOBOSE, arrangement=AreoleArrangement.SPIRAL, height_m=0.1,
+                          diameter_m=0.1, areole_spacing_cm=0.8)
+        eng = CactusEngine(p)
+        gen = Generatrix(0.1, 0.05, p, True)
+        sig, th = eng._areoles(gen, 0.0, np.random.default_rng(0), gen.length)
+        d = np.mod(np.diff(th), 2 * np.pi)
+        self.assertTrue(np.allclose(d, np.radians(137.50776), atol=1e-6))
+        # Equal-area lattice: about one areole per spacing^2 of lateral surface
+        self.assertAlmostEqual(len(sig) * (0.008 ** 2) * 0.866 / gen.area[-1], 1.0, delta=0.05)
+
+    def test_rosette_age_gradients(self):
+        from core.rosette import RosetteEngine, RosetteProfile
+        p = RosetteProfile(leaf_count=30, size_gradient=0.6, elevation_outer_deg=10, elevation_inner_deg=80)
+        r = RosetteEngine(p).generate(seed=3)
+        u = r.leaves.point_attributes["leaf_u"]
+        V = r.leaves.vertices.astype(float)
+        per = len(V) // 30
+        tips = V[np.arange(30) * per + np.argmax(u[:per])]
+        # Outer (old) leaves reach farther out and lie lower than inner (young) leaves
+        self.assertGreater(np.hypot(*tips[0][:2]), np.hypot(*tips[-1][:2]))
+        self.assertLess(tips[0][2], tips[-1][2])
+
+    def test_succulent_trait_arithmetic(self):
+        from core.succulent_db import CACTUS_CATALOG, CACTUS_RANGES
+        from core.trait_space import blend_profile, mutate_profile
+        a = CACTUS_CATALOG["carnegiea_gigantea"].profile
+        b = CACTUS_CATALOG["echinocactus_grusonii"].profile
+        m = blend_profile(a, b, 0.25, CACTUS_RANGES)
+        self.assertAlmostEqual(m.height_m, 0.75 * a.height_m + 0.25 * b.height_m)
+        self.assertEqual(m.habit, a.habit)
+        v = mutate_profile(a, 1.0, 5, CACTUS_RANGES)
+        self.assertNotEqual(v.height_m, a.height_m)
+
+
 class TestMeshes(unittest.TestCase):
     def test_wood_and_foliage_mesh_consistency(self):
         p = get_species_preset("acer_palmatum")
