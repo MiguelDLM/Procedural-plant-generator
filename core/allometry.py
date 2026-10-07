@@ -37,6 +37,7 @@ class AllometricProfile:
     # Stem buttress / root flare intensity and decay
     buttress_amplitude: float = 0.45   # Proportional expansion at soil level
     buttress_decay: float = 12.0       # Exponential rate of decay upwards
+    buttress_lobes: int = 0            # Gielis symmetry m of the fluted base (0 = round)
 
     # Wood physical traits
     wood_density_g_cm3: float = 0.62   # Typical angiosperm/gymnosperm wood density
@@ -66,7 +67,7 @@ class AllometricEngine:
         """
         dbh_cm = max(1.0, dbh_m * 100.0)
         cr = self.profile.crown_radius_c * (dbh_cm ** self.profile.crown_radius_d)
-        return float(np.clip(cr, 0.2, 18.0))
+        return float(np.clip(cr, 0.2, 25.0))
 
     def calculate_crown_depth(self, total_height_m: float) -> float:
         """
