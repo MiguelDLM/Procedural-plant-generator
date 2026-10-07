@@ -568,6 +568,9 @@ class PPG_PT_Topology(_PPGSub, Panel):
         if p.growth_form != 'Tree':
             col.prop(p, "seed")
             col.prop(p, "succ_detail")
+            col.prop(p, "show_roots")
+            if p.show_roots:
+                col.prop(p, "root_display_depth")
             if p.growth_form == 'Cactus':
                 col.prop(p, "spine_budget")
             col.prop(p, "assign_materials")

@@ -24,6 +24,7 @@ import numpy as np
 from .leaf_morphology import half_width_profile, T_GRID
 from .mesh_engine import MeshData
 from .cactus import _mesh, _normalize, _quads_grid
+from .roots import RootSystemType
 
 GOLDEN = math.radians(137.50776)
 UP = np.array([0.0, 0.0, 1.0])
@@ -84,6 +85,13 @@ class RosetteProfile:
     bands: float = 0.0               # Transverse tubercle bands (Haworthiopsis)
     armature_color: tuple = (0.30, 0.20, 0.15)
 
+    # Shallow fibrous roots (Franco & Nobel 1990 for Agave deserti)
+    root_system: RootSystemType = RootSystemType.FIBROUS
+    root_count: int = 25
+    root_spread_ratio: float = 1.0  # Reach relative to rosette diameter
+    root_depth_m: float = 0.2
+    root_radius_mm: float = 1.5
+
 
 @dataclass
 class RosetteResult:
@@ -92,6 +100,7 @@ class RosetteResult:
     stem: MeshData
     leaf_count: int
     diameter_m: float
+    roots: MeshData = None
 
 
 class RosetteEngine:
@@ -101,7 +110,8 @@ class RosetteEngine:
     def __init__(self, profile: RosetteProfile):
         self.p = profile
 
-    def generate(self, seed: int = 7, detail: float = 1.0) -> RosetteResult:
+    def generate(self, seed: int = 7, detail: float = 1.0, with_roots: bool = False,
+                 root_display_depth: float = 3.0) -> RosetteResult:
         rng = np.random.default_rng(seed)
         leaves, arm, stems = [], [], []
         centres = [(np.zeros(3), 1.0)]
@@ -119,8 +129,14 @@ class RosetteEngine:
             stems.append(st)
             n_total += n
             diam = max(diam, dm + 2 * float(np.hypot(c[0], c[1])))
+        roots = None
+        if with_roots:
+            from .succulent_roots import succulent_roots
+            roots = succulent_roots(p.root_system, p.stem_radius_m, max(0.05, p.root_spread_ratio * diam),
+                                    p.root_depth_m, p.root_count, core_ratio=0.9,
+                                    root_radius_mm=p.root_radius_mm, display_depth_m=root_display_depth, seed=seed)
         return RosetteResult(MeshData.concatenate(leaves), MeshData.concatenate(arm), MeshData.concatenate(stems),
-                             n_total, diam)
+                             n_total, diam, roots)
 
     # ------------------------------------------------------------------
     def _rosette(self, centre, scale, rng, detail, primary):

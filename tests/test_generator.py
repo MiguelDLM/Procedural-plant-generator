@@ -371,6 +371,97 @@ class TestSucculents(unittest.TestCase):
         # Equal-area lattice: about one areole per spacing^2 of lateral surface
         self.assertAlmostEqual(len(sig) * (0.008 ** 2) * 0.866 / gen.area[-1], 1.0, delta=0.05)
 
+    def test_opuntia_cladode_collision_avoidance(self):
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        for sp_key in ("opuntia_ficus_indica", "opuntia_microdasys"):
+            prof = CACTUS_CATALOG[sp_key].profile
+            eng = CactusEngine(prof)
+            for seed in (2, 7):
+                r = eng.generate(seed=seed, detail=0.5, spine_budget=5000)
+                self.assertGreater(len(r.stem.vertices), 500, f"{sp_key} seed {seed}")
+                self.assertGreater(r.areole_count, 100, f"{sp_key} seed {seed}")
+
+    def test_candelabra_arms_collision_avoidance(self):
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine, StemAxis
+        p = CACTUS_CATALOG["myrtillocactus_geometrizans"].profile
+        eng = CactusEngine(p)
+        R = 0.5 * p.diameter_m
+        main_axis = StemAxis(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, p.height_m]]))
+        for seed in (1, 7):
+            rng = np.random.default_rng(seed)
+            specs = eng._arms(main_axis, R, rng)
+            self.assertGreaterEqual(len(specs), 8)
+            for i in range(len(specs)):
+                ax1, _, r1, _, _ = specs[i]
+                for j in range(i + 1, len(specs)):
+                    ax2, _, r2, _, _ = specs[j]
+                    self.assertFalse(eng._arm_collides(ax1, r1, ax2, r2), f"Arms {i} and {j} collide in seed {seed}")
+
+    def test_opuntia_cladodes_do_not_interpenetrate(self):
+        """Exact volume test: no cladode surface point lies inside another cladode away from insertions."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        eng = CactusEngine(CACTUS_CATALOG["opuntia_ficus_indica"].profile)
+        geoms = []
+        orig = eng._pad
+
+        def spy(base, up, roll, L, rng, detail, parent_n=None):
+            geoms.append(eng._pad_frame(base, up, roll, L, parent_n))
+            return orig(base, up, roll, L, rng, detail, parent_n)
+        eng._pad = spy
+        eng.generate(seed=4, detail=0.5, spine_budget=500)
+        self.assertGreater(len(geoms), 8)
+        for i, gi in enumerate(geoms):
+            pts = eng._pad_surface_points(gi)
+            for j, gj in enumerate(geoms):
+                if i == j:
+                    continue
+                near = (np.linalg.norm(pts - gi[7], axis=1) < 0.25 * gi[4]) | \
+                       (np.linalg.norm(pts - gj[7], axis=1) < 0.25 * gj[4])
+                self.assertFalse(np.any(eng._pad_inside(pts[~near], gj, inflate=0.98)), f"pads {i} and {j}")
+
+    def test_candelabra_secondary_arms(self):
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine, StemAxis
+        p = CACTUS_CATALOG["pachycereus_weberi"].profile
+        eng = CactusEngine(p)
+        main = StemAxis(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, p.height_m]]))
+        specs = eng._arms(main, 0.5 * p.diameter_m, np.random.default_rng(3))
+        self.assertGreater(len(specs), p.arm_count)               # Primary + secondary arms
+        tops = max(float(a.P[:, 2].max()) for a, *_ in specs)
+        self.assertGreater(tops, 3.0 * p.height_m)                  # Crown far above the short trunk
+        for i in range(len(specs)):
+            for j in range(len(specs)):
+                if i == j:
+                    continue
+                a, b = specs[i][0], specs[j][0]
+                if getattr(b, "parent", None) is a:      # Child arm vs its parent: beyond the elbow only
+                    self.assertFalse(eng._arm_collides(b, specs[j][2], a, specs[i][2], start1=0.35))
+                elif getattr(a, "parent", None) is not b and i < j:
+                    self.assertFalse(eng._arm_collides(a, specs[i][2], b, specs[j][2]))
+
+    def test_succulent_roots(self):
+        from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
+        from core.cactus import CactusEngine
+        from core.rosette import RosetteEngine
+        sag = CACTUS_CATALOG["carnegiea_gigantea"].profile
+        r = CactusEngine(sag).generate(seed=2, detail=0.4, spine_budget=100, with_roots=True)
+        V = r.roots.vertices
+        reach = float(np.hypot(V[:, 0], V[:, 1]).max())
+        self.assertGreater(reach, 0.6 * r.height_m)                  # Laterals extend about the plant height
+        self.assertLess(float(-V[:, 2].min()), 1.2)                  # Shallow system (taproot < ~1 m)
+        shallow = np.mean(-V[:, 2] < 0.35)
+        self.assertGreater(shallow, 0.8)                              # Most root surface in the top 30-35 cm
+        peyote = CactusEngine(CACTUS_CATALOG["lophophora_williamsii"].profile).generate(
+            seed=2, detail=0.4, with_roots=True)
+        self.assertGreater(float(-peyote.roots.vertices[:, 2].min()), peyote.height_m)  # Tuber longer than stem
+        agave = RosetteEngine(ROSETTE_CATALOG["agave_americana"].profile).generate(seed=2, detail=0.4,
+                                                                                    with_roots=True)
+        self.assertGreater(len(agave.roots.vertices), 100)
+        self.assertLess(float(-agave.roots.vertices[:, 2].min()), 0.8)
+
     def test_rosette_age_gradients(self):
         from core.rosette import RosetteEngine, RosetteProfile
         p = RosetteProfile(leaf_count=30, size_gradient=0.6, elevation_outer_deg=10, elevation_inner_deg=80)

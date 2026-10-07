@@ -127,7 +127,7 @@ class BlenderMeshBuilder:
         root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
         root_obj = existing_root or self._find_root(context, root_name)
         for c in root_obj.children:   # Objects of the succulent growth forms on a reused root
-            if c.name.endswith(("_Stem", "_Spines", "_Leaves", "_Armature", "_RosetteBase")):
+            if c.name.endswith(("_Stem", "_Spines", "_Leaves", "_Armature", "_RosetteBase", "_SuccRoots")):
                 c.hide_viewport = c.hide_render = True
 
         # Wood (stem flutes aligned with the main roots)

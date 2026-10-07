@@ -33,6 +33,7 @@ import math
 import numpy as np
 
 from .mesh_engine import MeshData
+from .roots import RootSystemType
 
 GOLDEN = math.radians(137.50776)
 UP = np.array([0.0, 0.0, 1.0])
@@ -90,7 +91,9 @@ class CactusProfile:
     arm_height_max: float = 0.65
     arm_radius_ratio: float = 0.8
     arm_reach_m: float = 0.5        # Horizontal elbow before turning upward
-    arm_length_ratio: float = 0.5   # Arm length relative to the stem above its insertion
+    arm_length_ratio: float = 0.5   # Vertical rise of an arm relative to the main stem height
+    arm_lean_deg: float = 3.0       # Outward lean of the erect part of each arm
+    arm_branching: float = 0.0      # Mean secondary arms per arm (dense candelabra crowns)
     offsets: int = 0                # Basal offsets (clumping)
     offset_scale: float = 0.7
 
@@ -110,6 +113,17 @@ class CactusProfile:
     glaucous: float = 0.2           # Waxy bloom
     flecks: float = 0.0             # White trichome flecks (Astrophytum)
 
+    # Roots (Cannon 1911; Snyman 2005): shallow laterals, optional taproot or napiform tuber
+    root_system: RootSystemType = RootSystemType.PLATE
+    root_count: int = 10
+    root_spread_ratio: float = 1.0  # Lateral reach relative to plant height
+    root_depth_m: float = 0.3       # 90% of roots above this depth
+    taproot_share: float = 0.0
+    taproot_depth_m: float = 0.5
+    root_core_ratio: float = 0.25   # Vascular cylinder / stem radius (root collar)
+    tuber_length_cm: float = 12.0
+    tuber_radius_ratio: float = 0.8 # Tuber radius relative to stem radius
+
 
 @dataclass
 class CactusResult:
@@ -118,6 +132,7 @@ class CactusResult:
     areole_count: int
     spine_count: int
     height_m: float
+    roots: MeshData = None
 
 
 # -----------------------------------------------------------------------------
@@ -134,20 +149,22 @@ def _quads_grid(rows: int, cols: int, offset: int = 0) -> np.ndarray:
 
 
 def _mesh(verts, quads=None, tris=None, ngons=None, uvs=None, attrs=None) -> MeshData:
-    faces = []
-    if quads is not None and len(quads):
-        faces += [list(q) for q in quads]
-    if tris is not None and len(tris):
-        faces += [list(t) for t in tris]
-    if ngons:
-        faces += [list(n) for n in ngons]
-    totals = np.array([len(f) for f in faces], dtype=np.int32)
-    loops = np.concatenate([np.asarray(f, dtype=np.int32) for f in faces]) if faces else np.zeros(0, np.int32)
-    starts = np.concatenate([[0], np.cumsum(totals[:-1])]).astype(np.int32) if len(totals) else np.zeros(0, np.int32)
-    if uvs is None:
-        loop_uv = np.zeros((len(loops), 2), np.float32)
-    else:
-        loop_uv = np.asarray(uvs, dtype=np.float32)[loops]
+    """MeshData from quad / triangle arrays (vectorized) plus optional n-gons."""
+    loops, totals = [], []
+    for block, k in ((quads, 4), (tris, 3)):
+        if block is not None and len(block):
+            arr = np.asarray(block, dtype=np.int32).reshape(-1, k)
+            loops.append(arr.reshape(-1))
+            totals.append(np.full(len(arr), k, dtype=np.int32))
+    for f in (ngons or []):
+        loops.append(np.asarray(f, dtype=np.int32))
+        totals.append(np.array([len(f)], dtype=np.int32))
+    loops = np.concatenate(loops) if loops else np.zeros(0, np.int32)
+    totals = np.concatenate(totals) if totals else np.zeros(0, np.int32)
+    starts = (np.concatenate([[0], np.cumsum(totals[:-1])]).astype(np.int32) if len(totals)
+              else np.zeros(0, np.int32))
+    loop_uv = (np.zeros((len(loops), 2), np.float32) if uvs is None
+               else np.asarray(uvs, dtype=np.float32)[loops])
     return MeshData(np.asarray(verts, np.float32), loops, starts, totals, loop_uv, attrs or {})
 
 
@@ -241,7 +258,8 @@ class CactusEngine:
         self.p = profile
 
     # ------------------------------------------------------------------
-    def generate(self, seed: int = 7, detail: float = 1.0, spine_budget: int = 60000) -> CactusResult:
+    def generate(self, seed: int = 7, detail: float = 1.0, spine_budget: int = 60000, with_roots: bool = False,
+                 root_display_depth: float = 3.0) -> CactusResult:
         p = self.p
         rng = np.random.default_rng(seed)
         stems, spines = [], []
@@ -270,48 +288,156 @@ class CactusEngine:
         ar_scale = np.concatenate([a["scale"] for a in spines]) if spines else np.zeros(0)
         ar_apex = np.concatenate([a["apex"] for a in spines]) if spines else np.zeros(0)
         spine_mesh, n_sp = self._spines(ar_pos, ar_nrm, ar_tan, ar_scale, ar_apex, rng, spine_budget)
-        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp,
-                            float(max(stem.vertices[:, 2].max(), 0.0)) if len(stem.vertices) else 0.0)
+        height = float(max(stem.vertices[:, 2].max(), 0.0)) if len(stem.vertices) else 0.0
+        roots = None
+        if with_roots:
+            from .succulent_roots import succulent_roots
+            R0 = 0.5 * (p.diameter_m if p.habit != CactusHabit.CLADODE else p.pad_length_cm * 0.01 * p.pad_thickness_ratio * 2)
+            roots = succulent_roots(
+                p.root_system, R0, max(0.05, p.root_spread_ratio * max(height, 0.05)), p.root_depth_m, p.root_count,
+                core_ratio=p.root_core_ratio, taproot_share=p.taproot_share, taproot_depth_m=p.taproot_depth_m,
+                root_radius_mm=max(0.5, 0.06 * R0 * 1000 * p.root_core_ratio * 4),
+                tuber_length_m=p.tuber_length_cm * 0.01, tuber_radius_m=p.tuber_radius_ratio * R0,
+                display_depth_m=root_display_depth, seed=seed)
+        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots)
 
     # ------------------------------------------------------------------
+    def _arm_collides(self, ax1: StemAxis, r1: float, ax2: StemAxis, r2: float, start1: float = 0.10) -> bool:
+        """Test whether two arm trajectories penetrate each other (ax1 sampled from `start1` of its length)."""
+        s1 = np.linspace(start1 * ax1.length, ax1.length, 30)
+        s2 = np.linspace(0.10 * ax2.length, ax2.length, 30)
+        pts1 = ax1.frame(s1)[0]
+        pts2 = ax2.frame(s2)[0]
+        dists = np.linalg.norm(pts1[:, None, :] - pts2[None, :, :], axis=-1)
+        return bool(dists.min() < (r1 + r2) * 0.95)
+
+    def _arm_trunk_collides(self, ax: StemAxis, r_arm: float, R_trunk: float) -> bool:
+        """Test whether an arm penetrates the main trunk outside the insertion base."""
+        s = np.linspace(0.20 * ax.length, ax.length, 30)
+        pts = ax.frame(s)[0]
+        d_trunk = np.hypot(pts[:, 0], pts[:, 1])
+        return bool(np.any(d_trunk < (R_trunk + r_arm) * 0.95))
+
     def _arms(self, main: StemAxis, R: float, rng) -> list:
         p = self.p
         specs = []
         if p.arm_count <= 0:
             return specs
         az0 = rng.uniform(0, 2 * math.pi)
-        for k in range(p.arm_count):
-            h = p.height_m * rng.uniform(p.arm_height_min, p.arm_height_max)
-            az = az0 + 2 * math.pi * k / p.arm_count + rng.normal(0, 0.35)
-            out = np.array([math.cos(az), math.sin(az), 0.0])
-            r_arm = R * p.arm_radius_ratio * rng.uniform(0.85, 1.05)
-            reach = max(R + r_arm, p.arm_reach_m * rng.uniform(0.8, 1.2))
-            rise = p.arm_length_ratio * (p.height_m - h) * rng.uniform(0.6, 1.1) + 2 * r_arm
-            base = main.frame(np.array(h))[0]
-            # Elbow: out and slightly up, then turning vertical (saguaro / candelabra arms)
-            ctrl = [base, base + out * reach * 0.6 + UP * reach * 0.15, base + out * reach + UP * reach * 0.6,
-                    base + out * reach * 1.05 + UP * (reach * 0.6 + rise)]
-            t = np.linspace(0.0, 1.0, 40)[:, None]
-            c0, c1, c2, c3 = [np.asarray(c) for c in ctrl]
-            pts = ((1 - t) ** 3) * c0 + 3 * ((1 - t) ** 2) * t * c1 + 3 * (1 - t) * t ** 2 * c2 + t ** 3 * c3
-            axis = StemAxis(pts)
-            specs.append((axis, axis.length, r_arm, False, rng.uniform(0, 2 * math.pi)))
+        num_arms = p.arm_count
+        for k in range(num_arms):
+            base_az = az0 + 2 * math.pi * k / num_arms
+            # In dense candelabra branching (e.g. Garambullo, Euphorbia),
+            # branches naturally organize into tiered reaches (staggered concentric layers)
+            # where outer arms reach further out, preventing vertical columns from merging.
+            tier = (k % 2) if num_arms >= 6 else 0
+            tier_reach_mult = (1.25 if tier == 1 else 0.85) if num_arms >= 6 else 1.0
+            h_frac = 0.2 + 0.6 * ((k * 3) % num_arms) / max(1, num_arms - 1) if num_arms > 1 else 0.5
+            base_h = p.height_m * (p.arm_height_min + (p.arm_height_max - p.arm_height_min) * h_frac)
+            min_reach = R + (R * p.arm_radius_ratio) + 0.04
+            base_reach = max(min_reach, p.arm_reach_m * tier_reach_mult)
+            for attempt in range(12):
+                az_nudge = 0.0 if attempt == 0 else rng.choice([-1, 1]) * (0.05 + 0.04 * attempt)
+                az = base_az + rng.normal(0, 0.04) + az_nudge
+                out = np.array([math.cos(az), math.sin(az), 0.0])
+                h = base_h + rng.normal(0, 0.02 * p.height_m)
+                h = np.clip(h, p.height_m * p.arm_height_min, p.height_m * p.arm_height_max)
+                r_arm = R * p.arm_radius_ratio * rng.uniform(0.88, 1.04)
+                reach_attempt_mult = 1.0
+                if attempt > 1:
+                    reach_attempt_mult = (1.18 if (attempt % 2 == 0) else 0.88)
+                reach = max(R + r_arm + 0.03, base_reach * reach_attempt_mult * rng.uniform(0.95, 1.05))
+                rise = p.arm_length_ratio * p.height_m * rng.uniform(0.75, 1.05) + 2 * r_arm
+                base = main.frame(np.array(h))[0]
+                lean = math.tan(math.radians(p.arm_lean_deg + 3.0 * tier))
+                ctrl = [base,
+                        base + out * reach * 0.6 + UP * reach * 0.15,
+                        base + out * reach + UP * reach * 0.6,
+                        base + out * (reach + lean * rise) + UP * (reach * 0.6 + rise)]
+                t = np.linspace(0.0, 1.0, 40)[:, None]
+                c0, c1, c2, c3 = [np.asarray(c) for c in ctrl]
+                pts = ((1 - t) ** 3) * c0 + 3 * ((1 - t) ** 2) * t * c1 + 3 * (1 - t) * t ** 2 * c2 + t ** 3 * c3
+                cand_axis = StemAxis(pts)
+                if self._arm_trunk_collides(cand_axis, r_arm, R):
+                    continue
+                collides = False
+                for prev_ax, _, prev_r, _, _ in specs:
+                    if self._arm_collides(cand_axis, r_arm, prev_ax, prev_r):
+                        collides = True
+                        break
+                if not collides:
+                    specs.append((cand_axis, cand_axis.length, r_arm, False, rng.uniform(0, 2 * math.pi)))
+                    break
+        if p.arm_branching > 0.0:
+            specs += self._secondary_arms(list(specs), R, rng)
         return specs
+
+    def _secondary_arms(self, arms: list, R: float, rng) -> list:
+        """Arms on arms (dense candelabra crowns such as Pachycereus weberi), with the same collision tests."""
+        p = self.p
+        out_specs = []
+        everything = list(arms)
+        for ax, length, r_par, _, _ in arms:
+            for _ in range(int(rng.poisson(p.arm_branching))):
+                for attempt in range(10):
+                    s0 = length * rng.uniform(0.45, 0.75)
+                    P0, T0, N0, B0 = ax.frame(np.array(s0))
+                    az = rng.uniform(0, 2 * math.pi)
+                    side = _normalize(math.cos(az) * N0 + math.sin(az) * B0)
+                    side = _normalize(side - UP * float(side @ UP))
+                    r_sub = r_par * rng.uniform(0.8, 0.95)
+                    reach = (r_par + r_sub) * rng.uniform(1.4, 2.2)
+                    rise = (length - s0) * rng.uniform(0.5, 0.8)
+                    lean = math.tan(math.radians(p.arm_lean_deg))
+                    ctrl = [P0, P0 + side * reach * 0.6 + UP * reach * 0.15, P0 + side * reach + UP * reach * 0.6,
+                            P0 + side * (reach + lean * rise) + UP * (reach * 0.6 + rise)]
+                    t = np.linspace(0.0, 1.0, 30)[:, None]
+                    c0, c1, c2, c3 = [np.asarray(c) for c in ctrl]
+                    pts = ((1 - t) ** 3) * c0 + 3 * ((1 - t) ** 2) * t * c1 + 3 * (1 - t) * t ** 2 * c2 + t ** 3 * c3
+                    cand = StemAxis(pts)
+                    cand.parent = ax
+                    if self._arm_trunk_collides(cand, r_sub, R):
+                        continue
+                    if any(self._arm_collides(cand, r_sub, a2, r2) for a2, _, r2, _, _ in everything if a2 is not ax):
+                        continue
+                    # Its own parent arm: only the part beyond the elbow must stay clear
+                    if self._arm_collides(cand, r_sub, ax, r_par, start1=0.35):
+                        continue
+                    spec = (cand, cand.length, r_sub, False, rng.uniform(0, 2 * math.pi))
+                    out_specs.append(spec)
+                    everything.append(spec)
+                    break
+        return out_specs
 
     def _offsets(self, R: float, globose: bool, rng) -> list:
         p = self.p
         specs = []
-        for k in range(p.offsets):
-            az = k * GOLDEN + rng.normal(0, 0.3)
-            d = R * rng.uniform(1.6, 2.6) * (1 + 0.3 * (k // 6))
+        if p.offsets <= 0:
+            return specs
+        az0 = rng.uniform(0, 2 * math.pi)
+        for i in range(p.offsets):
             scale = p.offset_scale * rng.uniform(0.6, 1.0)
+            r_off = R * scale * rng.uniform(0.8, 1.0)
             h = p.height_m * scale * (rng.uniform(0.5, 1.0) if not globose else 1.0)
             lean = math.radians(rng.uniform(0, 12))
-            base = np.array([d * math.cos(az), d * math.sin(az), 0.0])
-            top = base + h * np.array([math.sin(lean) * math.cos(az), math.sin(lean) * math.sin(az), math.cos(lean)])
-            pts = np.linspace(base, top, 12)
-            axis = StemAxis(pts)
-            specs.append((axis, axis.length, R * scale * rng.uniform(0.8, 1.0), globose, rng.uniform(0, 2 * math.pi)))
+            base_az = az0 + i * GOLDEN
+            base_d = R * rng.uniform(1.6, 2.6) * (1 + 0.3 * (i // 6))
+            for attempt in range(8):
+                az = base_az + rng.normal(0, 0.2) + (attempt * 0.15 if attempt > 0 else 0)
+                d = max(R + r_off + 0.02, base_d * (1.0 + 0.1 * (attempt // 2)))
+                base = np.array([d * math.cos(az), d * math.sin(az), 0.0])
+                col = False
+                for prev_ax, _, prev_r, _, _ in specs:
+                    prev_base = prev_ax.P[0]
+                    if np.linalg.norm(base[:2] - prev_base[:2]) < (r_off + prev_r) * 1.02:
+                        col = True
+                        break
+                if not col:
+                    top = base + h * np.array([math.sin(lean) * math.cos(az), math.sin(lean) * math.sin(az), math.cos(lean)])
+                    pts = np.linspace(base, top, 12)
+                    axis = StemAxis(pts)
+                    specs.append((axis, axis.length, r_off, globose, rng.uniform(0, 2 * math.pi)))
+                    break
         return specs
 
     # ------------------------------------------------------------------
@@ -430,42 +556,226 @@ class CactusEngine:
         return stem, areoles
 
     # ------------------------------------------------------------------
-    def _opuntia(self, rng, detail):
-        """Chains of flattened cladodes; areoles on an equal-area spiral on both faces."""
-        p = self.p
-        L = p.pad_length_cm * 0.01
-        parts = []
-        queue = [(np.array([0.0, 0.0, -0.1 * L]), UP.copy(), rng.uniform(0, 2 * math.pi), 1.0, 0)]
-        count = 0
-        while queue and count < 200:
-            base, up, roll, scale, level = queue.pop(0)
-            count += 1
-            mesh, ar, rim = self._pad(base, up, roll, L * scale, rng, detail)
-            parts.append((mesh, ar))
-            if level + 1 >= p.pad_levels:
-                continue
-            n_child = rng.poisson(p.pad_branching)
-            for _ in range(min(4, n_child)):
-                # Daughter pads arise from upper-margin areoles
-                a = rng.uniform(0.15, 0.85)
-                j = int(a * (len(rim) - 1))
-                pos, outward = rim[j]
-                child_up = _normalize(outward * 0.6 + UP * rng.uniform(0.5, 1.0))
-                queue.append((pos, child_up, rng.uniform(0, 2 * math.pi), scale * rng.uniform(0.75, 1.0), level + 1))
-        return parts
+    @staticmethod
+    def _pad_inside(pts: np.ndarray, geom, inflate: float = 1.05) -> np.ndarray:
+        """Exact inside test against a cladode's volume (same obovate outline and thickness profile)."""
+        centre, e1, e2, n, L, W, Th, base = geom
+        d = pts - centre
+        x, y, z = d @ e1, d @ e2, d @ n
+        phi = np.arctan2(y / (0.5 * L), x / (0.5 * W))
+        obov = 1.0 + 0.12 * np.sin(phi)
+        r = np.hypot(x / (0.5 * W * obov), y / (0.5 * L))
+        th = 0.5 * Th * np.clip(1.0 - np.minimum(r, 1.0) ** 2.5, 0.0, 1.0) ** 0.5
+        return (r < inflate) & (np.abs(z) < th * inflate + 0.02 * Th)
 
-    def _pad(self, base, up, roll, L, rng, detail):
+    @staticmethod
+    def _pad_surface_points(geom, n_r: int = 7, n_phi: int = 28) -> np.ndarray:
+        """Points on both faces and the rim of a cladode."""
+        centre, e1, e2, n, L, W, Th, base = geom
+        rr = np.linspace(0.15, 1.0, n_r)
+        ph = np.linspace(0.0, 2 * math.pi, n_phi, endpoint=False)
+        R_, P_ = np.meshgrid(rr, ph, indexing="ij")
+        obov = 1.0 + 0.12 * np.sin(P_)
+        x = 0.5 * W * R_ * np.cos(P_) * obov
+        y = 0.5 * L * R_ * np.sin(P_)
+        t = 0.5 * Th * np.clip(1.0 - R_ ** 2.5, 0.0, 1.0) ** 0.5
+        pts = [centre + x[..., None] * e1 + y[..., None] * e2 + (s * t)[..., None] * n for s in (1.0, -1.0)]
+        return np.concatenate([q.reshape(-1, 3) for q in pts])
+
+    def _pads_overlap(self, new_geom, old_geom, is_parent: bool) -> bool:
+        """Two-way exact penetration test; around a daughter's insertion on its parent, contact is allowed."""
+        a = self._pad_surface_points(new_geom)
+        b = self._pad_surface_points(old_geom)
+        if is_parent:
+            base, L_new = new_geom[7], new_geom[4]
+            a = a[np.linalg.norm(a - base, axis=1) > 0.22 * L_new]
+            b = b[np.linalg.norm(b - base, axis=1) > 0.22 * L_new]
+        return bool(self._pad_inside(a, old_geom).any() or self._pad_inside(b, new_geom).any())
+
+    def _pad_frame(self, base, up, roll, L, parent_n=None):
+        """Compute coordinate frame and dimensions for a cladode."""
         p = self.p
         W = L * p.pad_width_ratio
         Th = L * p.pad_thickness_ratio
         e2 = _normalize(up)
-        side = np.cross(e2, UP)
-        if np.linalg.norm(side) < 1e-6:
-            side = np.array([1.0, 0.0, 0.0])
-        side = _normalize(side)
-        e1 = _normalize(math.cos(roll) * side + math.sin(roll) * np.cross(e2, side))
+        if parent_n is None:
+            side = np.cross(e2, UP)
+            if np.linalg.norm(side) < 1e-6:
+                side = np.array([1.0, 0.0, 0.0])
+            side = _normalize(side)
+            e1 = _normalize(math.cos(roll) * side + math.sin(roll) * np.cross(e2, side))
+        else:
+            # Align width axis with the margin tangent in the parent's plane,
+            # using roll as the natural dihedral twist angle.
+            side = np.cross(parent_n, e2)
+            if np.linalg.norm(side) < 1e-4:
+                side = np.cross(UP, e2)
+                if np.linalg.norm(side) < 1e-4:
+                    side = np.array([1.0, 0.0, 0.0])
+            side = _normalize(side)
+            n0 = _normalize(np.cross(e2, side))
+            e1 = _normalize(math.cos(roll) * side + math.sin(roll) * n0)
         n = np.cross(e1, e2)
         centre = base + e2 * (0.5 * L * 0.92)
+        return centre, e1, e2, n, L, W, Th, base
+
+    def _pad_sample_points(self, pad_geom):
+        """Dense volume and surface sample points for collision checking."""
+        centre, e1, e2, n, L, W, Th, base = pad_geom
+        pts = [centre, base]
+        for t in np.linspace(-0.45, 0.45, 9):
+            pts.append(centre + t * L * e2)
+        for v_rel in [-0.3, -0.15, 0.0, 0.15, 0.3]:
+            obov = 1.0 + 0.12 * v_rel
+            w_max = 0.5 * W * obov * math.sqrt(max(0.0, 1.0 - (v_rel / 0.5) ** 2))
+            for u_rel in np.linspace(-0.85, 0.85, 5):
+                pts.append(centre + u_rel * w_max * e1 + v_rel * L * e2)
+        for phi in np.linspace(0.0, 2 * math.pi, 16, endpoint=False):
+            obov = 1.0 + 0.12 * math.sin(phi)
+            x = 0.5 * W * math.cos(phi) * obov * 0.95
+            y = 0.5 * L * math.sin(phi) * 0.95
+            pts.append(centre + x * e1 + y * e2)
+        for phi in np.linspace(0.0, 2 * math.pi, 8, endpoint=False):
+            for sgn in [-1.0, 1.0]:
+                x = 0.25 * W * math.cos(phi)
+                y = 0.25 * L * math.sin(phi)
+                z = sgn * 0.35 * Th
+                pts.append(centre + x * e1 + y * e2 + z * n)
+        return np.array(pts)
+
+    def _is_inside_pad(self, pts, pad_geom, margin=0.92):
+        """Test whether 3D points lie inside a cladode's obovate volume."""
+        centre, e1, e2, n, L, W, Th, _ = pad_geom
+        d = pts - centre
+        u = np.dot(d, e1)
+        v = np.dot(d, e2)
+        w = np.dot(d, n)
+        v_norm = np.clip(v / (0.5 * L + 1e-9), -1.0, 1.0)
+        obov = 1.0 + 0.12 * v_norm
+        r_uv = np.hypot(u / (0.5 * W * obov + 1e-9), v_norm)
+        thick = 0.5 * Th * np.sqrt(np.clip(1.0 - r_uv ** 2.5, 0.0, 1.0))
+        inside = (r_uv < margin) & (np.abs(w) < (thick * margin + 1e-4))
+        return inside
+
+    def _pads_collide(self, p1_geom, p2_geom, is_parent=False):
+        """Test whether two cladodes penetrate each other (excluding natural base joint)."""
+        c1, _, _, _, L1, _, _, _ = p1_geom
+        c2, _, e2_2, _, L2, _, _, b2 = p2_geom
+        if np.linalg.norm(c1 - c2) > (0.55 * L1 + 0.55 * L2):
+            return False
+        pts1 = self._pad_sample_points(p1_geom)
+        pts2 = self._pad_sample_points(p2_geom)
+        if is_parent:
+            # Child (p2) body penetrating parent (p1)
+            v2 = np.dot(pts2 - c2, e2_2)
+            pts2_body = pts2[v2 > -0.32 * L2]
+            if np.any(self._is_inside_pad(pts2_body, p1_geom)):
+                return True
+            # Parent (p1) penetrating child body away from insertion base
+            d_base = np.linalg.norm(pts1 - b2, axis=1)
+            pts1_away = pts1[d_base > 0.18 * L2]
+            if np.any(self._is_inside_pad(pts1_away, p2_geom)):
+                return True
+            return False
+        else:
+            if np.any(self._is_inside_pad(pts1, p2_geom)):
+                return True
+            if np.any(self._is_inside_pad(pts2, p1_geom)):
+                return True
+            return False
+
+    def _opuntia(self, rng, detail):
+        """
+        Chains of flattened cladodes (Opuntia).
+        Biological principles:
+        - Areoles along the upper margin develop daughter pads with lateral inhibition
+          (apical dominance) preventing duplicate or overlapping insertions.
+        - Daughter pads align their planar width axis with the parent margin, fanning
+          outward with controlled dihedral twist.
+        - Negative autotropism and phototropism adjust growth trajectories to seek free space.
+        - Steric hindrance / density-dependent bud dormancy suppresses buds that cannot
+          grow without colliding with existing pads.
+        """
+        p = self.p
+        L = p.pad_length_cm * 0.01
+        parts = []
+        base0 = np.array([0.0, 0.0, -0.1 * L])
+        az0 = rng.uniform(0, 2 * math.pi)
+        mesh0, ar0, rim0 = self._pad(base0, UP.copy(), az0, L, rng, detail, parent_n=None)
+        geom0 = self._pad_frame(base0, UP.copy(), az0, L, parent_n=None)
+        parts.append((mesh0, ar0))
+
+        placed_pads = [{'idx': 0, 'parent': None, 'level': 0, 'geom': geom0, 'scale': 1.0}]
+        queue = [placed_pads[0]]
+
+        while queue and len(placed_pads) < 200:
+            parent = queue.pop(0)
+            level = parent['level']
+            if level + 1 >= p.pad_levels:
+                continue
+            n_child = int(rng.poisson(p.pad_branching))
+            if p.pad_branching >= 1.0:
+                # Young plants keep branching: at least two daughters on the basal pad, one above
+                n_child = max(n_child, 2 if level == 0 else (1 if level + 2 < p.pad_levels else 0))
+            if n_child <= 0:
+                continue
+            n_child = min(4, n_child)
+
+            p_centre, p_e1, p_e2, p_n, p_L, p_W, p_Th, _ = parent['geom']
+
+            # Stratified margin areoles (lateral inhibition along the upper rim)
+            if n_child == 1:
+                base_phis = [math.pi * 0.5 + rng.uniform(-0.06, 0.06)]
+            elif n_child == 2:
+                base_phis = [math.pi * 0.32 + rng.uniform(-0.04, 0.04),
+                             math.pi * 0.68 + rng.uniform(-0.04, 0.04)]
+            elif n_child == 3:
+                base_phis = [math.pi * 0.25 + rng.uniform(-0.03, 0.03),
+                             math.pi * 0.50 + rng.uniform(-0.03, 0.03),
+                             math.pi * 0.75 + rng.uniform(-0.03, 0.03)]
+            else:
+                base_phis = [math.pi * (0.2 + 0.6 * (i + 0.5) / n_child) + rng.uniform(-0.02, 0.02)
+                             for i in range(n_child)]
+
+            for b_phi in base_phis:
+                child_scale = parent['scale'] * rng.uniform(0.78, 0.95)
+                child_L = L * child_scale
+                accepted = False
+
+                # Phototropism / collision avoidance: test candidate trajectories
+                for attempt in range(12):
+                    phi = b_phi + (rng.uniform(-0.08, 0.08) * (1 + attempt // 3) if attempt > 0 else 0.0)
+                    pos = (p_centre + 0.5 * p_W * 0.9 * math.cos(phi) * p_e1 * 1.1 +
+                           0.5 * p_L * 0.92 * math.sin(phi) * p_e2)
+                    outward = _normalize(pos - p_centre)
+                    up_weight = rng.uniform(0.4, 0.8) + (attempt * 0.12)
+                    child_up = _normalize(outward * 0.65 + UP * up_weight)
+                    twist = rng.normal(0.0, math.radians(16.0)) + (attempt * rng.choice([-0.25, 0.25]))
+
+                    cand_geom = self._pad_frame(pos, child_up, twist, child_L, parent_n=p_n)
+
+                    # Collision test against all previously placed cladodes
+                    collides = False
+                    for ex in placed_pads:
+                        is_par = (ex['idx'] == parent['idx'])
+                        if self._pads_overlap(cand_geom, ex['geom'], is_par):
+                            collides = True
+                            break
+                    if not collides:
+                        mesh, ar, rim = self._pad(pos, child_up, twist, child_L, rng, detail, parent_n=p_n)
+                        pad_entry = {'idx': len(placed_pads), 'parent': parent['idx'], 'level': level + 1,
+                                     'geom': cand_geom, 'scale': child_scale}
+                        placed_pads.append(pad_entry)
+                        parts.append((mesh, ar))
+                        queue.append(pad_entry)
+                        accepted = True
+                        break
+
+        return parts
+
+    def _pad(self, base, up, roll, L, rng, detail, parent_n=None):
+        p = self.p
+        centre, e1, e2, n, L, W, Th, base = self._pad_frame(base, up, roll, L, parent_n)
         nr, nf = int(10 * detail) + 4, int(32 * detail) + 8
         rr = np.linspace(0.0, 1.0, nr)[1:]
         ph = np.linspace(0.0, 2 * math.pi, nf, endpoint=False)

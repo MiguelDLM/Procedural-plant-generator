@@ -9,7 +9,18 @@ systems (Köstler, Brückner & Bibelriether 1968, "Die Wurzeln der Waldbäume"):
     PLATE     shallow horizontal laterals carrying vertical sinkers (Picea, Populus, Salix)
     BUTTRESS  superficial laterals continuing up the stem as plank buttresses, with sinkers
               at their ends (Crook, Ennos & Banks 1997, J. Exp. Bot. 48: 1703)
-    FIBROUS   many adventitious roots of near-constant girth from the stem base (palms)
+    FIBROUS   many adventitious roots of near-constant girth from the stem base (palms, agaves,
+              aloes, crassulaceous rosettes)
+    TUBEROUS  a napiform (turnip/carrot-shaped) storage taproot carrying fine laterals, as in some
+              globose cacti (Lophophora, Ariocarpus)
+
+Succulents: most cacti are shallow-rooted, with laterals rarely deeper than 15-30 cm but extending
+up to ~10 m from a saguaro (Cannon 1911, The Root Habits of Desert Plants, Carnegie Inst. Publ. 131);
+cultivated Opuntia concentrate roots in the top 100-150 mm and spread 1.6-1.7 m in one season,
+producing ephemeral "rain roots" after wetting (Snyman 2005, J. Prof. Assoc. Cactus Dev. 7: 1).
+Shallow placement is critical for desert agaves: lowering an Agave deserti root system by 0.24 m
+cut simulated water uptake by ~25% (Franco & Nobel 1990, Oecologia 82: 151,
+doi:10.1007/BF00323528).
 
 Quantitative rules:
 - Root collar: the stem cross-section is shared among the main roots following
@@ -43,6 +54,7 @@ class RootSystemType(str, Enum):
     PLATE = "Plate"
     BUTTRESS = "Buttress"
     FIBROUS = "Fibrous"
+    TUBEROUS = "Tuberous"   # Napiform storage taproot (Lophophora, Ariocarpus) with fine laterals
 
 
 # Jackson et al. (1996), Table 1: fitted depth coefficient beta per biome
@@ -78,6 +90,9 @@ class RootProfile:
     knees: int = 0                    # Pneumatophores ("cypress knees") on shallow laterals
     fibrous_count: int = 60           # Adventitious roots (FIBROUS)
     fibrous_radius_m: float = 0.006
+    fibrous_spread_m: float = 0.0     # Horizontal reach of fibrous roots (0 = 1-3 m, palms)
+    tuber_length_m: float = 0.12      # TUBEROUS storage root
+    tuber_radius_m: float = 0.03
 
 
 def sample_depth(beta: float, u: np.ndarray | float) -> np.ndarray:
@@ -105,6 +120,9 @@ class RootSystemEngine:
         dbh = dbh_m
         if prof.system == RootSystemType.FIBROUS:
             self._fibrous(graph, R, rng)
+            return graph
+        if prof.system == RootSystemType.TUBEROUS:
+            self._tuber(graph, R, rng)
             return graph
 
         n = max(1, int(prof.lateral_count))
@@ -306,13 +324,48 @@ class RootSystemEngine:
         for i in range(n):
             az = i * math.radians(137.508) + rng.normal(0, 0.1)
             h = rng.uniform(-0.05, 0.25) * R * 2.0
-            dip = math.radians(rng.uniform(15.0, 70.0))
-            L = min(self._display / max(0.2, math.sin(dip)), rng.uniform(1.0, 3.0))
+            if prof.fibrous_spread_m > 0.0:
+                # Reach set by the spread; dip so that roots end within the rooting depth (beta model)
+                L = prof.fibrous_spread_m * rng.uniform(0.5, 1.05)
+                depth = float(np.clip(sample_depth(prof.beta, rng.uniform(0.3, 0.9)), 0.02, prof.max_depth_m))
+                dip = math.atan2(depth, L)
+            else:
+                dip = math.radians(rng.uniform(15.0, 70.0))
+                L = rng.uniform(1.0, 3.0)
+            L = min(self._display / max(0.05, math.sin(dip)), L)
             k = max(4, int(L / 0.12))
             t = np.linspace(0.0, 1.0, k + 1)
             start = np.array([R * 0.85 * math.cos(az), R * 0.85 * math.sin(az), h])
             d = np.array([math.cos(az) * math.cos(dip), math.sin(az) * math.cos(dip), -math.sin(dip)])
-            bend = np.column_stack([np.zeros(k + 1), np.zeros(k + 1), -0.15 * L * t ** 2])
-            p = start + (L * t)[:, None] * d + bend
+            sag = (0.15 * L) if prof.fibrous_spread_m <= 0.0 else (0.2 * L * math.tan(dip))
+            bend = np.column_stack([np.zeros(k + 1), np.zeros(k + 1), -sag * t ** 2])
+            # Sinuous course through the soil (cumulative random deflection, larger toward the tip)
+            wobble = np.cumsum(rng.normal(0.0, 0.035 * L / np.sqrt(k), (k + 1, 3)), axis=0) * t[:, None]
+            wobble[:, 2] *= 0.4
+            p = start + (L * t)[:, None] * d + bend + wobble
             r = np.full(k + 1, prof.fibrous_radius_m * rng.uniform(0.8, 1.2))
             graph.add_axis(Axis(p, r, 2, -1, -1, az))
+
+    def _tuber(self, graph, R, rng):
+        """Napiform storage taproot: swollen below the collar, tapering to a thin tip, with fine laterals."""
+        prof = self.profile
+        L = min(self._display, prof.tuber_length_m)
+        k = 24
+        t = np.linspace(0.0, 1.0, k + 1)
+        wob = rng.normal(0.0, 0.004, (k + 1, 2)).cumsum(axis=0) * L
+        p = np.column_stack([wob[:, 0] * t, wob[:, 1] * t, 0.02 * L - L * t])
+        # Napiform profile: widest a little below the collar, then a long taper
+        r = prof.tuber_radius_m * (1.0 + 0.25 * np.sin(np.pi * np.clip(t / 0.35, 0, 1))) * (1.0 - t) ** 0.9
+        r = np.maximum(r, self.MIN_RADIUS)
+        aid = graph.add_axis(Axis(p, r, 1, -1, -1, 0.0))
+        for _ in range(max(3, int(prof.fibrous_count))):
+            j = int(rng.uniform(0.15, 0.9) * k)
+            az = rng.uniform(0, 2 * math.pi)
+            top = p[j]
+            Lr = (prof.fibrous_spread_m or 3 * L) * rng.uniform(0.3, 1.0)
+            n = 8
+            u = np.linspace(0.0, 1.0, n + 1)
+            q = np.column_stack([top[0] + math.cos(az) * Lr * u, top[1] + math.sin(az) * Lr * u,
+                                 top[2] - 0.3 * Lr * u ** 1.5])
+            rr = np.maximum(self.MIN_RADIUS * 0.5, prof.fibrous_radius_m * (1.0 - 0.6 * u))
+            graph.add_axis(Axis(q, rr, 2, aid, j, az))

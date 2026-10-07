@@ -43,11 +43,13 @@ LAYOUT = {
                            "spine_thickness_mm", "spine_curvature", "central_hook", "radial_lift_deg",
                            "spine_jitter", "wool", "apical_wool"]),
         ("Branching", ["arm_count", "arm_height_min", "arm_height_max", "arm_radius_ratio", "arm_reach_m",
-                       "arm_length_ratio", "offsets", "offset_scale"]),
+                       "arm_length_ratio", "arm_lean_deg", "arm_branching", "offsets", "offset_scale"]),
         ("Cladodes (Opuntia)", ["pad_length_cm", "pad_width_ratio", "pad_thickness_ratio", "pad_levels",
                                 "pad_branching"]),
         ("Colour", ["stem_color", "groove_color", "spine_color", "spine_tip_color", "wool_color", "glaucous",
                     "flecks"]),
+        ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "taproot_share",
+                   "taproot_depth_m", "root_core_ratio", "tuber_length_cm", "tuber_radius_ratio"]),
     ],
     GrowthForm.ROSETTE: [
         ("Rosette", ["phyllotaxis", "leaf_count", "stem_height_m", "stem_radius_m", "rosette_height_m",
@@ -59,6 +61,7 @@ LAYOUT = {
                                 "teeth_size_cm", "teeth_hook"]),
         ("Colour", ["leaf_color", "blush_color", "blush_amount", "glaucous", "spots", "bands",
                     "armature_color"]),
+        ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "root_radius_mm"]),
     ],
 }
 
@@ -371,6 +374,15 @@ def _child(context, root, suffix, mesh_data, mat):
     return obj
 
 
+def _root_material(name):
+    mat = bpy.data.materials.get(name + "_RootMat")
+    if mat is None:
+        mat, nt, b = _new_mat(name + "_RootMat")
+        b.inputs['Base Color'].default_value = _srgb_to_linear((0.42, 0.33, 0.24))
+        _set(b, 0.85, "Roughness")
+    return mat
+
+
 def update_succulent_geometry(context, props, find_root):
     form = GrowthForm(props.growth_form)
     key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
@@ -384,7 +396,8 @@ def update_succulent_geometry(context, props, find_root):
     mkey = _key(profile)
     if form == GrowthForm.CACTUS:
         res = CactusEngine(profile).generate(seed=props.seed, detail=props.succ_detail,
-                                             spine_budget=props.spine_budget)
+                                             spine_budget=props.spine_budget, with_roots=props.show_roots,
+                                             root_display_depth=props.root_display_depth)
         skin = spines = None
         if props.assign_materials:
             skin = bpy.data.materials.get(root.name + "_Skin")
@@ -399,7 +412,8 @@ def update_succulent_geometry(context, props, find_root):
         root["areoles"] = res.areole_count
         root["spines"] = res.spine_count
     else:
-        res = RosetteEngine(profile).generate(seed=props.seed, detail=props.succ_detail)
+        res = RosetteEngine(profile).generate(seed=props.seed, detail=props.succ_detail, with_roots=props.show_roots,
+                                              root_display_depth=props.root_display_depth)
         leaf = arm = None
         if props.assign_materials:
             leaf = bpy.data.materials.get(root.name + "_Leaf")
@@ -413,6 +427,7 @@ def update_succulent_geometry(context, props, find_root):
         for suffix in ("_Stem", "_Spines"):
             _child(context, root, suffix, None, None)
         root["leaf_count"] = res.leaf_count
+    _child(context, root, "_SuccRoots", res.roots if props.show_roots else None, _root_material(root.name))
     root["scientific_name"] = preset.scientific_name
     root["common_name"] = preset.common_name
     root["family"] = preset.family
