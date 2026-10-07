@@ -66,6 +66,19 @@ class RosetteProfile:
     keel: float = 0.3                # Abaxial keel
     section_exponent: float = 2.2    # Superellipse exponent (2 elliptic, >2 boxy)
 
+    # Leaf base and young leaves
+    base_width: float = 0.3          # Half-width at the insertion relative to the widest point
+    clasp: float = 0.0               # How much the base wraps around the stem (sheathing / clasping)
+    base_swell: float = 0.0          # Extra thickness of the fleshy leaf base
+    furl: float = 0.0                # Rolling of young central leaves into the spike (cogollo)
+
+    # Stem body and old leaves
+    dead_leaves: int = 0             # Persistent dry leaves below the living rosette (skirt)
+    dead_color: tuple = (0.55, 0.46, 0.34)
+    stem_color: tuple = (0.50, 0.45, 0.36)   # Corky stem below the leaves
+    stem_scars: float = 0.0          # Visibility of crescent leaf scars on the stem
+    scar_spacing_mm: float = 6.0     # Internode length along the bare stem
+
     # Armature
     terminal_spine_cm: float = 0.0
     teeth_count: int = 0             # Per margin
@@ -84,6 +97,10 @@ class RosetteProfile:
     spots: float = 0.0               # Pale spots (Aloe)
     bands: float = 0.0               # Transverse tubercle bands (Haworthiopsis)
     armature_color: tuple = (0.30, 0.20, 0.15)
+    blush_tip: float = 1.0           # Weight of the tip in the blush (0 = margins only)
+    margin_band: float = 0.0         # Horny dark margin (Agave)
+    striation: float = 0.0           # Fine longitudinal lines
+    imprints: float = 0.0            # Bud imprints of neighbouring leaves' teeth and outline (Agave)
 
     # Shallow fibrous roots (Franco & Nobel 1990 for Agave deserti)
     root_system: RootSystemType = RootSystemType.FIBROUS
@@ -151,6 +168,12 @@ class RosetteEngine:
         hw = np.maximum(hw, 0.004)
         hw[-1] = 0.0
         hw /= max(1e-6, hw.max())
+        # Broad sheathing base: blend the lamina outline toward `base_width` over the basal ~18%
+        wb = 1.0 - np.clip(u / 0.18, 0.0, 1.0)
+        wb = wb * wb * (3.0 - 2.0 * wb)
+        hw = hw + (max(p.base_width, 0.004) - hw[0]) * wb
+        hw[-1] = 0.0
+        hw = np.maximum(hw, 0.0)
         # Leaves are inserted along the top of the stem: the oldest at its base, above ground
         stem_top = centre + UP * (max(p.stem_height_m, 0.0) + p.rosette_height_m) * scale
         verts, quads, tris, attrs = [], [], [], {"leaf_u": [], "leaf_edge": [], "leaf_top": [], "leaf_rand": []}
@@ -158,8 +181,13 @@ class RosetteEngine:
         diam = 0.0
         step = GOLDEN if p.phyllotaxis == RosettePhyllotaxis.SPIRAL else math.pi
         az0 = rng.uniform(0, 2 * math.pi)
-        for i in range(n):
-            age = i / max(1, n - 1)                      # 0 oldest .. 1 youngest
+        attrs["leaf_dead"] = []
+        dz = p.rosette_height_m * scale / max(1, n - 1)
+        n_dead = p.dead_leaves if primary else p.dead_leaves // 2
+        ground = centre[2] + 0.004
+        for i in range(-n_dead, n):
+            dead = i < 0
+            age = max(0.0, i / max(1, n - 1))            # 0 oldest .. 1 youngest
             L = p.leaf_length_cm * 0.01 * scale * (1.0 - p.size_gradient * age ** 1.3) * rng.uniform(0.92, 1.06)
             W = L / max(0.5, p.leaf_aspect)               # Full width
             elev = math.radians(p.elevation_outer_deg + (p.elevation_inner_deg - p.elevation_outer_deg)
@@ -167,17 +195,31 @@ class RosetteEngine:
             az = az0 + i * step + rng.normal(0, 0.04)
             r_ins = p.stem_radius_m * scale * (1.0 - 0.7 * age)
             z_ins = -p.rosette_height_m * scale * (1.0 - age)
+            if dead:
+                # Withered leaves: shrunken, papery, hanging from below the living whorl
+                L *= rng.uniform(0.7, 0.95)
+                W *= rng.uniform(0.55, 0.8)
+                elev = -math.radians(rng.uniform(20, 70))
+                z_ins = max(-p.rosette_height_m * scale + i * max(dz, 0.002), ground - stem_top[2] + 0.004)
             radial = np.array([math.cos(az), math.sin(az), 0.0])
             lateral = np.array([-math.sin(az), math.cos(az), 0.0])
             base = stem_top + radial * r_ins + UP * z_ins
             # Midline: angle from horizontal changes along the leaf by the curvature
-            ang = elev + math.radians(p.curvature_deg) * u * (1.0 - 0.5 * age)
+            # Bending concentrated in the distal half (rigid, fibre-reinforced base; recurving tips)
+            ang = elev + math.radians(p.curvature_deg) * u ** 2 * (1.0 - 0.6 * age)
+            if dead:
+                ang = ang - math.radians(rng.uniform(10, 50)) * u ** 2
             ds = L / (nu - 1)
             dirs = np.cos(ang)[:, None] * radial + np.sin(ang)[:, None] * UP
             mid = base + np.concatenate([[np.zeros(3)], np.cumsum(dirs[:-1] * ds, axis=0)])
+            if dead:          # Rest on the ground instead of passing through it
+                mid[:, 2] = np.maximum(mid[:, 2], ground + 0.002 * (n_dead + i + 1) * scale)
             normal = _normalize(np.cross(lateral[None, :], dirs))       # Adaxial (upper) normal
             half_w = 0.5 * W * hw
             thick = p.leaf_thickness * W * (1.0 - p.thickness_taper * u) * np.clip(hw * 1.3, 0.25, 1.0)
+            thick = thick * (1.0 + p.base_swell * (1.0 - u) ** 6)
+            if dead:
+                thick = thick * 0.12
             v = np.linspace(0.0, 2 * math.pi, nv, endpoint=False)
             e = 2.0 / max(1.2, p.section_exponent)
             cx = np.sign(np.cos(v)) * np.abs(np.cos(v)) ** e
@@ -188,7 +230,23 @@ class RosetteEngine:
             xr = np.abs(cx)[None, :]
             Z = np.where(top[None, :], Z - p.channel * thick[:, None] * (1.0 - xr ** 2),
                          Z - p.keel * thick[:, None] * (1.0 - xr))
+            # Young central leaves roll about their long axis (furled spike / cogollo)
+            furl = 0.0 if dead else p.furl * np.clip((age - 0.55) / 0.45, 0.0, 1.0) ** 1.5
+            if furl > 1e-3:
+                amax = furl * math.pi * 0.85
+                wrow = np.maximum(half_w, 1e-6)[:, None]
+                a = amax * X / wrow
+                rho = wrow / amax
+                X, Z = rho * np.sin(a) - Z * np.sin(a), rho * (1.0 - np.cos(a)) + Z * np.cos(a)
             P = mid[:, None, :] + X[..., None] * lateral[None, None, :] + Z[..., None] * normal[:, None, :]
+            # Clasping base: near the insertion the lateral spread follows an arc around the stem axis
+            if p.clasp > 0.0:
+                wc = p.clasp * (1.0 - np.clip(u / 0.22, 0.0, 1.0)) ** 2
+                Rrow = np.maximum(np.hypot(*(mid[:, :2] - stem_top[:2]).T), 0.3 * p.stem_radius_m * scale + 1e-4)
+                phi = X / Rrow[:, None]
+                delta = (Rrow[:, None, None] * (np.cos(phi) - 1.0)[..., None] * radial[None, None, :]
+                         + (Rrow[:, None] * np.sin(phi) - X)[..., None] * lateral[None, None, :])
+                P = P + wc[:, None, None] * delta
             off = sum(len(vv) for vv in verts)
             verts.append(P.reshape(-1, 3))
             quads.append(_quads_grid(nu, nv, off))
@@ -196,13 +254,16 @@ class RosetteEngine:
             attrs["leaf_edge"].append(np.tile(np.abs(cx), nu))
             attrs["leaf_top"].append(np.tile(top.astype(float), nu))
             attrs["leaf_rand"].append(np.full(nu * nv, rng.random()))
+            attrs["leaf_dead"].append(np.full(nu * nv, 1.0 if dead else 0.0))
             diam = max(diam, 2 * float(np.hypot(*(mid[-1] - centre)[:2])))
-            arm_parts.append(self._armature(mid, dirs, lateral, normal, half_w, L, rng))
+            if not dead:
+                arm_parts.append(self._armature(mid, dirs, lateral, normal, half_w, L, rng))
         V = np.vstack(verts)
         Q = np.vstack(quads)
         attrs = {k: np.concatenate(vv).astype(np.float32) for k, vv in attrs.items()}
         leaves = _mesh(V, Q, None, None, None, attrs)
-        stem = self._stem(centre, stem_top, scale)
+        w0 = 0.5 * p.leaf_length_cm * 0.01 * scale / max(0.5, p.leaf_aspect) * hw[0]
+        stem = self._stem(centre, stem_top, scale, az0, step, w0, rng)
         return leaves, MeshData.concatenate([a for a in arm_parts if a is not None]), stem, n, diam
 
     def _armature(self, mid, dirs, lateral, normal, half_w, L, rng):
@@ -243,13 +304,55 @@ class RosetteEngine:
         V = np.array(verts)
         return _mesh(V, None, np.array(tris), None, None, {"leaf_u": np.ones(len(V), np.float32)})
 
-    def _stem(self, centre, top, scale):
+    def _stem(self, centre, top, scale, az0, step, w_base, rng):
+        """Stem as a body of revolution: flared root crown, bare corky internodes with crescent leaf scars
+        following the phyllotactic spiral, then the insertion zone tapering into the apical dome, where the
+        radius matches the leaf insertion radius r_ins = r0 (1 - 0.7 age)."""
         p = self.p
-        r = p.stem_radius_m * scale * 0.9
-        h0 = centre - UP * 0.02
-        ring = np.linspace(0, 2 * math.pi, 10, endpoint=False)
-        rows = [h0, top - UP * p.rosette_height_m * scale * 0.5]
-        V = np.vstack([c + r * np.stack([np.cos(ring), np.sin(ring), np.zeros(10)], 1) for c in rows])
-        Q = _quads_grid(2, 10)
-        return _mesh(V, Q, None, [list(range(10))[::-1], list(range(10, 20))], None,
-                     {"leaf_u": np.zeros(len(V), np.float32)})
+        r0 = p.stem_radius_m * scale
+        rh = p.rosette_height_m * scale
+        zb, zt = centre[2] - 0.03 * max(scale, 0.3), top[2]
+        z_zone = zt - rh                                   # Oldest living leaf
+        bare = max(0.0, z_zone - centre[2])
+        dz_s = max(0.001, p.scar_spacing_mm * 1e-3 * scale) if bare > 0.05 * scale else max(rh / max(1, p.leaf_count), 1e-3)
+        nseg = 32
+        n_bare = int(np.clip(bare / (dz_s / 4.0), 4, 600))
+        z = np.concatenate([np.linspace(zb, z_zone, n_bare, endpoint=False), np.linspace(z_zone, zt, 12)])
+        t_zone = np.clip((z - z_zone) / max(rh, 1e-6), 0.0, 1.0)
+        r = r0 * (1.0 - 0.7 * t_zone) * 0.92
+        r = r * (1.0 + 0.35 * np.exp(-np.maximum(z - centre[2], 0.0) / (0.8 * r0)))     # Root-crown flare
+        r[-1] = 0.15 * r0
+        th = np.linspace(0, 2 * math.pi, nseg, endpoint=False)
+        V = np.stack([centre[0] + r[:, None] * np.cos(th)[None, :], centre[1] + r[:, None] * np.sin(th)[None, :],
+                      np.repeat(z[:, None], nseg, 1)], -1).reshape(-1, 3)
+        nr = len(z)
+        Q = _quads_grid(nr, nseg)
+        apex = len(V)
+        V = np.vstack([V, [centre[0], centre[1], zt + 0.05 * r0]])
+        T = np.array([[(nr - 1) * nseg + k, (nr - 1) * nseg + (k + 1) % nseg, apex] for k in range(nseg)])
+        # Crescent leaf scars below the living whorl (leaf -j sits at azimuth az0 - j*step)
+        Z = np.repeat(z, nseg)
+        TH = np.tile(th, nr)
+        R = np.repeat(r, nseg)
+        k = (z_zone - Z) / dz_s
+        scar = np.zeros_like(Z)
+        w_a = np.clip(w_base / np.maximum(R, 1e-4), 0.3, 1.6)       # Crescent half-angle (< ~90 deg)
+        for off in (-1, 0, 1, 2):
+            j = np.floor(k) + off
+            ok = j >= 1
+            zj = z_zone - j * dz_s
+            d_th = np.angle(np.exp(1j * (TH - (az0 - j * step))))
+            q = np.clip(np.abs(d_th) / w_a, 0.0, 1.0)
+            zc = zj + 0.3 * dz_s * q ** 2
+            sig = max(0.14 * dz_s, 0.6 * (bare / max(n_bare, 1)))
+            val = np.exp(-((Z - zc) / sig) ** 2) * (1.0 - q ** 4)
+            scar = np.maximum(scar, np.where(ok, val, 0.0))
+        # Scars sit on slightly raised leaf cushions
+        cushion = (1.0 + 0.05 * scar * (Z < z_zone))[:, None]
+        V[:-1, :2] = centre[:2] + (V[:-1, :2] - centre[:2]) * cushion
+        scar = np.concatenate([scar, [0.0]])
+        h = np.concatenate([np.clip((Z - centre[2]) / max(zt - centre[2], 1e-6), 0, 1), [1.0]])
+        zone = np.concatenate([t_zone.repeat(nseg), [1.0]])
+        return _mesh(V, Q, T, [list(range(nseg))[::-1]], None,
+                     {"leaf_u": np.zeros(len(V), np.float32), "scar": scar.astype(np.float32),
+                      "stem_h": h.astype(np.float32), "stem_zone": zone.astype(np.float32)})

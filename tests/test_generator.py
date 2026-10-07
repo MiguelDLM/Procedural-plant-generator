@@ -442,6 +442,32 @@ class TestSucculents(unittest.TestCase):
                 elif getattr(a, "parent", None) is not b and i < j:
                     self.assertFalse(eng._arm_collides(a, specs[i][2], b, specs[j][2]))
 
+    def test_candelabra_crown_is_filled(self):
+        """Pachycereus weberi: branch columns cover the crown disc, including the centre (no hollow vase)."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine, StemAxis
+        p = CACTUS_CATALOG["pachycereus_weberi"].profile
+        eng = CactusEngine(p)
+        main = StemAxis(np.array([[0.0, 0.0, 0.0], [0.0, 0.0, p.height_m]]))
+        specs = eng._arms(main, 0.5 * p.diameter_m, np.random.default_rng(5))
+        r_top = np.array([np.hypot(*a.P[-1, :2]) for a, *_ in specs])
+        disc = p.arm_reach_m + 0.5 * p.diameter_m
+        self.assertGreaterEqual(np.sum(r_top < 0.35 * disc), 3)    # Inner columns near the axis
+        self.assertGreaterEqual(np.sum(r_top > 0.7 * disc), 5)     # And an outer ring
+
+    def test_rosette_stem_and_dead_leaves(self):
+        from core.succulent_db import ROSETTE_CATALOG
+        from core.rosette import RosetteEngine
+        r = RosetteEngine(ROSETTE_CATALOG["agave_americana"].profile).generate(seed=1, detail=0.5)
+        V = r.stem.vertices
+        rad = np.hypot(V[:, 0], V[:, 1])
+        self.assertGreater(rad.max() / max(1e-6, np.median(rad)), 1.2)   # Flared crown + tapering apex
+        dead = r.leaves.point_attributes["leaf_dead"] > 0.5
+        self.assertTrue(dead.any())
+        self.assertGreaterEqual(float(r.leaves.vertices[dead, 2].min()), -0.01)  # Withered leaves rest on soil
+        ae = RosetteEngine(ROSETTE_CATALOG["aeonium_arboreum"].profile).generate(seed=1, detail=0.5)
+        self.assertGreater(float(ae.stem.point_attributes["scar"].max()), 0.8)  # Leaf scars on the bare stem
+
     def test_succulent_roots(self):
         from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
         from core.cactus import CactusEngine

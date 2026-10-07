@@ -93,7 +93,8 @@ class CactusProfile:
     arm_reach_m: float = 0.5        # Horizontal elbow before turning upward
     arm_length_ratio: float = 0.5   # Vertical rise of an arm relative to the main stem height
     arm_lean_deg: float = 3.0       # Outward lean of the erect part of each arm
-    arm_branching: float = 0.0      # Mean secondary arms per arm (dense candelabra crowns)
+    arm_branching: float = 0.0
+    crown_fill: float = 0.0          # Fraction of arms whose columns fill the crown disc (area-uniform) instead of a ring      # Mean secondary arms per arm (dense candelabra crowns)
     offsets: int = 0                # Basal offsets (clumping)
     offset_scale: float = 0.7
 
@@ -316,7 +317,8 @@ class CactusEngine:
         s = np.linspace(0.20 * ax.length, ax.length, 30)
         pts = ax.frame(s)[0]
         d_trunk = np.hypot(pts[:, 0], pts[:, 1])
-        return bool(np.any(d_trunk < (R_trunk + r_arm) * 0.95))
+        below = pts[:, 2] < self.p.height_m           # Above the trunk's apex there is no trunk to hit
+        return bool(np.any((d_trunk < (R_trunk + r_arm) * 0.95) & below))
 
     def _arms(self, main: StemAxis, R: float, rng) -> list:
         p = self.p
@@ -325,8 +327,16 @@ class CactusEngine:
             return specs
         az0 = rng.uniform(0, 2 * math.pi)
         num_arms = p.arm_count
+        n_fill = int(round(p.crown_fill * num_arms))
+        disc = p.arm_reach_m + R                    # Radius of the crown disc filled by the columns
         for k in range(num_arms):
             base_az = az0 + 2 * math.pi * k / num_arms
+            fill = k < n_fill
+            if fill:
+                # Vogel spiral: column k sits at radius disc*sqrt((k+.5)/n), golden-angle azimuth, so the
+                # vertical parts of the arms cover the crown disc with equal area per column (no hollow centre).
+                d_col = disc * math.sqrt((k + 0.5) / n_fill)
+                base_az = az0 + k * GOLDEN
             # In dense candelabra branching (e.g. Garambullo, Euphorbia),
             # branches naturally organize into tiered reaches (staggered concentric layers)
             # where outer arms reach further out, preventing vertical columns from merging.
@@ -336,7 +346,13 @@ class CactusEngine:
             base_h = p.height_m * (p.arm_height_min + (p.arm_height_max - p.arm_height_min) * h_frac)
             min_reach = R + (R * p.arm_radius_ratio) + 0.04
             base_reach = max(min_reach, p.arm_reach_m * tier_reach_mult)
-            for attempt in range(12):
+            if fill:
+                # Inner columns branch from near the apex, outer ones lower down (dome of insertions)
+                rel = d_col / disc
+                base_h = p.height_m * (p.arm_height_max - (p.arm_height_max - p.arm_height_min) * rel)
+                base_reach = max(min_reach, d_col)
+                tier, tier_reach_mult = 0, 1.0
+            for attempt in range(16 if fill else 12):
                 az_nudge = 0.0 if attempt == 0 else rng.choice([-1, 1]) * (0.05 + 0.04 * attempt)
                 az = base_az + rng.normal(0, 0.04) + az_nudge
                 out = np.array([math.cos(az), math.sin(az), 0.0])
@@ -347,9 +363,13 @@ class CactusEngine:
                 if attempt > 1:
                     reach_attempt_mult = (1.18 if (attempt % 2 == 0) else 0.88)
                 reach = max(R + r_arm + 0.03, base_reach * reach_attempt_mult * rng.uniform(0.95, 1.05))
+                if fill:     # Short elbows for inner columns so they stand close to the axis
+                    reach = max(0.2 * R, min(reach, d_col * rng.uniform(0.9, 1.05)))
+                    if reach < R + r_arm:        # Central columns sprout from the trunk apex
+                        h = p.height_m * 0.99
                 rise = p.arm_length_ratio * p.height_m * rng.uniform(0.75, 1.05) + 2 * r_arm
                 base = main.frame(np.array(h))[0]
-                lean = math.tan(math.radians(p.arm_lean_deg + 3.0 * tier))
+                lean = math.tan(math.radians((p.arm_lean_deg + 3.0 * tier) * (rel ** 1.5 if fill else 1.0)))
                 ctrl = [base,
                         base + out * reach * 0.6 + UP * reach * 0.15,
                         base + out * reach + UP * reach * 0.6,

@@ -43,7 +43,7 @@ LAYOUT = {
                            "spine_thickness_mm", "spine_curvature", "central_hook", "radial_lift_deg",
                            "spine_jitter", "wool", "apical_wool"]),
         ("Branching", ["arm_count", "arm_height_min", "arm_height_max", "arm_radius_ratio", "arm_reach_m",
-                       "arm_length_ratio", "arm_lean_deg", "arm_branching", "offsets", "offset_scale"]),
+                       "arm_length_ratio", "arm_lean_deg", "arm_branching", "crown_fill", "offsets", "offset_scale"]),
         ("Cladodes (Opuntia)", ["pad_length_cm", "pad_width_ratio", "pad_thickness_ratio", "pad_levels",
                                 "pad_branching"]),
         ("Colour", ["stem_color", "groove_color", "spine_color", "spine_tip_color", "wool_color", "glaucous",
@@ -57,10 +57,11 @@ LAYOUT = {
                      "offsets", "offset_scale"]),
         ("Leaf", ["leaf_length_cm", "leaf_aspect", "leaf_thickness", "thickness_taper", "curvature_deg",
                   "widest_position", "base_angle_deg", "apex_angle_deg", "base_curvature", "apex_curvature"]),
-        ("Section & Armature", ["channel", "keel", "section_exponent", "terminal_spine_cm", "teeth_count",
-                                "teeth_size_cm", "teeth_hook"]),
-        ("Colour", ["leaf_color", "blush_color", "blush_amount", "glaucous", "spots", "bands",
-                    "armature_color"]),
+        ("Section & Armature", ["channel", "keel", "section_exponent", "base_width", "clasp", "base_swell", "furl",
+                                "dead_leaves", "stem_scars", "scar_spacing_mm",
+                                "terminal_spine_cm", "teeth_count", "teeth_size_cm", "teeth_hook"]),
+        ("Colour", ["leaf_color", "blush_color", "blush_amount", "blush_tip", "glaucous", "spots", "bands",
+                    "armature_color", "margin_band", "striation", "imprints", "dead_color", "stem_color"]),
         ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "root_radius_mm"]),
     ],
 }
@@ -240,6 +241,53 @@ def cactus_materials(name, p):
     return skin, spines
 
 
+def _math(nt, op, a, b=None, loc=(0, 0), c=None):
+    m = nt.nodes.new('ShaderNodeMath')
+    m.operation = op
+    m.location = loc
+    for i, v in enumerate((a, b, c)):
+        if v is None:
+            continue
+        if isinstance(v, (int, float)):
+            m.inputs[i].default_value = v
+        else:
+            nt.links.new(v, m.inputs[i])
+    return m.outputs[0]
+
+
+def _agave_details(nt, p, u, edge, top, col):
+    """Horny margin, longitudinal striations and bud imprints (teeth and outline of the neighbouring leaf)."""
+    e = edge.outputs['Fac']
+    uu = u.outputs['Fac']
+    tt = top.outputs['Fac']
+    if getattr(p, "striation", 0.0) > 0:
+        s = _math(nt, 'SINE', _math(nt, 'MULTIPLY', e, 2 * 3.14159 * 22, (-650, -1200)), None, (-450, -1200))
+        s = _math(nt, 'MULTIPLY', s, 0.05 * p.striation, (-250, -1200))
+        col = _mix(nt, s, col, (1.0, 1.0, 1.0, 1.0), (-50, -1200), 'ADD')
+    if getattr(p, "imprints", 0.0) > 0:
+        # Tooth imprints: a row of pale marks inside the margin, one per tooth of the neighbouring leaf
+        per = _math(nt, 'COSINE', _math(nt, 'MULTIPLY', uu, 2 * 3.14159 * max(1, p.teeth_count), (-650, -1400)),
+                    None, (-450, -1400))
+        per = _math(nt, 'POWER', _math(nt, 'MULTIPLY_ADD', per, 0.5, (-300, -1400), 0.5), 6.0, (-150, -1400))
+        # Soft band just inside the margin: exp(-((edge - 0.78) / 0.07)^2)
+        dz = _math(nt, 'DIVIDE', _math(nt, 'SUBTRACT', e, 0.78, (-600, -1550)), 0.07, (-450, -1550))
+        band = _math(nt, 'EXPONENT', _math(nt, 'MULTIPLY', _math(nt, 'MULTIPLY', dz, dz, (-350, -1600)), -1.0,
+                                           (-250, -1600)), None, (-150, -1600))
+        teeth = _math(nt, 'MULTIPLY', per, band, (0, -1500))
+        # Outline imprint: a pale line converging toward the tip
+        line_pos = _math(nt, 'MULTIPLY_ADD', uu, -0.7, (-650, -1800), 0.78)
+        d = _math(nt, 'ABSOLUTE', _math(nt, 'SUBTRACT', e, line_pos, (-450, -1800)), None, (-300, -1800))
+        line = _math(nt, 'EXPONENT', _math(nt, 'MULTIPLY', _math(nt, 'MULTIPLY', d, d, (-150, -1800)), -900.0,
+                                           (0, -1800)), None, (100, -1800))
+        imp = _math(nt, 'MULTIPLY', _math(nt, 'MAXIMUM', teeth, line, (200, -1650)), tt, (300, -1650))
+        imp = _math(nt, 'MULTIPLY', imp, 0.55 * p.imprints, (400, -1650))
+        col = _mix(nt, imp, col, (0.80, 0.85, 0.86, 1.0), (500, -1500))
+    if getattr(p, "margin_band", 0.0) > 0:
+        mb = _math(nt, 'MULTIPLY', _math(nt, 'GREATER_THAN', e, 0.93, (-450, -2000)), p.margin_band, (-300, -2000))
+        col = _mix(nt, mb, col, _srgb_to_linear(p.armature_color), (600, -2000))
+    return col
+
+
 def rosette_materials(name, p):
     leaf, nt, bsdf = _new_mat(name + "_Leaf")
     u = _attr(nt, "leaf_u", (-1100, 300))
@@ -267,6 +315,13 @@ def rosette_materials(name, p):
     amt.location = (-450, 200)
     amt.inputs[1].default_value = p.blush_amount
     nt.links.new(mx.outputs[0], amt.inputs[0])
+    pu.inputs[0].default_value = 0.0
+    tipw = nt.nodes.new('ShaderNodeMath')
+    tipw.operation = 'MULTIPLY'
+    tipw.location = (-850, 450)
+    tipw.inputs[1].default_value = getattr(p, "blush_tip", 1.0)
+    nt.links.new(u.outputs['Fac'], tipw.inputs[0])
+    nt.links.new(tipw.outputs[0], pu.inputs[0])
     base = (_srgb_to_linear(p.leaf_color))
     hsv = nt.nodes.new('ShaderNodeHueSaturation')
     hsv.location = (-650, -250)
@@ -330,7 +385,14 @@ def rosette_materials(name, p):
         m2.inputs[1].default_value = p.bands
         nt.links.new(m1.outputs[0], m2.inputs[0])
         col = _mix(nt, m2.outputs[0], col, (0.92, 0.93, 0.9, 1.0), (50, -300))
+    col = _agave_details(nt, p, u, edge, top, col)
     col = _glaucous(nt, col, p.glaucous, bsdf, (300, 0))
+    if getattr(p, "dead_leaves", 0) > 0:
+        dead = _attr(nt, "leaf_dead", (300, -400))
+        # Withered leaves: straw/brown, darker toward the base where they rot
+        dry = _mix(nt, u.outputs['Fac'], tuple(0.6 * c for c in _srgb_to_linear(p.dead_color)[:3]) + (1.0,),
+                   _srgb_to_linear(p.dead_color), (450, -500))
+        col = _mix(nt, dead.outputs['Fac'], col, dry, (600, -300))
     nt.links.new(col, bsdf.inputs['Base Color'])
     _set(bsdf, 0.25, "Subsurface Weight")
     _set(bsdf, 0.4, "Coat Weight")
@@ -340,9 +402,22 @@ def rosette_materials(name, p):
     b2.inputs['Base Color'].default_value = _srgb_to_linear(p.armature_color)
     _set(b2, 0.4, "Roughness")
     stem, nt3, b3 = _new_mat(name + "_RosetteStem")
-    b3.inputs['Base Color'].default_value = _srgb_to_linear(tuple(0.55 * c + 0.45 * d for c, d in
-                                                                   zip(p.leaf_color, (0.45, 0.38, 0.28))))
-    _set(b3, 0.7, "Roughness")
+    # Pale leaf-base tissue in the insertion zone, corky bark below, darker crescent leaf scars
+    zone = _attr(nt3, "stem_zone", (-900, 200))
+    scar = _attr(nt3, "scar", (-900, -100))
+    pale = tuple(0.6 * c + 0.4 * d for c, d in zip(p.leaf_color, (0.85, 0.82, 0.62)))
+    zs = _math(nt3, 'POWER', zone.outputs['Fac'], 0.5, (-700, 200))
+    col = _mix(nt3, zs, _srgb_to_linear(getattr(p, "stem_color", (0.5, 0.45, 0.36))), _srgb_to_linear(pale),
+               (-450, 200))
+    noise = nt3.nodes.new('ShaderNodeTexNoise')
+    noise.location = (-700, -350)
+    _set(noise, 60.0, "Scale")
+    col = _mix(nt3, _math(nt3, 'MULTIPLY', noise.outputs['Fac'], 0.25, (-500, -350)), col, (0.1, 0.08, 0.06, 1.0),
+               (-250, 0))
+    sc = _math(nt3, 'MULTIPLY', scar.outputs['Fac'], getattr(p, "stem_scars", 0.0), (-700, -100))
+    col = _mix(nt3, sc, col, (0.12, 0.09, 0.06, 1.0), (-50, 0))
+    nt3.links.new(col, b3.inputs['Base Color'])
+    _set(b3, 0.75, "Roughness")
     return leaf, arm
 
 
