@@ -770,7 +770,8 @@ class CactusEngine:
                              for i in range(n_child)]
 
             for b_phi in base_phis:
-                child_scale = parent['scale'] * rng.uniform(0.78, 0.95)
+                # Mature cladodes reach a similar size at every level (no compounding shrinkage)
+                child_scale = max(0.75, parent['scale'] * rng.uniform(0.88, 1.0))
                 child_L = L * child_scale
                 accepted = False
 
@@ -820,8 +821,11 @@ class CactusEngine:
             for phi in np.linspace(0.24 * math.pi, 0.76 * math.pi, 7):     # Upper (distal) margin only
                 if any(abs(phi - c) < 0.22 for c in used):
                     continue
+                # Same outline as the pad mesh (obovate factor on the width only), slightly inside the rim
+                # where the margin still has thickness, so the pericarpel grows out of the areole
                 ob = 1.0 + 0.12 * math.sin(phi)
-                q = centre + 0.5 * W * ob * math.cos(phi) * e1 + 0.5 * L * ob * math.sin(phi) * e2
+                rim = 0.93
+                q = centre + rim * (0.5 * W * ob * math.cos(phi) * e1 + 0.5 * L * math.sin(phi) * e2)
                 out = _normalize(math.cos(phi) / (0.5 * W) * e1 + math.sin(phi) / (0.5 * L) * e2)
                 axis = _normalize(out * 0.75 + UP * 0.45)
                 side = _normalize(np.cross(axis, n))
@@ -830,7 +834,7 @@ class CactusEngine:
                                                     for s in (-1, 1) for v in (side, n)])
                 if any(np.any(self._pad_inside(probe, other['geom'], inflate=1.02)) for other in pads):
                     continue
-                P.append(q - out * 0.003)          # Seated in the margin areole
+                P.append(q)
                 D.append(axis)
                 Wt.append(1.0 if not used else 0.1)       # Mostly last year's (terminal) pads
         if not P:

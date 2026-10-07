@@ -242,8 +242,8 @@ def ellipsoid(b: _Builder, centre, axis, rx, rz, organ, nu=5, nv=6, orand=0.0, p
 
 
 class FlowerEngine:
-    NU = 12
-    NV = 7
+    NU = 16
+    NV = 9
 
     def __init__(self, profile: FlowerProfile):
         self.p = profile
@@ -332,7 +332,7 @@ class FlowerEngine:
         L = p.petal_length_cm * 0.01 * (0.45 + 0.55 * o)
         W = L / max(0.3, p.petal_aspect)
         r_rec = p.receptacle_radius_cm * 0.01 * (0.7 + 0.3 * o)
-        sides = max(6, int(10 * detail))
+        sides = max(10, int(18 * detail))
 
         def openness_elev(e_open, closed=86.0):
             return closed + (e_open - closed) * o ** 0.8
@@ -344,10 +344,11 @@ class FlowerEngine:
         z_top = 0.0
         if p.hypanthium_cm > 0 and not p.capitulum:
             hl = p.hypanthium_cm * 0.01
-            t = np.linspace(0.0, 1.0, 6)
-            r = np.maximum(r_rec * (0.55 + 0.45 * np.sin(t * math.pi * 0.5)), 1e-4)   # Obovoid ovary / pericarpel
+            t = np.linspace(0.0, 1.0, 10)
+            # Obovoid ovary / pericarpel with a rounded, closed base where it joins the stem or pedicel
+            r = np.maximum(r_rec * (0.12 + 0.88 * np.sin(t * math.pi * 0.5) ** 0.6), 1e-4)
             r = np.maximum(r, r_rec * 0.8 if p.tube_length_cm <= 0 else r)
-            pts = np.stack([np.zeros(6), np.zeros(6), -hl + hl * t], 1)
+            pts = np.stack([np.zeros(10), np.zeros(10), -hl + hl * t], 1)
             tube_mesh(b, pts, r, sides, SEPAL, 0.0, 0.0, cap=False)
             for k in range(p.hypanthium_scales):      # Spiral bract scales (cactus pericarpel)
                 f = (k + 0.5) / p.hypanthium_scales

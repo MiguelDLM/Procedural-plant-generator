@@ -679,6 +679,8 @@ class TestFlowers(unittest.TestCase):
         s = surface_flower_sites(r.flower_pos, r.flower_normal, r.flower_weight, 20, seed=1, lean=0.0, min_dist=0.07)
         self.assertGreater(len(s), 3)
         for q, d in zip(s.positions, s.directions):
+            # Attached: the base sits inside the margin of a cladode (not floating beyond its outline)
+            self.assertTrue(any(bool(eng._pad_inside(q[None, :], g, inflate=1.0)[0]) for g in geoms))
             probe = q + d * np.linspace(0.015, 0.08, 6)[:, None]       # Pericarpel and perianth along the axis
             for g in geoms:
                 self.assertFalse(np.any(eng._pad_inside(probe, g, inflate=1.0)))

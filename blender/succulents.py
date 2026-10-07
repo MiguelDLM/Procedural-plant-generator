@@ -471,14 +471,16 @@ def _succulent_flowers(context, root, props, form, res, profile):
     _, ip = flower_from_props(props)
     if form == GrowthForm.CACTUS:
         w = res.flower_weight
-        n = flower_site_count(props, int(np.count_nonzero(w > 0.05)) // 12 + 1)
+        # Crowns of 10-20 flowers around each apex (barrels, Mammillaria) at the default density
+        n = flower_site_count(props, int(np.count_nonzero(w > 0.05)) // 4 + 1)
         clad = getattr(getattr(profile, "habit", None), "value", "") == "Cladode"
         if clad:     # Margin sites already carry their direction (in the pad plane)
             n = flower_site_count(props, len(w))
         f, _ = flower_from_props(props)
         span = 0.01 * (f.petal_length_cm * 1.6 + f.receptacle_radius_cm) * props.flower_scale
         sites = surface_flower_sites(res.flower_pos, res.flower_normal, w, n, seed=props.seed,
-                                     lean=0.0 if clad else 0.3 + 0.5 * ip.orientation, min_dist=span)
+                                     lean=0.0 if clad else 0.3 + 0.5 * ip.orientation, min_dist=span,
+                                     sink=0.0 if clad else 0.006 * f.receptacle_radius_cm * props.flower_scale)
     else:
         pos, dirs = res.terminal_sites if ip.site_mode == FlowerSiteMode.TERMINAL else res.axillary_sites
         rng = np.random.default_rng(props.seed + 3)

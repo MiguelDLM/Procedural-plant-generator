@@ -445,7 +445,10 @@ def update_flowers_on_plant(context, root, props, sites: FlowerSites):
 
 
 def flower_site_count(props, available: int) -> int:
-    return int(min(props.flower_max, max(0, round(available * props.flower_density))))
+    """Inflorescences to place: a fraction of the available sites, at least one when flowering is on."""
+    if available <= 0 or props.flower_density <= 0:
+        return 0
+    return int(min(props.flower_max, max(1, round(available * props.flower_density))))
 
 
 def update_flower_geometry(context, props, find_root):

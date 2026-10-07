@@ -309,7 +309,7 @@ def tree_flower_sites(graph, infl: InflorescenceProfile, count: int, seed: int =
 
 
 def surface_flower_sites(pos, normal, weight, count: int, seed: int = 0, lean: float = 0.6,
-                         min_dist: float = 0.0) -> FlowerSites:
+                         min_dist: float = 0.0, sink: float = 0.0) -> FlowerSites:
     """Sites on a stem surface (cactus areoles): sampled by weight (e.g. near the apex), facing
     outward-and-up, at least `min_dist` apart (flowers must not overlap)."""
     rng = np.random.default_rng(seed + 541)
@@ -333,5 +333,7 @@ def surface_flower_sites(pos, normal, weight, count: int, seed: int = 0, lean: f
         k = len(idx)
     else:
         idx = ok[rng.choice(len(ok), k, replace=False, p=pr)]
-    D = _normalize(np.asarray(normal)[idx] * (1 - lean) + UP * lean)
-    return FlowerSites(np.asarray(pos)[idx], D, rng.uniform(0.85, 1.1, k))
+    N = np.asarray(normal)[idx]
+    D = _normalize(N * (1 - lean) + UP * lean)
+    # The flower base is sunk slightly into the areole so its rim never hangs over the curved stem
+    return FlowerSites(np.asarray(pos)[idx] - N * sink, D, rng.uniform(0.85, 1.1, k))

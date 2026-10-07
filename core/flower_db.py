@@ -365,7 +365,7 @@ FLOWER_CATALOG = {
         "Opuntia ficus-indica", "Prickly pear (flor de nopal)", "Cactaceae", "P∞ A∞ G(∞) inf",
         "Yellow cup-shaped flowers on the pad margins; long areolate pericarpel (future tuna), green stigma.",
         inf(I.SOLITARY, peduncle_cm=0.0, stem_radius_mm=1.0),
-        arrangement=SP, spiral_tepals=18, petal_length_cm=3.0, petal_aspect=1.0, widest_position=0.75,
+        arrangement=SP, spiral_tepals=18, petal_length_cm=2.6, petal_aspect=1.0, widest_position=0.75,
         apex_angle_deg=170, apex_curvature=0.9, truncation=0.4, opening_deg=30, inner_opening_deg=60,
         inner_scale=0.9, reflex_deg=-5, cup=0.7, sepal_length_ratio=0.0, hypanthium_cm=3.2, hypanthium_scales=14,
         receptacle_radius_cm=1.2, stamen_count=250, stamen_length_ratio=0.4, stamen_spread_deg=30,
@@ -373,6 +373,28 @@ FLOWER_CATALOG = {
         petal_color=(0.98, 0.80, 0.10), tip_color=(0.98, 0.82, 0.12), outer_color=(0.85, 0.50, 0.15),
         outer_tint=0.3, stamen_color=(0.97, 0.88, 0.40), anther_color=(0.98, 0.85, 0.30),
         pistil_color=(0.30, 0.70, 0.25), sepal_color=(0.35, 0.55, 0.30), sheen=0.2),
+    "opuntia_microdasys": fl(
+        "Opuntia microdasys", "Bunny ears flower (nopalillo cegador)", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Small lemon-yellow cup flowers on the pad margins; short pericarpel tufted with glochids.",
+        inf(I.SOLITARY, peduncle_cm=0.0, stem_radius_mm=1.0),
+        arrangement=SP, spiral_tepals=14, petal_length_cm=1.9, petal_aspect=1.0, widest_position=0.75,
+        apex_angle_deg=170, apex_curvature=0.9, truncation=0.4, opening_deg=35, inner_opening_deg=65,
+        inner_scale=0.9, reflex_deg=-5, cup=0.7, sepal_length_ratio=0.0, hypanthium_cm=1.8, hypanthium_scales=10,
+        receptacle_radius_cm=0.7, stamen_count=120, stamen_length_ratio=0.4, stamen_spread_deg=30,
+        anther_size_mm=0.8, carpels=6, style_length_ratio=0.55, stigma_size_mm=2.0,
+        petal_color=(0.98, 0.88, 0.25), tip_color=(0.98, 0.90, 0.30), outer_color=(0.75, 0.70, 0.30),
+        outer_tint=0.3, stamen_color=(0.97, 0.92, 0.50), pistil_color=(0.40, 0.70, 0.30),
+        sepal_color=(0.40, 0.58, 0.32)),
+    "pachycereus_marginatus": fl(
+        "Pachycereus marginatus", "Organ pipe flower (órgano)", "Cactaceae", "P∞ A∞ G(∞) inf",
+        "Small funnelform reddish to greenish-white flowers, 3-5 cm, along the upper rib crests.",
+        inf(I.SOLITARY, peduncle_cm=0.0),
+        arrangement=SP, spiral_tepals=16, merosity=8, tube_length_cm=1.8, tube_radius_cm=0.4, tube_flare=1.8,
+        petal_length_cm=1.3, petal_aspect=2.2, apex_angle_deg=100, opening_deg=35, inner_opening_deg=55,
+        inner_scale=0.85, reflex_deg=-10, cup=0.3, sepal_length_ratio=0.0, hypanthium_cm=1.2,
+        hypanthium_scales=10, receptacle_radius_cm=0.45, stamen_count=80, stamen_length_ratio=0.5, carpels=6,
+        style_length_ratio=0.9, petal_color=(0.92, 0.80, 0.78), tip_color=(0.90, 0.85, 0.80),
+        outer_color=(0.70, 0.30, 0.30), outer_tint=0.7, sepal_color=(0.45, 0.35, 0.28)),
     "echinopsis_pachanoi": fl(
         "Echinopsis pachanoi", "San Pedro flower", "Cactaceae", "P∞ A∞ G(∞) inf",
         "Huge nocturnal white trumpet: long hairy tube flaring into spiral tepals.",
@@ -552,12 +574,12 @@ TREE_FLOWERS = {
 }
 CACTUS_FLOWERS = {
     "carnegiea_gigantea": "carnegiea_gigantea", "pachycereus_pringlei": "pachycereus_columnar",
-    "pachycereus_weberi": "pachycereus_columnar", "pachycereus_marginatus": "pachycereus_columnar",
+    "pachycereus_weberi": "pachycereus_columnar", "pachycereus_marginatus": "pachycereus_marginatus",
     "myrtillocactus_geometrizans": "myrtillocactus_geometrizans", "echinopsis_pachanoi": "echinopsis_pachanoi",
     "cephalocereus_senilis": "pachycereus_columnar", "ferocactus_wislizeni": "ferocactus_wislizeni",
     "echinocactus_grusonii": "echinocactus_grusonii", "mammillaria_hahniana": "mammillaria_hahniana",
     "lophophora_williamsii": "lophophora_williamsii", "astrophytum_myriostigma": "echinocactus_grusonii",
-    "opuntia_ficus_indica": "opuntia_ficus_indica", "opuntia_microdasys": "opuntia_ficus_indica",
+    "opuntia_ficus_indica": "opuntia_ficus_indica", "opuntia_microdasys": "opuntia_microdasys",
     "euphorbia_ingens": "euphorbia_cyathia",
 }
 ROSETTE_FLOWERS = {
