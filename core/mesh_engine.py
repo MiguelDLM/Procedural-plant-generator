@@ -125,16 +125,8 @@ class BotanicalMeshEngine:
 
                 z_rel = float(np.clip(p[2] / max(1.0, total_height_m), 0.0, 1.0))
 
-                # For order > 0, child branch starts flush on parent branch surface
-                if order > 0 and i == 0 and node.parent_idx >= 0:
-                    parent_node = skeleton.nodes[node.parent_idx]
-                    # Shift start point outward to parent surface
-                    offset_dir = n * math.cos(node.azimuth_rad) + b * math.sin(node.azimuth_rad)
-                    norm_offset = np.linalg.norm(offset_dir)
-                    if norm_offset > 1e-6:
-                        offset_dir = offset_dir / norm_offset
-                    p = parent_node.position + offset_dir * (parent_node.radius * 0.85)
-                    # Branch collar swelling at insertion junction
+                # For order > 0, branch collar swelling at insertion junction
+                if order > 0 and i == 0:
                     r = r * self.config.collar_flare_factor
 
                 # Radius modulation: Gielis buttress near ground for trunk (order 0)

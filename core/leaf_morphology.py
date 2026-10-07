@@ -307,6 +307,12 @@ class LeafMorphologyEngine:
                 a_next = (a + 1) % 4
                 faces.append([ring0 + a, ring0 + a_next, ring1 + a_next, ring1 + a])
 
+        # Shift all vertices so petiole base attaches seamlessly at origin (0, 0, 0)
+        base_pz = p_start_vert[2] - (petiole_len * 0.25)
+        for v in verts:
+            v[1] += petiole_len
+            v[2] -= base_pz
+
         return {
             "vertices": verts,
             "faces": faces,

@@ -317,8 +317,27 @@ class ArchitectureEngine:
         curr_parent = parent_idx
         dist = 0.0
 
-        for s in range(num_segments):
-            s_rel = s / max(1, num_segments - 1)
+        # Root node at the exact parent branch junction
+        node0 = BranchNode(
+            position=start_pos.copy(),
+            direction=initial_dir.copy(),
+            radius=base_radius,
+            order=order,
+            distance_along_stem=0.0,
+            relative_height=float(start_pos[2]),
+            parent_idx=parent_idx,
+            azimuth_rad=azimuth_rad
+        )
+        idx0 = graph.add_node(node0)
+        branch_indices.append(idx0)
+        curr_parent = idx0
+
+        curr_pos = start_pos.copy()
+        curr_dir = initial_dir.copy()
+        dist = 0.0
+
+        for s in range(1, num_segments + 1):
+            s_rel = s / num_segments
             dist += actual_seg_len
             curr_pos += curr_dir * actual_seg_len
 

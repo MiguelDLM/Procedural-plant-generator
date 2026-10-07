@@ -58,11 +58,29 @@ class BlenderMeshBuilder:
         wood_name = f"{root_name}_Wood"
         foliage_name = f"{root_name}_Foliage"
 
-        root_obj = existing_root or bpy.data.objects.get(root_name)
+        # Find active PPG plant in scene to update in-place without duplicating
+        active_root_name = context.scene.get("ppg_active_root_name")
+        root_obj = existing_root
+        if not root_obj and active_root_name:
+            root_obj = bpy.data.objects.get(active_root_name)
+
+        if not root_obj or root_obj.name not in context.scene.objects:
+            if context.active_object and context.active_object.name.startswith("PPG_"):
+                cand = context.active_object
+                while cand.parent and cand.parent.name.startswith("PPG_"):
+                    cand = cand.parent
+                root_obj = cand
+            else:
+                root_obj = bpy.data.objects.get(root_name)
+
         if not root_obj or root_obj.name not in context.scene.objects:
             root_obj = bpy.data.objects.new(root_name, None)
             root_obj.empty_display_type = 'PLAIN_AXES'
             collection.objects.link(root_obj)
+        else:
+            root_obj.name = root_name
+
+        context.scene["ppg_active_root_name"] = root_name
 
         # -------------------------------------------------------------
         # 1. Build or Update Continuous Quad Wood Mesh
@@ -75,7 +93,7 @@ class BlenderMeshBuilder:
 
         wood_obj = None
         for child in root_obj.children:
-            if child.name.endswith("_Wood"):
+            if "_Wood" in child.name:
                 wood_obj = child
                 break
 
@@ -85,6 +103,7 @@ class BlenderMeshBuilder:
             collection.objects.link(wood_obj)
             wood_obj.parent = root_obj
         else:
+            wood_obj.name = wood_name
             mesh = wood_obj.data
 
         # Populate mesh in-place
@@ -108,7 +127,7 @@ class BlenderMeshBuilder:
         # -------------------------------------------------------------
         foliage_obj = None
         for child in root_obj.children:
-            if child.name.endswith("_Foliage"):
+            if "_Foliage" in child.name:
                 foliage_obj = child
                 break
 
@@ -127,7 +146,9 @@ class BlenderMeshBuilder:
                 collection.objects.link(foliage_obj)
                 foliage_obj.parent = root_obj
             else:
+                foliage_obj.name = foliage_name
                 f_mesh = foliage_obj.data
+                f_mesh.name = foliage_name
 
             self._populate_mesh(f_mesh, foliage_data["vertices"], foliage_data["faces"], foliage_data["uvs"])
             foliage_obj.hide_viewport = False
@@ -152,25 +173,29 @@ class BlenderMeshBuilder:
         }
 
     def _populate_mesh(self, mesh: "bpy.types.Mesh", verts: list, faces: list, uvs: list):
-        """Efficiently populates or updates a Blender Mesh from Python lists."""
+        """Efficiently populates or updates a Blender Mesh using fast C-buffers."""
         mesh.clear_geometry()
         mesh.from_pydata(verts, [], faces)
         mesh.update()
 
-        # Add UV coordinates
-        if uvs and len(uvs) == len(verts):
+        # Vectorized fast UV mapping
+        if uvs and len(uvs) == len(verts) and len(mesh.loops) > 0:
             uv_layer = mesh.uv_layers.get("UVMap") or mesh.uv_layers.new(name="UVMap")
-            for poly in mesh.polygons:
-                for loop_idx in poly.loop_indices:
-                    v_idx = mesh.loops[loop_idx].vertex_index
-                    uv_layer.data[loop_idx].uv = Vector(uvs[v_idx])
+            loop_vert_indices = np.empty(len(mesh.loops), dtype=np.int32)
+            mesh.loops.foreach_get('vertex_index', loop_vert_indices)
+            uv_arr = np.array(uvs, dtype=np.float32)
+            loop_uvs = uv_arr[loop_vert_indices].ravel()
+            uv_layer.data.foreach_set('uv', loop_uvs)
 
-        # Enable smooth shading
-        for poly in mesh.polygons:
-            poly.use_smooth = True
+        # Vectorized smooth shading
+        if len(mesh.polygons) > 0:
+            mesh.polygons.foreach_set('use_smooth', [True] * len(mesh.polygons))
 
     def _assign_vertex_groups(self, obj: "bpy.types.Object", orders: list):
-        """Creates vertex groups for Trunk (order 0), Scaffolds (order 1), and Twigs."""
+        """Creates vertex groups for Trunk (order 0), Scaffolds (order 1), and Twigs efficiently."""
+        if not orders:
+            return
+
         for name in ["Trunk", "Scaffolds", "Twigs"]:
             if name not in obj.vertex_groups:
                 obj.vertex_groups.new(name=name)
@@ -179,10 +204,14 @@ class BlenderMeshBuilder:
         vg_scaffold = obj.vertex_groups["Scaffolds"]
         vg_twigs = obj.vertex_groups["Twigs"]
 
-        for v_idx, order in enumerate(orders):
-            if order == 0:
-                vg_trunk.add([v_idx], 1.0, 'REPLACE')
-            elif order == 1:
-                vg_scaffold.add([v_idx], 1.0, 'REPLACE')
-            else:
-                vg_twigs.add([v_idx], 1.0, 'REPLACE')
+        orders_arr = np.array(orders)
+        trunk_idx = np.where(orders_arr == 0)[0].tolist()
+        scaffold_idx = np.where(orders_arr == 1)[0].tolist()
+        twigs_idx = np.where(orders_arr >= 2)[0].tolist()
+
+        if trunk_idx:
+            vg_trunk.add(trunk_idx, 1.0, 'REPLACE')
+        if scaffold_idx:
+            vg_scaffold.add(scaffold_idx, 1.0, 'REPLACE')
+        if twigs_idx:
+            vg_twigs.add(twigs_idx, 1.0, 'REPLACE')

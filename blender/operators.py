@@ -113,6 +113,24 @@ def build_custom_preset_from_props(props) -> tuple[BotanicalSpeciesPreset, Gieli
     return preset, gielis
 
 
+try:
+    from .runtime import (
+        update_tree_geometry,
+        apply_species_preset_to_props,
+        build_custom_preset_from_props,
+        is_updating,
+        set_updating
+    )
+except (ImportError, ValueError):
+    from blender.runtime import (
+        update_tree_geometry,
+        apply_species_preset_to_props,
+        build_custom_preset_from_props,
+        is_updating,
+        set_updating
+    )
+
+
 class PPG_OT_LiveUpdate(Operator):
     """Internal operator to update tree geometry live in the 3D viewport"""
     bl_idname = "ppg.live_update"
@@ -120,56 +138,54 @@ class PPG_OT_LiveUpdate(Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        props = context.scene.ppg_properties
-
-        preset, gielis = build_custom_preset_from_props(props)
-        pipeline = BotanicalPlantPipeline(preset)
-
-        # Force exact height requested by slider
-        result = pipeline.generate(
-            dbh_m=props.dbh_m,
-            leaf_density=props.leaf_density,
-            seed=props.seed
-        )
-        result.total_height_m = props.tree_height_m
-        result.crown_depth_m = max(0.5, props.tree_height_m - props.crown_base_height_m)
-
-        builder = BlenderMeshBuilder(
-            result,
-            radial_resolution=props.radial_resolution,
-            buttress_profile=gielis
-        )
-
-        built = builder.build_or_update_plant(
-            context=context,
-            leaf_density=props.leaf_density,
-            leaf_scale=props.leaf_scale,
-            show_leaves=props.show_leaves,
-            use_subsurf=props.use_subsurf
-        )
-
-        # Assign materials if needed
-        if props.assign_materials:
-            bark_mat = create_bark_material()
-            foliage_mat = create_foliage_material()
-
-            if built["wood"] and not built["wood"].data.materials:
-                built["wood"].data.materials.append(bark_mat)
-            if built["foliage"] and not built["foliage"].data.materials:
-                built["foliage"].data.materials.append(foliage_mat)
-
+        if not is_updating():
+            set_updating(True)
+            try:
+                update_tree_geometry(context)
+            finally:
+                set_updating(False)
         return {'FINISHED'}
 
 
 class PPG_OT_GeneratePlant(Operator):
     """Generate or refresh procedural plant mesh in active collection"""
     bl_idname = "ppg.generate_plant"
-    bl_label = "Generate Botanical Tree"
+    bl_label = "Update Botanical Tree"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        bpy.ops.ppg.live_update()
-        self.report({'INFO'}, "Generated continuous quad botanical tree.")
+        if not is_updating():
+            set_updating(True)
+            try:
+                update_tree_geometry(context)
+            finally:
+                set_updating(False)
+        self.report({'INFO'}, "Updated botanical tree.")
+        return {'FINISHED'}
+
+
+class PPG_OT_NewPlant(Operator):
+    """Create a brand new procedural plant without overwriting the current one"""
+    bl_idname = "ppg.new_plant"
+    bl_label = "New Plant"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        if "ppg_active_root_name" in context.scene:
+            del context.scene["ppg_active_root_name"]
+
+        for obj in context.selected_objects:
+            obj.select_set(False)
+        context.view_layer.objects.active = None
+
+        if not is_updating():
+            set_updating(True)
+            try:
+                update_tree_geometry(context)
+            finally:
+                set_updating(False)
+
+        self.report({'INFO'}, "Created new separate botanical plant.")
         return {'FINISHED'}
 
 
@@ -181,44 +197,8 @@ class PPG_OT_ApplySpeciesPreset(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
+        apply_species_preset_to_props(props, props.species_enum, context)
         preset = get_species_preset(props.species_enum)
-
-        # Load values into interactive sliders
-        props.dbh_m = preset.allometry.dbh_default_m
-        props.tree_height_m = preset.allometry.height_a * ((preset.allometry.dbh_default_m * 100) ** preset.allometry.height_b)
-        props.crown_base_height_m = props.tree_height_m * (1.0 - preset.allometry.crown_depth_ratio)
-        props.pipe_delta = preset.allometry.pipe_exponent_delta
-        props.buttress_amplitude = preset.allometry.buttress_amplitude
-        props.buttress_decay = preset.allometry.buttress_decay
-        props.wood_density = preset.allometry.wood_density_g_cm3
-
-        props.branch_levels = preset.architecture.max_order
-        props.branch_angle_deg = preset.architecture.branch_angle_mean_deg
-        props.phyllotaxis_angle_deg = preset.architecture.divergence_angle_deg
-        props.apical_dominance = preset.architecture.apical_dominance
-        props.branch_gravity = preset.architecture.gravitropism
-        props.branch_length_decay = preset.architecture.internode_decay_per_order
-        props.crookedness = preset.architecture.crookedness
-
-        props.leaf_archetype = preset.leaf_morphology.archetype.value
-        props.margin_type = preset.leaf_morphology.margin_type.value
-        props.leaf_length_cm = preset.leaf_morphology.blade_length_cm
-        props.leaf_aspect_ratio = preset.leaf_morphology.aspect_ratio
-        props.teeth_count = preset.leaf_morphology.teeth_count
-        props.leaf_droop = preset.leaf_morphology.longitudinal_droop
-
-        # Species-specific Gielis buttress default
-        if "ficus" in props.species_enum or "sequoia" in props.species_enum:
-            props.buttress_m = 6
-        elif "quercus" in props.species_enum:
-            props.buttress_m = 4
-        else:
-            props.buttress_m = 0
-
-        # Trigger update
-        if props.auto_update:
-            bpy.ops.ppg.live_update()
-
         self.report({'INFO'}, f"Loaded empirical parameters for {preset.scientific_name}")
         return {'FINISHED'}
 

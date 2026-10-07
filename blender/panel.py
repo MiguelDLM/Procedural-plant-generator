@@ -19,18 +19,30 @@ except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
 
 
+try:
+    from .runtime import is_updating, set_updating, update_tree_geometry, apply_species_preset_to_props
+except (ImportError, ValueError):
+    from blender.runtime import is_updating, set_updating, update_tree_geometry, apply_species_preset_to_props
+
+
 def on_param_update(self, context):
-    """Callback when any slider changes in the UI - updates tree in real time."""
+    """Callback when any slider changes in the UI - updates tree in real time without operator deadlock."""
+    if is_updating():
+        return
     if not getattr(self, "auto_update", True):
         return
-    if BLENDER_AVAILABLE and hasattr(bpy.ops.ppg, "live_update"):
-        bpy.ops.ppg.live_update()
+    set_updating(True)
+    try:
+        update_tree_geometry(context)
+    finally:
+        set_updating(False)
 
 
 def on_species_change(self, context):
-    """When species dropdown changes, auto-load empirical parameters into sliders."""
-    if BLENDER_AVAILABLE and hasattr(bpy.ops.ppg, "apply_species_preset"):
-        bpy.ops.ppg.apply_species_preset()
+    """When species dropdown changes, safely auto-load empirical parameters into sliders."""
+    if is_updating():
+        return
+    apply_species_preset_to_props(self, self.species_enum, context)
 
 
 class PPG_Properties(PropertyGroup):
@@ -392,10 +404,11 @@ class PPG_PT_MainPanel(Panel):
         layout = self.layout
         props = context.scene.ppg_properties
 
-        # Top Bar: Live update toggle and generate button
+        # Top Bar: Live update toggle, update active tree, or spawn new separate tree
         row = layout.row(align=True)
         row.prop(props, "auto_update", icon='PLAY', toggle=True)
-        row.operator("ppg.generate_plant", text="Refresh / Generate", icon='FILE_REFRESH')
+        row.operator("ppg.generate_plant", text="Update", icon='FILE_REFRESH')
+        row.operator("ppg.new_plant", text="New Tree", icon='ADD')
 
         # -------------------------------------------------------------
         # Section 1: Species Preset

@@ -53,7 +53,9 @@ class BotanicalPlantPipeline:
         self,
         dbh_m: float = None,
         leaf_density: float = 1.0,
-        seed: int = 42
+        seed: int = 42,
+        leaf_grid_x: int = 8,
+        leaf_grid_y: int = 16
     ) -> BotanicalPlantResult:
         """
         Executes end-to-end biological generation.
@@ -93,7 +95,7 @@ class BotanicalPlantPipeline:
                         skeleton.nodes[n_idx].position[2] -= droop * frac
 
         # 4. Generate master leaf 3D mesh
-        leaf_mesh = self.leaf_morphology.generate_3d_leaf_mesh(grid_x=12, grid_y=24)
+        leaf_mesh = self.leaf_morphology.generate_3d_leaf_mesh(grid_x=leaf_grid_x, grid_y=leaf_grid_y)
 
         # 5. Generate empirical leaf venation graph (Duarte et al. 2025 & Runions et al. 2005)
         blade_len_m = self.preset.leaf_morphology.blade_length_cm * 0.01

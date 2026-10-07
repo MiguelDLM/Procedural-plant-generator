@@ -26,6 +26,7 @@ if BLENDER_AVAILABLE:
     from .blender.operators import (
         PPG_OT_LiveUpdate,
         PPG_OT_GeneratePlant,
+        PPG_OT_NewPlant,
         PPG_OT_ApplySpeciesPreset,
         PPG_OT_ExportTraits,
     )
@@ -34,6 +35,7 @@ if BLENDER_AVAILABLE:
         PPG_Properties,
         PPG_OT_LiveUpdate,
         PPG_OT_GeneratePlant,
+        PPG_OT_NewPlant,
         PPG_OT_ApplySpeciesPreset,
         PPG_OT_ExportTraits,
         PPG_PT_MainPanel,
