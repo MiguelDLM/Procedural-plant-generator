@@ -7,10 +7,10 @@ backed by empirical datasets (TALLO, Dryad, LeavesBank, PlantCLEF, Plant Ontolog
 bl_info = {
     "name": "Procedural Plant Generator",
     "author": "Miguel Diaz de Leon-Munoz",
-    "version": (0, 1, 0),
+    "version": (0, 2, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Plant Gen",
-    "description": "Data-driven botanical 3D plant and tree generator backed by empirical traits and Plant Ontology",
+    "description": "Interactive real-time botanical tree generator backed by empirical traits and Plant Ontology",
     "category": "Add Mesh",
 }
 
@@ -24,15 +24,17 @@ except ImportError:
 if BLENDER_AVAILABLE:
     from .blender.panel import PPG_Properties, PPG_PT_MainPanel
     from .blender.operators import (
+        PPG_OT_LiveUpdate,
         PPG_OT_GeneratePlant,
-        PPG_OT_GenerateLeaf,
+        PPG_OT_ApplySpeciesPreset,
         PPG_OT_ExportTraits,
     )
 
     classes = (
         PPG_Properties,
+        PPG_OT_LiveUpdate,
         PPG_OT_GeneratePlant,
-        PPG_OT_GenerateLeaf,
+        PPG_OT_ApplySpeciesPreset,
         PPG_OT_ExportTraits,
         PPG_PT_MainPanel,
     )

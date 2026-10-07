@@ -1,14 +1,14 @@
 """
 Blender Operators for Procedural Plant Generator.
+Supports live real-time procedural updating, continuous quad meshing, and species preset loading.
 """
 
 import json
-import os
 
 try:
     import bpy
     from bpy.types import Operator
-    from bpy.props import StringProperty, FloatProperty, IntProperty, BoolProperty, EnumProperty
+    from bpy.props import StringProperty
     BLENDER_AVAILABLE = True
 except ImportError:
     BLENDER_AVAILABLE = False
@@ -16,112 +16,217 @@ except ImportError:
 
 try:
     from ..core.species_db import get_species_preset, SPECIES_CATALOG
+    from ..core.allometry import AllometricProfile
+    from ..core.architecture import ArchitectureProfile, HalleOldemanModel, PhyllotaxisType
+    from ..core.leaf_morphology import LeafMorphologyProfile, LeafArchetype, MarginType
+    from ..core.leaf_venation import VenationProfile, VenationPattern
+    from ..core.biomechanics import BiomechanicalProfile
+    from ..core.species_preset import BotanicalSpeciesPreset
+    from ..core.gielis import GielisProfile
     from ..core.plant_pipeline import BotanicalPlantPipeline
-    from ..core.ontology import PLANT_ONTOLOGY_REGISTRY, get_po_term
+    from ..core.ontology import get_po_term
     from .mesh_builder import BlenderMeshBuilder
     from .materials import create_bark_material, create_foliage_material
 except (ImportError, ValueError):
     from core.species_db import get_species_preset, SPECIES_CATALOG
+    from core.allometry import AllometricProfile
+    from core.architecture import ArchitectureProfile, HalleOldemanModel, PhyllotaxisType
+    from core.leaf_morphology import LeafMorphologyProfile, LeafArchetype, MarginType
+    from core.leaf_venation import VenationProfile, VenationPattern
+    from core.biomechanics import BiomechanicalProfile
+    from core.species_preset import BotanicalSpeciesPreset
+    from core.gielis import GielisProfile
     from core.plant_pipeline import BotanicalPlantPipeline
-    from core.ontology import PLANT_ONTOLOGY_REGISTRY, get_po_term
+    from core.ontology import get_po_term
     from blender.mesh_builder import BlenderMeshBuilder
     from blender.materials import create_bark_material, create_foliage_material
 
 
-class PPG_OT_GeneratePlant(Operator):
-    """Generate a 3D plant or tree grounded in empirical botanical datasets"""
-    bl_idname = "ppg.generate_plant"
-    bl_label = "Generate Plant"
-    bl_options = {'REGISTER', 'UNDO'}
+def build_custom_preset_from_props(props) -> tuple[BotanicalSpeciesPreset, GielisProfile]:
+    """Constructs dynamic botanical profiles directly from the user's interactive sliders."""
+    base_preset = get_species_preset(props.species_enum)
+
+    # User-adjusted allometry
+    allometry = AllometricProfile(
+        dbh_min_m=0.02,
+        dbh_max_m=props.dbh_m * 2.0,
+        dbh_default_m=props.dbh_m,
+        height_max_m=max(props.tree_height_m, base_preset.allometry.height_max_m),
+        pipe_exponent_delta=props.pipe_delta,
+        crown_depth_ratio=max(0.1, min(0.9, (props.tree_height_m - props.crown_base_height_m) / max(0.5, props.tree_height_m))),
+        buttress_amplitude=props.buttress_amplitude,
+        buttress_decay=props.buttress_decay,
+        wood_density_g_cm3=props.wood_density
+    )
+
+    # User-adjusted architecture
+    architecture = ArchitectureProfile(
+        model=base_preset.architecture.model,
+        phyllotaxis=PhyllotaxisType.SPIRAL if abs(props.phyllotaxis_angle_deg - 137.5) < 10.0 else (
+            PhyllotaxisType.DECUSSATE if abs(props.phyllotaxis_angle_deg - 90.0) < 10.0 else PhyllotaxisType.DISTICHOUS
+        ),
+        max_order=props.branch_levels,
+        branch_angle_mean_deg=props.branch_angle_deg,
+        branch_angle_std_deg=5.0,
+        divergence_angle_deg=props.phyllotaxis_angle_deg,
+        apical_dominance=props.apical_dominance,
+        gravitropism=props.branch_gravity,
+        internode_decay_per_order=props.branch_length_decay,
+        crookedness=props.crookedness
+    )
+
+    # User-adjusted leaf morphology
+    leaf_morph = LeafMorphologyProfile(
+        archetype=LeafArchetype(props.leaf_archetype),
+        margin_type=MarginType(props.margin_type),
+        blade_length_cm=props.leaf_length_cm,
+        aspect_ratio=props.leaf_aspect_ratio,
+        teeth_count=props.teeth_count,
+        transverse_curl=0.20,
+        longitudinal_droop=props.leaf_droop
+    )
+
+    # Gielis buttress cross section profile
+    gielis = GielisProfile(
+        m=float(props.buttress_m),
+        n1=props.gielis_n1,
+        n2=props.gielis_n2,
+        n3=props.gielis_n3,
+        a=1.0,
+        b=1.0
+    )
+
+    preset = BotanicalSpeciesPreset(
+        scientific_name=base_preset.scientific_name,
+        common_name=base_preset.common_name,
+        family=base_preset.family,
+        biome=base_preset.biome,
+        growth_habit=base_preset.growth_habit,
+        allometry=allometry,
+        architecture=architecture,
+        leaf_morphology=leaf_morph,
+        venation=base_preset.venation,
+        biomechanics=base_preset.biomechanics,
+        po_growth_form=base_preset.po_growth_form
+    )
+
+    return preset, gielis
+
+
+class PPG_OT_LiveUpdate(Operator):
+    """Internal operator to update tree geometry live in the 3D viewport"""
+    bl_idname = "ppg.live_update"
+    bl_label = "Live Update Tree"
+    bl_options = {'INTERNAL'}
 
     def execute(self, context):
         props = context.scene.ppg_properties
 
-        preset = get_species_preset(props.species_enum)
+        preset, gielis = build_custom_preset_from_props(props)
         pipeline = BotanicalPlantPipeline(preset)
 
-        # Execute procedural generation
+        # Force exact height requested by slider
         result = pipeline.generate(
             dbh_m=props.dbh_m,
             leaf_density=props.leaf_density,
             seed=props.seed
         )
+        result.total_height_m = props.tree_height_m
+        result.crown_depth_m = max(0.5, props.tree_height_m - props.crown_base_height_m)
 
-        builder = BlenderMeshBuilder(result)
-        built = builder.build_full_plant(context)
+        builder = BlenderMeshBuilder(
+            result,
+            radial_resolution=props.radial_resolution,
+            buttress_profile=gielis
+        )
 
-        # Assign materials
+        built = builder.build_or_update_plant(
+            context=context,
+            leaf_density=props.leaf_density,
+            leaf_scale=props.leaf_scale,
+            show_leaves=props.show_leaves,
+            use_subsurf=props.use_subsurf
+        )
+
+        # Assign materials if needed
         if props.assign_materials:
             bark_mat = create_bark_material()
             foliage_mat = create_foliage_material()
 
-            if built["wood"]:
+            if built["wood"] and not built["wood"].data.materials:
                 built["wood"].data.materials.append(bark_mat)
-            if built["leaf_master"]:
-                built["leaf_master"].data.materials.append(foliage_mat)
-            if built["foliage"]:
+            if built["foliage"] and not built["foliage"].data.materials:
                 built["foliage"].data.materials.append(foliage_mat)
 
-        # Select the newly created plant empty
-        bpy.ops.object.select_all(action='DESELECT')
-        built["root"].select_set(True)
-        context.view_layer.objects.active = built["root"]
-
-        self.report(
-            {'INFO'},
-            f"Generated {preset.scientific_name}: H={result.total_height_m:.2f}m, CR={result.crown_radius_m:.2f}m, DBH={result.dbh_m*100:.1f}cm"
-        )
         return {'FINISHED'}
 
 
-class PPG_OT_GenerateLeaf(Operator):
-    """Generate a high-detail standalone leaf with 3D venation network"""
-    bl_idname = "ppg.generate_leaf"
-    bl_label = "Generate Macro Leaf"
+class PPG_OT_GeneratePlant(Operator):
+    """Generate or refresh procedural plant mesh in active collection"""
+    bl_idname = "ppg.generate_plant"
+    bl_label = "Generate Botanical Tree"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        bpy.ops.ppg.live_update()
+        self.report({'INFO'}, "Generated continuous quad botanical tree.")
+        return {'FINISHED'}
+
+
+class PPG_OT_ApplySpeciesPreset(Operator):
+    """Load default empirical allometric values for the selected species into sliders"""
+    bl_idname = "ppg.apply_species_preset"
+    bl_label = "Load Species Empirical Data"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         props = context.scene.ppg_properties
         preset = get_species_preset(props.species_enum)
 
-        pipeline = BotanicalPlantPipeline(preset)
-        result = pipeline.generate(dbh_m=props.dbh_m, seed=props.seed)
+        # Load values into interactive sliders
+        props.dbh_m = preset.allometry.dbh_default_m
+        props.tree_height_m = preset.allometry.height_a * ((preset.allometry.dbh_default_m * 100) ** preset.allometry.height_b)
+        props.crown_base_height_m = props.tree_height_m * (1.0 - preset.allometry.crown_depth_ratio)
+        props.pipe_delta = preset.allometry.pipe_exponent_delta
+        props.buttress_amplitude = preset.allometry.buttress_amplitude
+        props.buttress_decay = preset.allometry.buttress_decay
+        props.wood_density = preset.allometry.wood_density_g_cm3
 
-        builder = BlenderMeshBuilder(result)
+        props.branch_levels = preset.architecture.max_order
+        props.branch_angle_deg = preset.architecture.branch_angle_mean_deg
+        props.phyllotaxis_angle_deg = preset.architecture.divergence_angle_deg
+        props.apical_dominance = preset.architecture.apical_dominance
+        props.branch_gravity = preset.architecture.gravitropism
+        props.branch_length_decay = preset.architecture.internode_decay_per_order
+        props.crookedness = preset.architecture.crookedness
 
-        # Build blade
-        leaf_obj = builder.build_leaf_mesh_object(f"Leaf_{preset.scientific_name.replace(' ', '_')}")
-        context.scene.collection.objects.link(leaf_obj)
+        props.leaf_archetype = preset.leaf_morphology.archetype.value
+        props.margin_type = preset.leaf_morphology.margin_type.value
+        props.leaf_length_cm = preset.leaf_morphology.blade_length_cm
+        props.leaf_aspect_ratio = preset.leaf_morphology.aspect_ratio
+        props.teeth_count = preset.leaf_morphology.teeth_count
+        props.leaf_droop = preset.leaf_morphology.longitudinal_droop
 
-        # Build 3D veins
-        vein_obj = builder.build_vein_curve_object(f"Veins_{preset.scientific_name.replace(' ', '_')}")
-        context.scene.collection.objects.link(vein_obj)
-        vein_obj.parent = leaf_obj
+        # Species-specific Gielis buttress default
+        if "ficus" in props.species_enum or "sequoia" in props.species_enum:
+            props.buttress_m = 6
+        elif "quercus" in props.species_enum:
+            props.buttress_m = 4
+        else:
+            props.buttress_m = 0
 
-        # Assign materials
-        if props.assign_materials:
-            foliage_mat = create_foliage_material()
-            leaf_obj.data.materials.append(foliage_mat)
-            vein_mat = create_foliage_material("Botanical_Vein_PBR")
-            if "Principled BSDF" in vein_mat.node_tree.nodes:
-                vein_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.20, 0.45, 0.10, 1.0)
-            vein_obj.data.materials.append(vein_mat)
+        # Trigger update
+        if props.auto_update:
+            bpy.ops.ppg.live_update()
 
-        bpy.ops.object.select_all(action='DESELECT')
-        leaf_obj.select_set(True)
-        context.view_layer.objects.active = leaf_obj
-
-        self.report(
-            {'INFO'},
-            f"Generated Leaf ({preset.scientific_name}): VLA={preset.venation.vla_mm_per_mm2} mm/mm², Pattern={preset.venation.pattern.value}"
-        )
+        self.report({'INFO'}, f"Loaded empirical parameters for {preset.scientific_name}")
         return {'FINISHED'}
 
 
 class PPG_OT_ExportTraits(Operator):
-    """Export the active species empirical traits to a JSON report with Plant Ontology terms"""
+    """Export current active plant parameters to a structured JSON file"""
     bl_idname = "ppg.export_traits"
-    bl_label = "Export Botanical Report"
+    bl_label = "Export Trait Report"
     bl_options = {'REGISTER'}
 
     filepath: StringProperty(
@@ -133,47 +238,29 @@ class PPG_OT_ExportTraits(Operator):
 
     def execute(self, context):
         props = context.scene.ppg_properties
-        preset = get_species_preset(props.species_enum)
+        preset, gielis = build_custom_preset_from_props(props)
 
         data = {
-            "scientific_name": preset.scientific_name,
-            "common_name": preset.common_name,
+            "species": preset.scientific_name,
             "family": preset.family,
             "biome": preset.biome,
-            "growth_habit": preset.growth_habit,
             "plant_ontology": {
-                "growth_form": {"id": preset.po_growth_form, "name": get_po_term(preset.po_growth_form).name if get_po_term(preset.po_growth_form) else "shoot system"},
-                "stem": {"id": "PO:0009046", "name": "stem"},
-                "leaf_lamina": {"id": "PO:0020039", "name": "leaf lamina"},
-                "leaf_vein": {"id": "PO:0005022", "name": "leaf vein"},
-                "leaf_areole": {"id": "PO:0005026", "name": "leaf areole"}
+                "trunk": "PO:0004712",
+                "branch": "PO:0025073",
+                "leaf_lamina": "PO:0020039",
+                "leaf_vein": "PO:0005022"
             },
-            "allometry_tallo": {
-                "height_power_law": f"H = {preset.allometry.height_a} * (DBH_cm)^{preset.allometry.height_b}",
-                "crown_radius_law": f"CR = {preset.allometry.crown_radius_c} * (DBH_cm)^{preset.allometry.crown_radius_d}",
-                "max_height_m": preset.allometry.height_max_m,
-                "pipe_delta": preset.allometry.pipe_exponent_delta,
-                "wood_density_g_cm3": preset.allometry.wood_density_g_cm3
-            },
-            "architecture_halle_oldeman": {
-                "model": preset.architecture.model.value,
-                "branch_angle_deg": preset.architecture.branch_angle_mean_deg,
-                "phyllotaxis": preset.architecture.phyllotaxis.value,
-                "apical_dominance": preset.architecture.apical_dominance,
-                "gravitropism": preset.architecture.gravitropism
-            },
-            "leaf_morphometrics": {
-                "archetype": preset.leaf_morphology.archetype.value,
-                "margin_type": preset.leaf_morphology.margin_type.value,
-                "blade_length_cm": preset.leaf_morphology.blade_length_cm,
-                "aspect_ratio": preset.leaf_morphology.aspect_ratio,
-                "teeth_count": preset.leaf_morphology.teeth_count
-            },
-            "venation_network_duarte_runions": {
-                "pattern": preset.venation.pattern.value,
-                "vein_length_per_area_vla": preset.venation.vla_mm_per_mm2,
-                "secondary_vein_pairs": preset.venation.secondary_vein_pairs,
-                "divergence_angle_deg": preset.venation.divergence_angle_deg
+            "parameters": {
+                "dbh_m": props.dbh_m,
+                "tree_height_m": props.tree_height_m,
+                "crown_base_height_m": props.crown_base_height_m,
+                "pipe_delta": props.pipe_delta,
+                "gielis_buttress_m": props.buttress_m,
+                "branch_levels": props.branch_levels,
+                "branch_angle_deg": props.branch_angle_deg,
+                "branch_gravity": props.branch_gravity,
+                "leaf_archetype": props.leaf_archetype,
+                "leaf_length_cm": props.leaf_length_cm
             }
         }
 
