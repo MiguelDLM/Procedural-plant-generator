@@ -1,12 +1,11 @@
 """
-Interactive Blender 3D Viewport UI Panel and Property Groups.
-Provides real-time interactive procedural updates with adjustable botanical sliders.
+Interactive 3D Viewport UI: properties and sidebar panels.
 """
 
 try:
     import bpy
     from bpy.types import Panel, PropertyGroup
-    from bpy.props import EnumProperty, FloatProperty, IntProperty, BoolProperty
+    from bpy.props import EnumProperty, FloatProperty, IntProperty, BoolProperty, FloatVectorProperty
     BLENDER_AVAILABLE = True
 except ImportError:
     BLENDER_AVAILABLE = False
@@ -14,386 +13,263 @@ except ImportError:
     PropertyGroup = object
 
 try:
-    from ..core.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
+    from ..core.species_db import get_preset_names, get_species_preset
+    from ..core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
+    from ..core.leaf_morphology import LeafArchetype, MarginType, LobeType, CompoundType
+    from ..core.leaf_venation import VenationPattern
+    from ..core.bark import BarkPattern
+    from ..core.roots import RootSystemType
+    from .runtime import (is_updating, schedule_update, apply_species_preset_to_props, apply_allometry,
+                          apply_leaf_template, apply_crown_shape)
 except (ImportError, ValueError):
-    from core.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
-
-
-try:
-    from .runtime import is_updating, set_updating, update_tree_geometry, apply_species_preset_to_props
-except (ImportError, ValueError):
-    from blender.runtime import is_updating, set_updating, update_tree_geometry, apply_species_preset_to_props
+    from core.species_db import get_preset_names, get_species_preset
+    from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
+    from core.leaf_morphology import LeafArchetype, MarginType, LobeType, CompoundType
+    from core.leaf_venation import VenationPattern
+    from core.bark import BarkPattern
+    from core.roots import RootSystemType
+    from blender.runtime import (is_updating, schedule_update, apply_species_preset_to_props, apply_allometry,
+                                 apply_leaf_template, apply_crown_shape)
 
 
 def on_param_update(self, context):
-    """Callback when any slider changes in the UI - updates tree in real time without operator deadlock."""
-    if is_updating():
+    if is_updating() or not getattr(self, "auto_update", True):
         return
-    if not getattr(self, "auto_update", True):
-        return
-    set_updating(True)
-    try:
-        update_tree_geometry(context)
-    finally:
-        set_updating(False)
+    schedule_update()
 
 
 def on_species_change(self, context):
-    """When species dropdown changes, safely auto-load empirical parameters into sliders."""
     if is_updating():
         return
     apply_species_preset_to_props(self, self.species_enum, context)
 
 
-class PPG_Properties(PropertyGroup):
-    """Interactive parameters for real-time procedural tree generation."""
+def on_dbh_change(self, context):
+    if is_updating():
+        return
+    if self.allometric_lock:
+        from .runtime import set_updating
+        set_updating(True)
+        try:
+            apply_allometry(self)
+        finally:
+            set_updating(False)
+    on_param_update(self, context)
 
-    auto_update: BoolProperty(
-        name="Real-time Live Update",
-        description="Update 3D tree in viewport immediately when any slider is adjusted",
-        default=True
-    )
 
-    species_enum: EnumProperty(
-        name="Species Preset",
-        description="Empirical botanical species archetype",
-        items=get_preset_names() if BLENDER_AVAILABLE else [],
-        default="quercus_robur",
-        update=on_species_change if BLENDER_AVAILABLE else None
-    )
+def on_leaf_archetype(self, context):
+    if is_updating():
+        return
+    apply_leaf_template(self)
+    on_param_update(self, context)
 
-    # -------------------------------------------------------------
-    # 1. Trunk & Allometry Controls [PO:0004712]
-    # -------------------------------------------------------------
-    dbh_m: FloatProperty(
-        name="DBH (Trunk Diameter)",
-        description="Diameter at Breast Height (1.3m) in meters [PO:0004712]",
-        default=0.45,
-        min=0.04,
-        max=4.50,
-        step=1.0,
-        precision=2,
-        unit='LENGTH',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    tree_height_m: FloatProperty(
-        name="Total Height",
-        description="Total tree height in meters",
-        default=14.0,
-        min=1.0,
-        max=95.0,
-        step=10.0,
-        precision=1,
-        unit='LENGTH',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def on_crown_shape(self, context):
+    if is_updating():
+        return
+    apply_crown_shape(self)
+    on_param_update(self, context)
 
-    crown_base_height_m: FloatProperty(
-        name="Trunk Clear Height",
-        description="Height from ground to first primary branch",
-        default=3.5,
-        min=0.2,
-        max=45.0,
-        step=5.0,
-        precision=1,
-        unit='LENGTH',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    pipe_delta: FloatProperty(
-        name="Taper Exponent (Δ)",
-        description="Leonardo da Vinci / pipe model tapering exponent (2.1 - 2.5)",
-        default=2.25,
-        min=1.8,
-        max=3.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def _enum_items(enum_cls):
+    return [(e.value, e.value.replace("_", " "), "") for e in enum_cls]
 
-    crookedness: FloatProperty(
-        name="Trunk Gnarliness",
-        description="Natural winding / tortuosity of trunk and branches",
-        default=0.14,
-        min=0.0,
-        max=0.50,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    wood_density: FloatProperty(
-        name="Wood Density (g/cm³)",
-        description="Basic wood density affecting gravitational droop [PO:0005352]",
-        default=0.68,
-        min=0.20,
-        max=1.25,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+U = on_param_update if BLENDER_AVAILABLE else None
 
-    # -------------------------------------------------------------
-    # 2. Gielis Buttress & Fluting Controls
-    # -------------------------------------------------------------
-    buttress_m: IntProperty(
-        name="Buttress Ribs (m)",
-        description="Gielis symmetry parameter (0=round, 3=triangular, 4=4-fluted, 6=6-buttress)",
-        default=4,
-        min=0,
-        max=12,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    buttress_amplitude: FloatProperty(
-        name="Flare Amplitude",
-        description="Root buttress expansion factor at soil level",
-        default=0.65,
-        min=0.0,
-        max=3.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def F(name, default, lo, hi, desc="", **kw):
+    return FloatProperty(name=name, default=default, min=lo, max=hi, description=desc, update=U, **kw)
 
-    buttress_decay: FloatProperty(
-        name="Flare Decay Rate",
-        description="How rapidly buttressing decays upwards (higher = stays near ground)",
-        default=10.0,
-        min=3.0,
-        max=25.0,
-        precision=1,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    gielis_n1: FloatProperty(
-        name="Rib Sharpness (n1)",
-        description="Gielis curvature exponent: smaller values produce sharper buttress ribs",
-        default=0.50,
-        min=0.20,
-        max=3.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def I(name, default, lo, hi, desc=""):
+    return IntProperty(name=name, default=default, min=lo, max=hi, description=desc, update=U)
 
-    gielis_n2: FloatProperty(
-        name="Rib Curvature (n2)",
-        description="Gielis cosine exponent",
-        default=1.8,
-        min=0.20,
-        max=4.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    gielis_n3: FloatProperty(
-        name="Rib Curvature (n3)",
-        description="Gielis sine exponent",
-        default=1.8,
-        min=0.20,
-        max=4.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def E(name, enum_cls, default, desc="", update=None):
+    return EnumProperty(name=name, items=_enum_items(enum_cls), default=default, description=desc,
+                        update=update or U)
 
-    # -------------------------------------------------------------
-    # 3. Branching Architecture Controls [PO:0025073]
-    # -------------------------------------------------------------
-    branch_levels: IntProperty(
-        name="Branch Levels",
-        description="Maximum branching hierarchy order (1=trunk only, 2=scaffolds, 3=twigs)",
-        default=3,
-        min=1,
-        max=3,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    branch_angle_deg: FloatProperty(
-        name="Branch Angle (°)",
-        description="Insertion angle relative to parent shoot axis",
-        default=48.0,
-        min=20.0,
-        max=85.0,
-        precision=1,
-        unit='ROTATION',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+def COL(name, default, desc=""):
+    return FloatVectorProperty(name=name, subtype='COLOR_GAMMA', size=3, min=0.0, max=1.0,
+                               default=default, description=desc, update=U)
 
-    branch_length_decay: FloatProperty(
-        name="Length Decay",
-        description="Ratio of child branch length relative to parent branch",
-        default=0.65,
-        min=0.30,
-        max=0.90,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    branch_gravity: FloatProperty(
-        name="Gravity Droop",
-        description="Negative = upright (orthotropic), 0 = neutral, Positive = weeping (pendulous)",
-        default=-0.15,
-        min=-0.50,
-        max=0.50,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+if BLENDER_AVAILABLE:
+    SPECIES_ITEMS = get_preset_names()
 
-    phyllotaxis_angle_deg: FloatProperty(
-        name="Phyllotaxis Divergence (°)",
-        description="Divergence angle (137.5° = golden angle spiral, 90° = decussate, 180° = distichous)",
-        default=137.5,
-        min=45.0,
-        max=240.0,
-        precision=1,
-        unit='ROTATION',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+    class PPG_Properties(PropertyGroup):
+        """Interactive parameters for procedural plant generation."""
+        auto_update: BoolProperty(name="Live Update", default=True,
+                                  description="Regenerate the plant when any parameter changes")
+        species_enum: EnumProperty(name="Species", items=SPECIES_ITEMS, default="quercus_robur",
+                                   update=on_species_change, description="Species preset")
 
-    apical_dominance: FloatProperty(
-        name="Apical Dominance",
-        description="Strength of central leader shoot suppression over lateral branches",
-        default=0.60,
-        min=0.10,
-        max=1.00,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Trait-space variation
+        blend_species: EnumProperty(name="Blend With", items=SPECIES_ITEMS, default="fagus_sylvatica",
+                                    description="Second species for morphological interpolation")
+        blend_factor: FloatProperty(name="Blend", default=0.0, min=0.0, max=1.0,
+                                    description="0 = current sliders, 1 = second species")
+        variation_amount: FloatProperty(name="Variation", default=0.0, min=0.0, max=3.0,
+                                        description="Intraspecific variability (in units of each trait's typical CV)")
+        variation_seed: IntProperty(name="Variant Seed", default=1, min=0, max=999999)
 
-    seed: IntProperty(
-        name="Random Seed",
-        description="Stochastic seed for branch generation",
-        default=42,
-        min=0,
-        max=999999,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Trunk & allometry
+        allometric_lock: BoolProperty(name="Allometric Scaling", default=True,
+                                      description="Derive height and crown from DBH using the species allometry")
+        dbh_m: FloatProperty(name="DBH", default=0.8, min=0.02, max=5.0, precision=2, unit='LENGTH',
+                             description="Stem diameter at breast height (1.3 m)", update=on_dbh_change)
+        tree_height_m: F("Height", 24.0, 0.5, 100.0, "Total height", unit='LENGTH')
+        crown_radius_m: F("Crown Radius", 9.0, 0.2, 25.0, "Mean horizontal crown radius", unit='LENGTH')
+        crown_base_height_m: F("Clear Bole", 6.0, 0.0, 80.0, "Height of the lowest live branch", unit='LENGTH')
+        pipe_delta: F("Pipe Exponent", 2.3, 1.8, 3.0, "Leonardo/pipe model exponent: r^D = sum r_i^D")
+        crookedness: F("Tortuosity", 0.3, 0.0, 0.6, "Natural winding of axes")
+        wood_density: F("Wood Density", 0.7, 0.15, 1.25, "g/cm3; heavier wood bends branches more")
 
-    # -------------------------------------------------------------
-    # 4. Foliage & Leaf Controls [PO:0020039]
-    # -------------------------------------------------------------
-    show_leaves: BoolProperty(
-        name="Show Leaves",
-        description="Generate anchored foliage leaves on twigs",
-        default=True,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Buttress
+        buttress_m: I("Buttress Lobes (m)", 4, 0, 12, "Gielis symmetry of the fluted base (0 = round)")
+        buttress_amplitude: F("Flare", 0.5, 0.0, 3.0, "Root flare at soil level")
+        buttress_decay: F("Flare Decay", 10.0, 2.0, 25.0, "Higher = flare confined near the ground")
+        gielis_n1: F("Rib Sharpness n1", 0.5, 0.2, 3.0)
+        gielis_n2: F("n2", 1.8, 0.2, 4.0)
+        gielis_n3: F("n3", 1.8, 0.2, 4.0)
 
-    leaf_archetype: EnumProperty(
-        name="Leaf Archetype",
-        description="Morphological leaf silhouette",
-        items=[
-            ('Pinnate_Lobed', 'Pinnate Lobed (Oak)', 'Quercus robur'),
-            ('Palmate_5', 'Palmate 5-Lobed (Maple)', 'Acer palmatum'),
-            ('Ovate', 'Ovate (Birch, Apple)', 'Betula, Malus'),
-            ('Elliptic', 'Elliptic (Beech, Fig)', 'Fagus, Ficus'),
-            ('Lanceolate', 'Lanceolate (Eucalyptus)', 'Eucalyptus, Salix'),
-            ('Cordate', 'Cordate (Linden)', 'Tilia'),
-            ('Flabellate', 'Flabellate (Ginkgo)', 'Ginkgo biloba'),
-            ('Acicular', 'Acicular (Needle)', 'Pinus conifer needle')
-        ],
-        default='Pinnate_Lobed',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Crown & architecture
+        arch_model: E("Architecture", HalleOldemanModel, "Rauh", "Halle-Oldeman architectural model")
+        crown_shape: E("Crown Template", CrownShape, "Spherical", "Sets widest position and fullness",
+                       update=on_crown_shape if BLENDER_AVAILABLE else None)
+        crown_widest: F("Widest Point", 0.45, 0.02, 0.98, "Relative height of the widest crown section")
+        crown_fullness: F("Fullness", 1.5, 0.3, 3.0, "Low = columnar/flat sides, high = peaked")
+        apical_dominance: F("Apical Dominance", 0.3, 0.0, 1.0, "High = single excurrent leader")
+        leader_count: I("Leaders", 0, 0, 6, "Codominant stems (0 = from apical dominance)")
+        branch_levels: I("Branch Orders", 3, 0, 4, "0 = unbranched, 3 = twigs")
+        branch_angle_deg: F("Branch Angle", 55.0, 5.0, 100.0, "Scaffold insertion angle")
+        twig_angle_deg: F("Twig Angle", 55.0, 5.0, 95.0, "Higher-order insertion angle")
+        branch_frequency: F("Branch Frequency", 2.0, 0.3, 8.0, "Lateral nodes per meter")
+        branch_length_decay: F("Length Ratio", 0.68, 0.3, 0.95, "Child/parent axis length")
+        internode_length: F("Internode", 0.45, 0.05, 1.5, "Base segment length (m)")
+        branch_gravity: F("Gravitropism", -0.05, -0.6, 0.9, "< 0 upright, > 0 weeping")
+        phototropism: F("Phototropism", 0.35, 0.0, 1.0, "Outward light-seeking bias")
+        plagiotropy: F("Plagiotropy", 0.2, 0.0, 1.0, "Flatten laterals into horizontal sprays")
+        phyllotaxis_type: E("Phyllotaxis", PhyllotaxisType, "Spiral")
+        phyllotaxis_angle_deg: F("Divergence", 137.5, 30.0, 180.0, "Spiral divergence angle (degrees)")
+        whorl_size: I("Whorl Size", 1, 1, 8)
+        seed: I("Seed", 42, 0, 999999)
 
-    margin_type: EnumProperty(
-        name="Leaf Margin",
-        description="Botanical margin type [PO:0020042]",
-        items=[
-            ('Entire', 'Entire (Smooth)', 'Smooth unbroken margin'),
-            ('Serrate', 'Serrate (Teeth forward)', 'Forward-pointing teeth'),
-            ('Dentate', 'Dentate (Teeth outward)', 'Outward-pointing teeth'),
-            ('Crenate', 'Crenate (Scalloped)', 'Rounded teeth')
-        ],
-        default='Entire',
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Leaf shape
+        leaf_archetype: E("Template", LeafArchetype, "Pinnate_Lobed", "Applies a leaf-shape template",
+                          update=on_leaf_archetype if BLENDER_AVAILABLE else None)
+        leaf_length_cm: F("Blade Length (cm)", 10.0, 0.2, 150.0)
+        leaf_aspect_ratio: F("Length/Width", 1.9, 0.5, 120.0)
+        leaf_widest: F("Widest Point", 0.6, 0.05, 0.95, "0 = base (ovate) .. 1 = apex (obovate)")
+        leaf_base_angle: F("Base Angle", 90.0, 5.0, 179.0, "Angle enclosed by the base")
+        leaf_apex_angle: F("Apex Angle", 70.0, 5.0, 179.0, "Angle enclosed by the apex")
+        leaf_base_curvature: F("Base Curvature", 0.3, -1.0, 1.0, "-1 concave (attenuate) .. +1 rounded")
+        leaf_apex_curvature: F("Apex Curvature", 0.0, -1.0, 1.0, "-1 acuminate .. +1 obtuse")
+        leaf_cordate: F("Cordate Base", 0.0, 0.0, 1.0)
+        leaf_asymmetry: F("Base Asymmetry", 0.0, 0.0, 1.0)
+        leaf_notch: F("Apical Notch", 0.0, 0.0, 0.5)
+        leaf_falcate: F("Falcate Bend", 0.0, 0.0, 0.3)
+        lobe_type: E("Lobation", LobeType, "None")
+        lobe_count: I("Lobes", 5, 1, 11)
+        lobe_depth: F("Sinus Depth", 0.5, 0.0, 0.95)
+        lobe_angle: F("Lobe Angle", 50.0, 15.0, 85.0)
+        lobe_spread: F("Lobe Spread", 200.0, 10.0, 330.0)
+        lobe_width: F("Lobe Width", 0.55, 0.2, 1.2)
+        lobe_roundness: F("Sinus Roundness", 0.5, 0.0, 1.0)
+        lobe_apex_angle: F("Lobe Apex Angle", 80.0, 10.0, 179.0)
+        margin_type: E("Margin", MarginType, "Entire")
+        teeth_count: I("Teeth", 24, 0, 80)
+        tooth_height: F("Tooth Depth", 0.035, 0.0, 0.2)
+        tooth_skew: F("Tooth Skew", 0.75, 0.3, 0.92, "0.5 symmetric .. 0.9 apically pointing")
+        compound_type: E("Organisation", CompoundType, "Simple")
+        leaflet_count: I("Leaflets", 7, 1, 80)
+        leaflet_angle: F("Leaflet Angle", 60.0, 5.0, 90.0)
+        rachis_ratio: F("Rachis Length", 2.5, 0.2, 20.0)
+        terminal_leaflet: BoolProperty(name="Terminal Leaflet", default=True, update=U)
+        leaflet_gradient: F("Leaflet Gradient", 0.3, 0.0, 0.8)
+        petiole_ratio: F("Petiole Length", 0.35, 0.0, 1.5)
+        petiole_angle: F("Petiole Angle", 50.0, 5.0, 120.0)
+        leaf_curl: F("Transverse Curl", 0.25, 0.0, 1.0)
+        leaf_droop: F("Droop", 0.35, 0.0, 1.0)
+        leaf_undulation: F("Undulation", 0.05, 0.0, 0.5)
+        leaf_thickness: F("Thickness (mm)", 0.22, 0.05, 1.5)
 
-    leaf_density: FloatProperty(
-        name="Foliage Density",
-        description="Relative quantity of leaves anchored along twigs",
-        default=1.0,
-        min=0.0,
-        max=2.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Venation & texture
+        vein_pattern: E("Venation", VenationPattern, "Craspedodromous")
+        vein_vla: F("VLA (mm/mm2)", 7.0, 1.0, 20.0, "Vein length per area; sets areole size")
+        vein_pairs: I("Secondary Pairs", 8, 0, 30)
+        vein_angle: F("Secondary Angle", 46.0, 10.0, 88.0)
+        vein_curvature: F("Arcuation", 0.45, 0.0, 1.0)
+        vein_reticulation: F("Reticulation", 0.6, 0.0, 1.0)
+        vein_contrast: F("Vein Contrast", 0.6, 0.0, 1.5)
+        texture_resolution: EnumProperty(name="Texture", items=[("256", "256", ""), ("512", "512", ""),
+                                                               ("1024", "1024", ""), ("2048", "2048", "")],
+                                         default="1024", update=U)
+        senescence: F("Season (Senescence)", 0.0, 0.0, 1.0, "0 summer green .. 1 full autumn colour")
+        color_adaxial: COL("Upper Surface", (0.19, 0.31, 0.09))
+        color_abaxial: COL("Lower Surface", (0.36, 0.46, 0.25))
+        color_vein: COL("Veins", (0.48, 0.56, 0.25))
+        color_autumn: COL("Autumn", (0.55, 0.38, 0.15))
+        leaf_gloss: F("Gloss", 0.3, 0.0, 1.0)
 
-    leaf_scale: FloatProperty(
-        name="Leaf Scale",
-        description="Uniform scaling multiplier for leaves",
-        default=1.0,
-        min=0.2,
-        max=3.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Foliage
+        show_leaves: BoolProperty(name="Show Leaves", default=True, update=U)
+        foliage_unit: EnumProperty(name="Card", default='SHOOT', update=U, items=[
+            ('SHOOT', "Leafy Shoot", "Each card is a shoot carrying several leaves: dense crowns, few polygons"),
+            ('LEAF', "Single Leaf", "One leaf per card: maximum texture detail for close-ups")])
+        shoot_leaves: I("Leaves per Shoot", 6, 2, 16)
+        leaf_density: F("Density", 1.0, 0.0, 3.0, "Multiplier on the leaf-area-index target")
+        leaf_area_index: F("Leaf Area Index", 4.5, 0.5, 12.0, "Leaf area per unit crown projection area")
+        leaf_angle: F("Mean Leaf Angle", 40.0, 5.0, 85.0,
+                      "Lamina inclination: planophile ~25, spherical ~57, erectophile ~70 degrees")
+        leaf_budget: IntProperty(name="Max Cards", default=60000, min=100, max=500000, update=U,
+                                 description="Upper bound on leaf cards (performance)")
+        leaf_scale: F("Leaf Scale", 1.0, 0.2, 4.0)
 
-    leaf_length_cm: FloatProperty(
-        name="Blade Length (cm)",
-        description="Length of leaf lamina from petiole base to apex in centimeters",
-        default=11.0,
-        min=1.0,
-        max=35.0,
-        precision=1,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Bark
+        bark_pattern: E("Bark", BarkPattern, "Fissured")
+        bark_color: COL("Bark Colour", (0.36, 0.33, 0.29))
+        bark_color2: COL("Furrow Colour", (0.14, 0.12, 0.10))
+        bark_scale: F("Feature Size (m)", 0.06, 0.005, 0.5)
+        bark_relief: F("Relief", 0.8, 0.0, 1.0)
 
-    leaf_aspect_ratio: FloatProperty(
-        name="Aspect Ratio (L/W)",
-        description="Blade length to width ratio",
-        default=1.75,
-        min=0.8,
-        max=8.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Roots
+        show_roots: BoolProperty(name="Show Roots", default=True, update=U)
+        root_display_depth: F("Display Depth (m)", 2.5, 0.2, 20.0, "Roots below this depth are not meshed")
+        root_system: E("Root System", RootSystemType, "Heart",
+                       "Koestler et al. (1968) type: taproot, heart, plate; plus buttress and fibrous")
+        root_laterals: I("Main Laterals", 6, 1, 16, "Structural laterals (= stem flutes when buttressed)")
+        root_spread: F("Spread / Crown", 1.4, 0.3, 4.0, "Lateral reach relative to crown radius")
+        root_max_depth: F("Max Depth (m)", 3.0, 0.3, 60.0, "Maximum rooting depth (Canadell et al. 1996)")
+        root_beta: F("Depth Coefficient (beta)", 0.966, 0.90, 0.99,
+                     "Jackson et al. (1996): cumulative root fraction Y = 1 - beta^d (d in cm)", precision=3)
+        root_taproot_share: F("Taproot Share", 0.3, 0.0, 0.8, "Collar flow taken by taproot / oblique roots")
+        root_zrt: F("Rapid Taper Zone (xDBH)", 2.2, 0.5, 5.0, "Radius of the zone of rapid taper")
+        root_sinker_spacing: F("Sinker Spacing (m)", 1.2, 0.2, 5.0)
+        root_exposure: F("Surface Exposure", 0.15, 0.0, 1.0, "How much laterals ride above the soil near the stem")
+        root_plank: F("Plank / Buttress", 0.5, 0.0, 5.0, "Vertical elongation of root sections near the stem")
+        root_buttress_height: F("Collar Height (xDBH)", 0.6, 0.0, 4.0, "Where laterals merge into the stem")
+        root_knees: I("Knees", 0, 0, 20, "Pneumatophores per lateral (Taxodium distichum)")
 
-    teeth_count: IntProperty(
-        name="Teeth Count",
-        description="Number of serration teeth per margin side",
-        default=24,
-        min=0,
-        max=60,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+        # Topology
+        radial_resolution: I("Trunk Sides", 12, 4, 32)
+        twig_resolution: I("Twig Sides", 5, 3, 16)
+        use_subsurf: BoolProperty(name="Subdivision Surface", default=False, update=U)
+        assign_materials: BoolProperty(name="Materials", default=True, update=U)
+else:
+    PPG_Properties = None
 
-    leaf_droop: FloatProperty(
-        name="Leaf Droop",
-        description="Longitudinal cantilever curvature bending downward",
-        default=0.30,
-        min=0.0,
-        max=1.0,
-        precision=2,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
 
-    # -------------------------------------------------------------
-    # 5. Topology & Material Controls
-    # -------------------------------------------------------------
-    radial_resolution: IntProperty(
-        name="Radial Sides",
-        description="Circumferential quad polygon resolution (8, 12, 16)",
-        default=12,
-        min=6,
-        max=24,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
-
-    use_subsurf: BoolProperty(
-        name="Subdivision Surface",
-        description="Add a smooth Subdivision Surface modifier for sculpted organic bark",
-        default=False,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
-
-    assign_materials: BoolProperty(
-        name="Assign PBR Materials",
-        description="Attach botanical procedural shaders with subsurface scattering",
-        default=True,
-        update=on_param_update if BLENDER_AVAILABLE else None
-    )
+class _PPGSub:
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Plant Gen'
+    bl_parent_id = "PPG_PT_main_panel"
 
 
 class PPG_PT_MainPanel(Panel):
-    """Main Interactive Sidebar Panel in 3D Viewport."""
     bl_label = "Procedural Plant Generator"
     bl_idname = "PPG_PT_main_panel"
     bl_space_type = 'VIEW_3D'
@@ -403,86 +279,224 @@ class PPG_PT_MainPanel(Panel):
     def draw(self, context):
         layout = self.layout
         props = context.scene.ppg_properties
-
-        # Top Bar: Live update toggle, update active tree, or spawn new separate tree
         row = layout.row(align=True)
         row.prop(props, "auto_update", icon='PLAY', toggle=True)
         row.operator("ppg.generate_plant", text="Update", icon='FILE_REFRESH')
-        row.operator("ppg.new_plant", text="New Tree", icon='ADD')
+        row.operator("ppg.new_plant", text="New", icon='ADD')
 
-        # -------------------------------------------------------------
-        # Section 1: Species Preset
-        # -------------------------------------------------------------
         box = layout.box()
-        box.label(text="Species Preset", icon='BOOKMARKS')
         box.prop(props, "species_enum", text="")
-        box.operator("ppg.apply_species_preset", text="Load Species Defaults", icon='IMPORT')
+        spec = get_species_preset(props.species_enum)
+        col = box.column(align=True)
+        col.scale_y = 0.8
+        col.label(text=f"{spec.family} · {spec.growth_habit}", icon='OUTLINER_OB_FORCE_FIELD')
+        col.label(text=spec.biome)
+        box.operator("ppg.apply_species_preset", text="Reload Species", icon='IMPORT')
+        layout.operator("ppg.export_traits", text="Export Traits (JSON)", icon='TEXT')
 
-        # -------------------------------------------------------------
-        # Section 2: Trunk & Allometry [PO:0004712]
-        # -------------------------------------------------------------
-        box = layout.box()
-        box.label(text="Trunk & Allometry [PO:0004712]", icon='MOD_LENGTH')
-        box.prop(props, "dbh_m")
-        box.prop(props, "tree_height_m")
-        box.prop(props, "crown_base_height_m")
-        box.prop(props, "pipe_delta")
-        box.prop(props, "crookedness")
-        box.prop(props, "wood_density")
 
-        # -------------------------------------------------------------
-        # Section 3: Gielis Buttress & Fluting (Modular Tree)
-        # -------------------------------------------------------------
-        box = layout.box()
-        box.label(text="Gielis Buttress & Fluting", icon='MESH_CONE')
-        box.prop(props, "buttress_m")
-        if props.buttress_m > 0:
-            box.prop(props, "buttress_amplitude")
-            box.prop(props, "buttress_decay")
-            box.prop(props, "gielis_n1")
-            row = box.row(align=True)
-            row.prop(props, "gielis_n2")
-            row.prop(props, "gielis_n3")
+class PPG_PT_Variation(_PPGSub, Panel):
+    bl_label = "Variants (Trait Space)"
+    bl_idname = "PPG_PT_variation"
+    bl_options = {'DEFAULT_CLOSED'}
 
-        # -------------------------------------------------------------
-        # Section 4: Branch Architecture [PO:0025073]
-        # -------------------------------------------------------------
-        box = layout.box()
-        box.label(text="Branch Architecture [PO:0025073]", icon='OUTLINER_OB_ARMATURE')
-        box.prop(props, "branch_levels")
-        box.prop(props, "branch_angle_deg")
-        box.prop(props, "branch_length_decay")
-        box.prop(props, "branch_gravity")
-        box.prop(props, "phyllotaxis_angle_deg")
-        box.prop(props, "apical_dominance")
-        box.prop(props, "seed")
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "blend_species", text="")
+        col.prop(p, "blend_factor", slider=True)
+        col.separator()
+        col.prop(p, "variation_amount", slider=True)
+        col.prop(p, "variation_seed")
+        self.layout.operator("ppg.apply_variant", icon='SHADERFX')
 
-        # -------------------------------------------------------------
-        # Section 5: Foliage & Leaves [PO:0020039]
-        # -------------------------------------------------------------
-        box = layout.box()
-        box.label(text="Foliage & Leaves [PO:0020039]", icon='SNAP_FACE')
-        box.prop(props, "show_leaves")
-        if props.show_leaves:
-            box.prop(props, "leaf_archetype")
-            box.prop(props, "margin_type")
-            box.prop(props, "leaf_density")
-            box.prop(props, "leaf_scale")
-            box.prop(props, "leaf_length_cm")
-            box.prop(props, "leaf_aspect_ratio")
-            if props.margin_type != 'Entire':
-                box.prop(props, "teeth_count")
-            box.prop(props, "leaf_droop")
 
-        # -------------------------------------------------------------
-        # Section 6: Topology & Shading
-        # -------------------------------------------------------------
-        box = layout.box()
-        box.label(text="Topology & Shading", icon='SHADING_SOLID')
-        box.prop(props, "radial_resolution")
-        box.prop(props, "use_subsurf")
-        box.prop(props, "assign_materials")
+class PPG_PT_Trunk(_PPGSub, Panel):
+    bl_label = "Trunk & Allometry"
+    bl_idname = "PPG_PT_trunk"
 
-        # Export Report
-        layout.separator()
-        layout.operator("ppg.export_traits", text="Export Trait Report (JSON)", icon='TEXT')
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "allometric_lock")
+        col.prop(p, "dbh_m")
+        sub = col.column(align=True)
+        sub.prop(p, "tree_height_m")
+        sub.prop(p, "crown_radius_m")
+        sub.prop(p, "crown_base_height_m")
+        col.separator()
+        col.prop(p, "pipe_delta")
+        col.prop(p, "crookedness")
+        col.prop(p, "wood_density")
+        col.separator()
+        col.prop(p, "buttress_m")
+        if p.buttress_m > 0:
+            col.prop(p, "buttress_amplitude")
+            col.prop(p, "buttress_decay")
+            col.prop(p, "gielis_n1")
+            row = col.row(align=True)
+            row.prop(p, "gielis_n2")
+            row.prop(p, "gielis_n3")
+
+
+class PPG_PT_Crown(_PPGSub, Panel):
+    bl_label = "Crown & Branching"
+    bl_idname = "PPG_PT_crown"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "arch_model")
+        col.prop(p, "crown_shape")
+        col.prop(p, "crown_widest", slider=True)
+        col.prop(p, "crown_fullness")
+        col.separator()
+        col.prop(p, "apical_dominance", slider=True)
+        col.prop(p, "leader_count")
+        col.prop(p, "branch_levels")
+        col.prop(p, "branch_angle_deg")
+        col.prop(p, "twig_angle_deg")
+        col.prop(p, "branch_frequency")
+        col.prop(p, "branch_length_decay")
+        col.prop(p, "internode_length")
+        col.separator()
+        col.prop(p, "branch_gravity")
+        col.prop(p, "phototropism")
+        col.prop(p, "plagiotropy")
+        col.separator()
+        col.prop(p, "phyllotaxis_type")
+        if p.phyllotaxis_type == "Spiral":
+            col.prop(p, "phyllotaxis_angle_deg")
+        col.prop(p, "whorl_size")
+        col.prop(p, "seed")
+
+
+class PPG_PT_Leaf(_PPGSub, Panel):
+    bl_label = "Leaf Shape"
+    bl_idname = "PPG_PT_leaf"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        layout = self.layout
+        layout.prop(p, "leaf_archetype")
+        col = layout.column(align=True)
+        col.label(text="Lamina")
+        for name in ("leaf_length_cm", "leaf_aspect_ratio", "leaf_widest", "leaf_base_angle", "leaf_apex_angle",
+                     "leaf_base_curvature", "leaf_apex_curvature", "leaf_cordate", "leaf_asymmetry",
+                     "leaf_notch", "leaf_falcate"):
+            col.prop(p, name)
+        col = layout.column(align=True)
+        col.prop(p, "lobe_type")
+        if p.lobe_type != "None":
+            for name in ("lobe_count", "lobe_depth", "lobe_angle" if p.lobe_type == "Pinnate" else "lobe_spread",
+                         "lobe_width", "lobe_roundness", "lobe_apex_angle"):
+                col.prop(p, name)
+        col = layout.column(align=True)
+        col.prop(p, "margin_type")
+        if p.margin_type != "Entire":
+            col.prop(p, "teeth_count")
+            col.prop(p, "tooth_height")
+            col.prop(p, "tooth_skew")
+        col = layout.column(align=True)
+        col.prop(p, "compound_type")
+        if p.compound_type != "Simple":
+            col.prop(p, "leaflet_count")
+            col.prop(p, "leaflet_angle" if p.compound_type in ("Pinnate", "Spray") else "lobe_spread")
+            if p.compound_type in ("Pinnate", "Spray"):
+                col.prop(p, "rachis_ratio")
+                col.prop(p, "leaflet_gradient")
+            if p.compound_type == "Pinnate":
+                col.prop(p, "terminal_leaflet")
+        col = layout.column(align=True)
+        col.label(text="Petiole & 3D form")
+        for name in ("petiole_ratio", "petiole_angle", "leaf_curl", "leaf_droop", "leaf_undulation",
+                     "leaf_thickness"):
+            col.prop(p, name)
+
+
+class PPG_PT_Venation(_PPGSub, Panel):
+    bl_label = "Venation & Colour"
+    bl_idname = "PPG_PT_venation"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        for name in ("vein_pattern", "vein_vla", "vein_pairs", "vein_angle", "vein_curvature",
+                     "vein_reticulation", "vein_contrast"):
+            col.prop(p, name)
+        col.separator()
+        col.prop(p, "senescence", slider=True)
+        col.prop(p, "texture_resolution")
+        col.separator()
+        for name in ("color_adaxial", "color_abaxial", "color_vein", "color_autumn", "leaf_gloss"):
+            col.prop(p, name)
+
+
+class PPG_PT_Foliage(_PPGSub, Panel):
+    bl_label = "Foliage"
+    bl_idname = "PPG_PT_foliage"
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "show_leaves")
+        if p.show_leaves:
+            col.prop(p, "foliage_unit")
+            if p.foliage_unit == 'SHOOT':
+                col.prop(p, "shoot_leaves")
+            col.prop(p, "leaf_area_index")
+            col.prop(p, "leaf_angle")
+            col.prop(p, "leaf_density")
+            col.prop(p, "leaf_scale")
+            col.prop(p, "leaf_budget")
+
+
+class PPG_PT_Roots(_PPGSub, Panel):
+    bl_label = "Roots"
+    bl_idname = "PPG_PT_roots"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "show_roots")
+        if not p.show_roots:
+            return
+        col.prop(p, "root_system")
+        col.prop(p, "root_display_depth")
+        col.separator()
+        for name in ("root_laterals", "root_spread", "root_max_depth", "root_beta", "root_taproot_share",
+                     "root_zrt", "root_sinker_spacing", "root_exposure", "root_plank", "root_buttress_height",
+                     "root_knees"):
+            col.prop(p, name)
+
+
+class PPG_PT_Bark(_PPGSub, Panel):
+    bl_label = "Bark"
+    bl_idname = "PPG_PT_bark"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        for name in ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief"):
+            col.prop(p, name)
+
+
+class PPG_PT_Topology(_PPGSub, Panel):
+    bl_label = "Topology & Shading"
+    bl_idname = "PPG_PT_topology"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        for name in ("radial_resolution", "twig_resolution", "use_subsurf", "assign_materials"):
+            col.prop(p, name)
+
+
+PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
+                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark, PPG_PT_Topology)

@@ -1,11 +1,17 @@
 """
-Procedural Plant Generator Runtime Engine.
-Manages interactive state, re-entrancy locking, fast geometry updates, and empirical presets.
-Guarantees zero UI deadlocks and instant responsive scrubbing.
+Procedural Plant Generator runtime.
+
+- PROP_MAP: single source of truth linking UI properties to preset trait paths
+  (used both to load species into sliders and to build a preset from sliders).
+- Debounced live updates: slider drags schedule one regeneration via a timer
+  instead of rebuilding on every intermediate value.
+- Leaf textures and materials are cached per plant and only regenerated when
+  the parameters that affect them change.
 """
 
-import time
-import numpy as np
+import copy
+import hashlib
+from enum import Enum
 
 try:
     import bpy
@@ -14,219 +20,354 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 try:
-    from ..core.species_db import get_species_preset, SPECIES_CATALOG
-    from ..core.allometry import AllometricProfile
-    from ..core.architecture import ArchitectureProfile, HalleOldemanModel, PhyllotaxisType
-    from ..core.leaf_morphology import LeafMorphologyProfile, LeafArchetype, MarginType
-    from ..core.leaf_venation import VenationProfile, VenationPattern
-    from ..core.biomechanics import BiomechanicalProfile
-    from ..core.species_preset import BotanicalSpeciesPreset
+    from ..core.species_db import get_species_preset
+    from ..core.architecture import CROWN_SHAPE_PARAMS, CrownShape
+    from ..core.leaf_morphology import ARCHETYPE_TEMPLATES, LeafArchetype
+    from ..core.leaf_texture import LeafTextureEngine
     from ..core.gielis import GielisProfile
     from ..core.plant_pipeline import BotanicalPlantPipeline
+    from ..core.trait_space import get_path, set_path, blend, mutate
     from .mesh_builder import BlenderMeshBuilder
-    from .materials import create_bark_material, create_foliage_material
+    from .materials import create_bark_material, create_leaf_material, leaf_images_from_texture
 except (ImportError, ValueError):
-    from core.species_db import get_species_preset, SPECIES_CATALOG
-    from core.allometry import AllometricProfile
-    from core.architecture import ArchitectureProfile, HalleOldemanModel, PhyllotaxisType
-    from core.leaf_morphology import LeafMorphologyProfile, LeafArchetype, MarginType
-    from core.leaf_venation import VenationProfile, VenationPattern
-    from core.biomechanics import BiomechanicalProfile
-    from core.species_preset import BotanicalSpeciesPreset
+    from core.species_db import get_species_preset
+    from core.architecture import CROWN_SHAPE_PARAMS, CrownShape
+    from core.leaf_morphology import ARCHETYPE_TEMPLATES, LeafArchetype
+    from core.leaf_texture import LeafTextureEngine
     from core.gielis import GielisProfile
     from core.plant_pipeline import BotanicalPlantPipeline
+    from core.trait_space import get_path, set_path, blend, mutate
     from blender.mesh_builder import BlenderMeshBuilder
-    from blender.materials import create_bark_material, create_foliage_material
+    from blender.materials import create_bark_material, create_leaf_material, leaf_images_from_texture
 
+
+# (UI property, preset attribute path)
+PROP_MAP: list[tuple[str, str]] = [
+    ("pipe_delta", "allometry.pipe_exponent_delta"),
+    ("buttress_m", "allometry.buttress_lobes"),
+    ("buttress_amplitude", "allometry.buttress_amplitude"),
+    ("buttress_decay", "allometry.buttress_decay"),
+    ("wood_density", "biomechanics.wood_density_g_cm3"),
+    ("arch_model", "architecture.model"),
+    ("phyllotaxis_type", "architecture.phyllotaxis"),
+    ("phyllotaxis_angle_deg", "architecture.divergence_angle_deg"),
+    ("whorl_size", "architecture.whorl_size"),
+    ("apical_dominance", "architecture.apical_dominance"),
+    ("leader_count", "architecture.leader_count"),
+    ("branch_levels", "architecture.max_order"),
+    ("branch_angle_deg", "architecture.branch_angle_mean_deg"),
+    ("twig_angle_deg", "architecture.twig_angle_mean_deg"),
+    ("branch_frequency", "architecture.branch_frequency_per_meter"),
+    ("branch_length_decay", "architecture.internode_decay_per_order"),
+    ("internode_length", "architecture.internode_length_base_m"),
+    ("branch_gravity", "architecture.gravitropism"),
+    ("phototropism", "architecture.phototropism"),
+    ("plagiotropy", "architecture.plagiotropy"),
+    ("crookedness", "architecture.crookedness"),
+    ("crown_widest", "architecture.crown_widest_position"),
+    ("crown_fullness", "architecture.crown_fullness"),
+    ("leaf_area_index", "architecture.leaf_area_index"),
+    ("leaf_angle", "leaf_morphology.mean_leaf_angle_deg"),
+    ("leaf_archetype", "leaf_morphology.archetype"),
+    ("margin_type", "leaf_morphology.margin_type"),
+    ("leaf_length_cm", "leaf_morphology.blade_length_cm"),
+    ("leaf_aspect_ratio", "leaf_morphology.aspect_ratio"),
+    ("leaf_widest", "leaf_morphology.widest_position"),
+    ("leaf_base_angle", "leaf_morphology.base_angle_deg"),
+    ("leaf_apex_angle", "leaf_morphology.apex_angle_deg"),
+    ("leaf_base_curvature", "leaf_morphology.base_curvature"),
+    ("leaf_apex_curvature", "leaf_morphology.apex_curvature"),
+    ("leaf_cordate", "leaf_morphology.cordate_depth"),
+    ("leaf_asymmetry", "leaf_morphology.base_asymmetry"),
+    ("leaf_notch", "leaf_morphology.apex_notch"),
+    ("leaf_falcate", "leaf_morphology.falcate_bend"),
+    ("lobe_type", "leaf_morphology.lobe_type"),
+    ("lobe_count", "leaf_morphology.lobe_count"),
+    ("lobe_depth", "leaf_morphology.lobe_depth"),
+    ("lobe_angle", "leaf_morphology.lobe_angle_deg"),
+    ("lobe_spread", "leaf_morphology.lobe_spread_deg"),
+    ("lobe_width", "leaf_morphology.lobe_width"),
+    ("lobe_roundness", "leaf_morphology.lobe_roundness"),
+    ("lobe_apex_angle", "leaf_morphology.lobe_apex_angle_deg"),
+    ("teeth_count", "leaf_morphology.teeth_count"),
+    ("tooth_height", "leaf_morphology.tooth_height_ratio"),
+    ("tooth_skew", "leaf_morphology.tooth_skew"),
+    ("compound_type", "leaf_morphology.compound_type"),
+    ("leaflet_count", "leaf_morphology.leaflet_count"),
+    ("leaflet_angle", "leaf_morphology.leaflet_angle_deg"),
+    ("rachis_ratio", "leaf_morphology.rachis_length_ratio"),
+    ("terminal_leaflet", "leaf_morphology.terminal_leaflet"),
+    ("leaflet_gradient", "leaf_morphology.leaflet_size_gradient"),
+    ("petiole_ratio", "leaf_morphology.petiole_length_ratio"),
+    ("petiole_angle", "leaf_morphology.petiole_angle_deg"),
+    ("leaf_curl", "leaf_morphology.transverse_curl"),
+    ("leaf_droop", "leaf_morphology.longitudinal_droop"),
+    ("leaf_undulation", "leaf_morphology.undulation_amplitude"),
+    ("leaf_gloss", "leaf_morphology.gloss"),
+    ("leaf_thickness", "leaf_morphology.thickness_mm"),
+    ("color_adaxial", "leaf_morphology.adaxial_color"),
+    ("color_abaxial", "leaf_morphology.abaxial_color"),
+    ("color_vein", "leaf_morphology.vein_color"),
+    ("color_autumn", "leaf_morphology.autumn_color"),
+    ("vein_pattern", "venation.pattern"),
+    ("vein_vla", "venation.vla_mm_per_mm2"),
+    ("vein_pairs", "venation.secondary_vein_pairs"),
+    ("vein_angle", "venation.divergence_angle_deg"),
+    ("vein_curvature", "venation.secondary_curvature"),
+    ("vein_reticulation", "venation.reticulation_density"),
+    ("vein_contrast", "venation.vein_contrast"),
+    ("bark_pattern", "bark.pattern"),
+    ("bark_color", "bark.base_color"),
+    ("bark_color2", "bark.secondary_color"),
+    ("bark_scale", "bark.feature_scale_m"),
+    ("bark_relief", "bark.relief"),
+    ("root_system", "roots.system"),
+    ("root_laterals", "roots.lateral_count"),
+    ("root_spread", "roots.spread_crown_ratio"),
+    ("root_max_depth", "roots.max_depth_m"),
+    ("root_beta", "roots.beta"),
+    ("root_taproot_share", "roots.taproot_share"),
+    ("root_zrt", "roots.zrt_dbh_ratio"),
+    ("root_sinker_spacing", "roots.sinker_spacing_m"),
+    ("root_exposure", "roots.surface_exposure"),
+    ("root_plank", "roots.plank"),
+    ("root_buttress_height", "roots.buttress_height_dbh"),
+    ("root_knees", "roots.knees"),
+]
 
 _IS_UPDATING = False
+_PENDING = False
 
 
 def is_updating() -> bool:
-    """Check if a property update or preset load is currently running."""
-    global _IS_UPDATING
     return _IS_UPDATING
 
 
 def set_updating(val: bool):
-    """Set the re-entrancy update lock."""
     global _IS_UPDATING
     _IS_UPDATING = val
 
 
-def build_custom_preset_from_props(props) -> tuple[BotanicalSpeciesPreset, GielisProfile]:
-    """Constructs dynamic botanical profiles directly from the user's interactive sliders."""
-    base_preset = get_species_preset(props.species_enum)
+def _to_prop(value):
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, tuple):
+        return tuple(float(v) for v in value)
+    return value
 
-    # User-adjusted allometry
-    allometry = AllometricProfile(
-        dbh_min_m=0.02,
-        dbh_max_m=props.dbh_m * 2.0,
-        dbh_default_m=props.dbh_m,
-        height_max_m=max(props.tree_height_m, base_preset.allometry.height_max_m),
-        pipe_exponent_delta=props.pipe_delta,
-        crown_depth_ratio=max(0.1, min(0.9, (props.tree_height_m - props.crown_base_height_m) / max(0.5, props.tree_height_m))),
-        buttress_amplitude=props.buttress_amplitude,
-        buttress_decay=props.buttress_decay,
-        wood_density_g_cm3=props.wood_density
-    )
 
-    # User-adjusted architecture
-    architecture = ArchitectureProfile(
-        model=base_preset.architecture.model,
-        phyllotaxis=PhyllotaxisType.SPIRAL if abs(props.phyllotaxis_angle_deg - 137.5) < 10.0 else (
-            PhyllotaxisType.DECUSSATE if abs(props.phyllotaxis_angle_deg - 90.0) < 10.0 else PhyllotaxisType.DISTICHOUS
-        ),
-        max_order=props.branch_levels,
-        branch_angle_mean_deg=props.branch_angle_deg,
-        branch_angle_std_deg=5.0,
-        divergence_angle_deg=props.phyllotaxis_angle_deg,
-        apical_dominance=props.apical_dominance,
-        gravitropism=props.branch_gravity,
-        internode_decay_per_order=props.branch_length_decay,
-        crookedness=props.crookedness
-    )
+def _from_prop(current, value):
+    if isinstance(current, Enum):
+        return type(current)(value)
+    if isinstance(current, tuple):
+        return tuple(float(v) for v in value)
+    if isinstance(current, bool):
+        return bool(value)
+    if isinstance(current, int):
+        return int(value)
+    if isinstance(current, float):
+        return float(value)
+    return value
 
-    # User-adjusted leaf morphology
-    leaf_morph = LeafMorphologyProfile(
-        archetype=LeafArchetype(props.leaf_archetype),
-        margin_type=MarginType(props.margin_type),
-        blade_length_cm=props.leaf_length_cm,
-        aspect_ratio=props.leaf_aspect_ratio,
-        teeth_count=props.teeth_count,
-        transverse_curl=0.20,
-        longitudinal_droop=props.leaf_droop
-    )
 
-    # Gielis buttress cross section profile
-    gielis = GielisProfile(
-        m=float(props.buttress_m),
-        n1=props.gielis_n1,
-        n2=props.gielis_n2,
-        n3=props.gielis_n3,
-        a=1.0,
-        b=1.0
-    )
+def write_preset_to_props(props, preset, context=None, include_dimensions: bool = True):
+    """Copies preset traits into the UI properties without triggering updates."""
+    global _IS_UPDATING
+    was = _IS_UPDATING
+    _IS_UPDATING = True
+    try:
+        for prop, path in PROP_MAP:
+            if hasattr(props, prop):
+                try:
+                    setattr(props, prop, _to_prop(get_path(preset, path)))
+                except (TypeError, ValueError) as e:
+                    print(f"[PPG] Could not set {prop}: {e}")
+        if include_dimensions:
+            props.dbh_m = preset.allometry.dbh_default_m
+            apply_allometry(props, preset)
+    finally:
+        _IS_UPDATING = was
 
-    preset = BotanicalSpeciesPreset(
-        scientific_name=base_preset.scientific_name,
-        common_name=base_preset.common_name,
-        family=base_preset.family,
-        biome=base_preset.biome,
-        growth_habit=base_preset.growth_habit,
-        allometry=allometry,
-        architecture=architecture,
-        leaf_morphology=leaf_morph,
-        venation=base_preset.venation,
-        biomechanics=base_preset.biomechanics,
-        po_growth_form=base_preset.po_growth_form
-    )
 
-    return preset, gielis
+def apply_allometry(props, preset=None):
+    """Sets height, crown radius and crown base from the allometric model for the current DBH."""
+    preset = preset or get_species_preset(props.species_enum)
+    h, cr, cd = BotanicalPlantPipeline(preset).dimensions(props.dbh_m)
+    props.tree_height_m = h
+    props.crown_radius_m = cr
+    props.crown_base_height_m = max(0.2, h - cd)
 
 
 def apply_species_preset_to_props(props, species_key: str, context=None):
-    """
-    Safely writes preset values to scene properties without triggering
-    recursive UI callbacks or freezing Blender.
-    """
+    write_preset_to_props(props, get_species_preset(species_key), context)
+    if context and getattr(props, "auto_update", True):
+        schedule_update()
+
+
+def build_custom_preset_from_props(props):
+    """Builds a full species preset from the current UI properties."""
+    preset = copy.deepcopy(get_species_preset(props.species_enum))
+    for prop, path in PROP_MAP:
+        if hasattr(props, prop):
+            current = get_path(preset, path)
+            set_path(preset, path, _from_prop(current, getattr(props, prop)))
+    preset.allometry.wood_density_g_cm3 = preset.biomechanics.wood_density_g_cm3
+    preset.allometry.dbh_default_m = props.dbh_m
+    gielis = GielisProfile(m=float(props.buttress_m), n1=props.gielis_n1, n2=props.gielis_n2,
+                           n3=props.gielis_n3, a=1.0, b=1.0)
+    return preset, gielis
+
+
+def apply_variant_to_props(props, context=None):
+    """Writes a blended and/or mutated variant (trait-space arithmetic) into the sliders."""
+    base, _ = build_custom_preset_from_props(props)
+    if props.blend_factor > 0.0 and props.blend_species != props.species_enum:
+        other = get_species_preset(props.blend_species)
+        base = blend(base, other, props.blend_factor)
+        base.allometry.dbh_default_m = (1 - props.blend_factor) * props.dbh_m + \
+            props.blend_factor * other.allometry.dbh_default_m
+    if props.variation_amount > 0.0:
+        base = mutate(base, props.variation_amount, seed=props.variation_seed)
+    write_preset_to_props(props, base, context)
+    if getattr(props, "auto_update", True):
+        schedule_update()
+
+
+def apply_leaf_template(props):
+    tpl = ARCHETYPE_TEMPLATES.get(LeafArchetype(props.leaf_archetype), {})
+    preset, _ = build_custom_preset_from_props(props)
+    for k, v in tpl.items():
+        setattr(preset.leaf_morphology, k, v)
     global _IS_UPDATING
-    was_updating = _IS_UPDATING
+    was = _IS_UPDATING
     _IS_UPDATING = True
     try:
-        preset = get_species_preset(species_key)
-
-        # Trunk & Allometry
-        props.dbh_m = preset.allometry.dbh_default_m
-        props.tree_height_m = preset.allometry.height_a * ((preset.allometry.dbh_default_m * 100) ** preset.allometry.height_b)
-        props.crown_base_height_m = props.tree_height_m * (1.0 - preset.allometry.crown_depth_ratio)
-        props.pipe_delta = preset.allometry.pipe_exponent_delta
-        props.buttress_amplitude = preset.allometry.buttress_amplitude
-        props.buttress_decay = preset.allometry.buttress_decay
-        props.wood_density = preset.allometry.wood_density_g_cm3
-
-        # Architecture
-        props.branch_levels = preset.architecture.max_order
-        props.branch_angle_deg = preset.architecture.branch_angle_mean_deg
-        props.phyllotaxis_angle_deg = preset.architecture.divergence_angle_deg
-        props.apical_dominance = preset.architecture.apical_dominance
-        props.branch_gravity = preset.architecture.gravitropism
-        props.branch_length_decay = preset.architecture.internode_decay_per_order
-        props.crookedness = preset.architecture.crookedness
-
-        # Foliage
-        props.leaf_archetype = preset.leaf_morphology.archetype.value
-        props.margin_type = preset.leaf_morphology.margin_type.value
-        props.leaf_length_cm = preset.leaf_morphology.blade_length_cm
-        props.leaf_aspect_ratio = preset.leaf_morphology.aspect_ratio
-        props.teeth_count = preset.leaf_morphology.teeth_count
-        props.leaf_droop = preset.leaf_morphology.longitudinal_droop
-
-        # Gielis buttress defaults per species
-        if "ficus" in species_key or "sequoia" in species_key:
-            props.buttress_m = 6
-        elif "quercus" in species_key:
-            props.buttress_m = 4
-        else:
-            props.buttress_m = 0
-
+        for prop, path in PROP_MAP:
+            if path.startswith("leaf_morphology.") and hasattr(props, prop):
+                setattr(props, prop, _to_prop(get_path(preset, path)))
     finally:
-        _IS_UPDATING = was_updating
+        _IS_UPDATING = was
 
-    # Trigger a single geometry update if auto_update is active
-    if context and getattr(props, "auto_update", True):
-        update_tree_geometry(context)
+
+def apply_crown_shape(props):
+    p, k = CROWN_SHAPE_PARAMS[CrownShape(props.crown_shape)]
+    global _IS_UPDATING
+    was = _IS_UPDATING
+    _IS_UPDATING = True
+    try:
+        props.crown_widest = p
+        props.crown_fullness = k
+    finally:
+        _IS_UPDATING = was
+
+
+# -----------------------------------------------------------------------------
+# Debounced updates
+# -----------------------------------------------------------------------------
+def _deferred_update():
+    global _PENDING
+    _PENDING = False
+    if _IS_UPDATING:
+        return 0.05
+    set_updating(True)
+    try:
+        update_tree_geometry(bpy.context)
+    finally:
+        set_updating(False)
+    return None
+
+
+def schedule_update(delay: float = 0.06):
+    """Coalesces rapid slider changes into a single regeneration."""
+    global _PENDING
+    if not BLENDER_AVAILABLE:
+        return
+    if _PENDING:
+        return
+    _PENDING = True
+    bpy.app.timers.register(_deferred_update, first_interval=delay)
+
+
+# -----------------------------------------------------------------------------
+# Geometry + materials
+# -----------------------------------------------------------------------------
+def _key(*parts) -> str:
+    return hashlib.sha1(repr(parts).encode()).hexdigest()[:12]
+
+
+def _ensure_leaf_material(root, preset, props, model, shoot_leaves):
+    res = int(props.texture_resolution)
+    key = _key(preset.leaf_morphology, preset.venation, res, round(props.senescence, 3), shoot_leaves)
+    mat_name = f"{root.name}_LeafMat"
+    mat = bpy.data.materials.get(mat_name)
+    if mat is not None and mat.get("ppg_key") == key:
+        return mat
+    tex = LeafTextureEngine(preset.leaf_morphology, preset.venation).render(
+        resolution=res, senescence=props.senescence, model=model)
+    color_img, height_img = leaf_images_from_texture(f"{root.name}_Leaf", tex)
+    mat = create_leaf_material(mat_name, color_img, height_img, preset.leaf_morphology)
+    mat["ppg_key"] = key
+    return mat
+
+
+def _ensure_bark_material(root, preset):
+    key = _key(preset.bark)
+    name = f"{root.name}_BarkMat"
+    mat = bpy.data.materials.get(name)
+    if mat is not None and mat.get("ppg_key") == key:
+        return mat
+    mat = create_bark_material(name, preset.bark)
+    mat["ppg_key"] = key
+    return mat
+
+
+def _assign(obj, mat):
+    if obj is None or mat is None:
+        return
+    mats = obj.data.materials
+    if len(mats) == 0:
+        mats.append(mat)
+    elif mats[0] != mat:
+        mats[0] = mat
 
 
 def update_tree_geometry(context):
-    """
-    Direct in-place update of tree mesh in active scene.
-    Does NOT call any bpy.ops operators, avoiding undo deadlocks.
-    """
+    """Regenerates the active plant in place (no bpy.ops, safe inside update callbacks)."""
     if not BLENDER_AVAILABLE:
         return
-
     props = getattr(context.scene, "ppg_properties", None)
     if not props:
         return
-
     try:
         preset, gielis = build_custom_preset_from_props(props)
         pipeline = BotanicalPlantPipeline(preset)
-
-        # Generate procedural skeleton
         result = pipeline.generate(
             dbh_m=props.dbh_m,
-            leaf_density=props.leaf_density,
-            seed=props.seed
+            leaf_density=props.leaf_density if props.show_leaves else 0.0,
+            seed=props.seed,
+            height_m=props.tree_height_m,
+            crown_radius_m=props.crown_radius_m,
+            crown_depth_m=max(0.3, props.tree_height_m - props.crown_base_height_m),
+            leaf_budget=props.leaf_budget,
+            shoot_leaves=props.shoot_leaves if props.foliage_unit == 'SHOOT' else 0,
+            roots=props.show_roots,
+            root_display_depth_m=props.root_display_depth,
         )
-        result.total_height_m = props.tree_height_m
-        result.crown_depth_m = max(0.5, props.tree_height_m - props.crown_base_height_m)
-
-        # Build or update mesh in viewport
-        builder = BlenderMeshBuilder(
-            result,
-            radial_resolution=props.radial_resolution,
-            buttress_profile=gielis
-        )
-
+        builder = BlenderMeshBuilder(result, radial_resolution=props.radial_resolution,
+                                     buttress_profile=gielis, twig_resolution=props.twig_resolution)
         built = builder.build_or_update_plant(
-            context=context,
-            leaf_density=props.leaf_density,
-            leaf_scale=props.leaf_scale,
-            show_leaves=props.show_leaves,
-            use_subsurf=props.use_subsurf
-        )
+            context=context, leaf_density=props.leaf_density, leaf_scale=props.leaf_scale,
+            show_leaves=props.show_leaves, use_subsurf=props.use_subsurf, show_roots=props.show_roots)
 
-        # Materials
         if props.assign_materials:
-            bark_mat = create_bark_material()
-            foliage_mat = create_foliage_material()
-
-            if built.get("wood") and not built["wood"].data.materials:
-                built["wood"].data.materials.append(bark_mat)
-            if built.get("foliage") and not built["foliage"].data.materials:
-                built["foliage"].data.materials.append(foliage_mat)
-
-    except Exception as e:
+            root = built["root"]
+            bark = _ensure_bark_material(root, preset)
+            _assign(built["wood"], bark)
+            _assign(built.get("roots"), bark)
+            if props.show_leaves:
+                _assign(built["foliage"], _ensure_leaf_material(root, preset, props, result.leaf_engine.shape_model,
+                                                                result.leaf_engine.shoot_leaves))
+    except Exception as e:  # Keep the UI responsive; report in console
+        import traceback
+        traceback.print_exc()
         print(f"[PPG Error] Failed to update plant geometry: {e}")

@@ -1,13 +1,14 @@
 """
 Procedural Plant Generator - Blender Extension
 A scientifically grounded botanical procedural plant and tree generator
-backed by empirical datasets (TALLO, Dryad, LeavesBank, PlantCLEF, Plant Ontology, Gielis 2003, Runions et al. 2005).
+built on measurable botanical traits: allometry, Halle-Oldeman architecture, leaf-architecture
+descriptors (Ellis et al. 2009), hierarchical venation and a normalised trait space.
 """
 
 bl_info = {
     "name": "Procedural Plant Generator",
     "author": "Miguel Diaz de Leon-Munoz",
-    "version": (0, 2, 0),
+    "version": (0, 3, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Plant Gen",
     "description": "Interactive real-time botanical tree generator backed by empirical traits and Plant Ontology",
@@ -22,24 +23,10 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 if BLENDER_AVAILABLE:
-    from .blender.panel import PPG_Properties, PPG_PT_MainPanel
-    from .blender.operators import (
-        PPG_OT_LiveUpdate,
-        PPG_OT_GeneratePlant,
-        PPG_OT_NewPlant,
-        PPG_OT_ApplySpeciesPreset,
-        PPG_OT_ExportTraits,
-    )
+    from .blender.panel import PPG_Properties, PANEL_CLASSES
+    from .blender.operators import OPERATOR_CLASSES
 
-    classes = (
-        PPG_Properties,
-        PPG_OT_LiveUpdate,
-        PPG_OT_GeneratePlant,
-        PPG_OT_NewPlant,
-        PPG_OT_ApplySpeciesPreset,
-        PPG_OT_ExportTraits,
-        PPG_PT_MainPanel,
-    )
+    classes = (PPG_Properties,) + OPERATOR_CLASSES + PANEL_CLASSES
 
     def register():
         for cls in classes:

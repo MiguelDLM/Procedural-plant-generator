@@ -1,24 +1,15 @@
 """Blender operators, UI panels, materials, and mesh builders."""
-from .operators import (
-    PPG_OT_LiveUpdate,
-    PPG_OT_GeneratePlant,
-    PPG_OT_ApplySpeciesPreset,
-    PPG_OT_ExportTraits,
-)
-from .panel import PPG_Properties, PPG_PT_MainPanel
-from .mesh_builder import BlenderMeshBuilder
-from .materials import create_bark_material, create_foliage_material
-from .geometry_nodes import setup_foliage_geometry_nodes
+from .operators import OPERATOR_CLASSES
+from .panel import PPG_Properties, PANEL_CLASSES
+from .mesh_builder import BlenderMeshBuilder, populate_mesh
+from .materials import create_bark_material, create_leaf_material
 
 __all__ = [
-    "PPG_OT_LiveUpdate",
-    "PPG_OT_GeneratePlant",
-    "PPG_OT_ApplySpeciesPreset",
-    "PPG_OT_ExportTraits",
+    "OPERATOR_CLASSES",
+    "PANEL_CLASSES",
     "PPG_Properties",
-    "PPG_PT_MainPanel",
     "BlenderMeshBuilder",
+    "populate_mesh",
     "create_bark_material",
-    "create_foliage_material",
-    "setup_foliage_geometry_nodes",
+    "create_leaf_material",
 ]
