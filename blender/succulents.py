@@ -239,6 +239,22 @@ def cactus_materials(name, p):
     nt2.links.new(wl.outputs['Fac'], rough.inputs['Value'])
     nt2.links.new(rough.outputs['Result'], b2.inputs['Roughness'])
     _set(b2, 0.15, "Subsurface Weight")
+    # Wool: matted-hair look (fine noise in colour and bump, soft sheen) only where wool = 1
+    wn = nt2.nodes.new('ShaderNodeTexNoise')
+    wn.location = (-700, -400)
+    _set(wn, 900.0, "Scale")
+    _set(wn, 8.0, "Detail")
+    shade = _math(nt2, 'MULTIPLY', _math(nt2, 'MULTIPLY', wn.outputs['Fac'], 0.35, (-450, -400)), wl.outputs['Fac'],
+                  (-300, -400))
+    c2 = _mix(nt2, shade, c, (0.35, 0.33, 0.30, 1.0), (50, 0), 'MULTIPLY')
+    nt2.links.new(c2, b2.inputs['Base Color'])
+    wb = nt2.nodes.new('ShaderNodeBump')
+    wb.location = (100, -400)
+    _set(wb, 0.6, "Strength")
+    nt2.links.new(wn.outputs['Fac'], wb.inputs['Height'])
+    nt2.links.new(wl.outputs['Fac'], wb.inputs['Strength'])
+    nt2.links.new(wb.outputs['Normal'], b2.inputs['Normal'])
+    nt2.links.new(wl.outputs['Fac'], b2.inputs['Sheen Weight'])
     return skin, spines
 
 

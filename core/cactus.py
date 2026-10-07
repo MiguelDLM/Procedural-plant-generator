@@ -573,7 +573,10 @@ class CactusEngine:
             ts = _normalize(Ps - P0)
             tt = _normalize(Pt - P0)
             nrm = _normalize(np.cross(tt, ts))
-            centre = axis.frame(gen.at(ar_sig)[1])[0]
+            # Outward reference from an interior point below on the axis (robust at the apex, where the
+            # horizontal offset from the axis vanishes and the normal is vertical)
+            z_in = np.maximum(gen.at(ar_sig)[1] - 0.5 * R, 0.0)
+            centre = axis.frame(z_in)[0]
             flip = np.sum(nrm * (P0 - centre), axis=1) < 0
             nrm[flip] *= -1
             apex_w = np.clip((ar_sig / gen.length - 0.85) / 0.15, 0.0, 1.0)
@@ -989,7 +992,8 @@ class CactusEngine:
             spine_t = np.tile(np.array([0, 0, 0, 0.45, 0.45, 0.45, 0.8, 0.8, 0.8, 1.0]), n_sp)
             parts.append(_mesh(V, q, t, None, None, {"spine_t": spine_t.astype(np.float32),
                                                      "wool": np.zeros(len(V), np.float32)}))
-        # Wool cushions: low hexagonal domes (plus extra apical wool)
+        # Wool tufts (trichomes of the areole): irregular, volumetric cushions sunk into the areole,
+        # plus short curled fibres on large tufts (peyote, Astrophytum, cephalia, apical wool)
         w = (p.wool + p.apical_wool * apex) * p.areole_spacing_cm * 0.01 * 0.3 * scale
         has = w > 1e-4
         if np.any(has):
@@ -998,14 +1002,76 @@ class CactusEngine:
             tt = tan[has]
             bb = np.cross(nn, tt)
             ww = w[has]
-            ang = np.linspace(0.0, 2 * math.pi, 6, endpoint=False)
-            ring = c[:, None, :] + ww[:, None, None] * (np.cos(ang)[None, :, None] * tt[:, None, :]
-                                                        + np.sin(ang)[None, :, None] * bb[:, None, :])
-            top = c + nn * ww[:, None] * 0.6
-            V = np.concatenate([ring, top[:, None, :]], axis=1).reshape(-1, 3)
-            per = 7
-            off = (np.arange(len(c)) * per)[:, None, None]
-            t = (np.array([[a, (a + 1) % 6, 6] for a in range(6)])[None] + off).reshape(-1, 3)
-            parts.append(_mesh(V, None, t, None, None,
-                               {"spine_t": np.zeros(len(V), np.float32), "wool": np.ones(len(V), np.float32)}))
+            h = ww * rng.uniform(0.75, 1.05, len(c))
+            # Level of detail: large tufts (seen up close) get 10 x 5 lumpy rings, tiny felt cushions 6 x 2
+            fine = ww > 3.0e-3
+            for sel, seg, prof in ((fine, 10, np.array([[-0.25, 0.85], [0.15, 1.0], [0.5, 0.95], [0.8, 0.7],
+                                                         [0.98, 0.35]])),
+                                   (~fine, 6, np.array([[-0.25, 0.95], [0.55, 0.8]]))):
+                if not np.any(sel):
+                    continue
+                cs, ns, ts, bs, ws, hs = c[sel], nn[sel], tt[sel], bb[sel], ww[sel], h[sel]
+                m = len(cs)
+                ang = np.linspace(0.0, 2 * math.pi, seg, endpoint=False)
+                lump = np.clip(1.0 + 0.22 * rng.standard_normal((m, len(prof), seg)), 0.6, 1.5)   # Clumped hairs
+                rad = ws[:, None, None] * prof[None, :, 1, None] * lump
+                dirs = (np.cos(ang)[None, None, :, None] * ts[:, None, None, :]
+                        + np.sin(ang)[None, None, :, None] * bs[:, None, None, :])
+                rings = (cs[:, None, None, :] + (hs[:, None] * prof[None, :, 0])[..., None, None] * ns[:, None, None, :]
+                         + rad[..., None] * dirs)
+                top = cs + ns * (hs * 1.08)[:, None]
+                nring = len(prof)
+                per = nring * seg + 1
+                V = np.concatenate([rings.reshape(m, -1, 3), top[:, None, :]], axis=1).reshape(-1, 3)
+                off = (np.arange(m) * per)[:, None, None]
+                i = np.arange(nring - 1)[:, None]
+                j = np.arange(seg)[None, :]
+                a0 = i * seg + j
+                a1 = i * seg + (j + 1) % seg
+                quads = np.stack([a0, a1, a1 + seg, a0 + seg], -1).reshape(-1, 4)
+                fan = np.stack([(nring - 1) * seg + np.arange(seg), (nring - 1) * seg + (np.arange(seg) + 1) % seg,
+                                np.full(seg, nring * seg)], -1)
+                parts.append(_mesh(V, (quads[None] + off).reshape(-1, 4), (fan[None] + off).reshape(-1, 3), None,
+                                   None, {"spine_t": np.zeros(len(V), np.float32),
+                                          "wool": np.ones(len(V), np.float32)}))
+            # Fibres on large tufts: short, curling hairs radiating from the cushion
+            big = np.flatnonzero(ww > 2.5e-3)
+            if len(big):
+                k = int(np.clip(4000 // max(1, len(big)), 0, 10))
+                if k > 0:
+                    nb = len(big)
+                    a = rng.uniform(0, 2 * math.pi, (nb, k))
+                    el = rng.uniform(0.15, 0.9, (nb, k))                   # Elevation above the surface plane
+                    d = (np.cos(el)[..., None] * (np.cos(a)[..., None] * tt[big][:, None, :]
+                                                   + np.sin(a)[..., None] * bb[big][:, None, :])
+                         + np.sin(el)[..., None] * nn[big][:, None, :])
+                    L = ww[big][:, None] * rng.uniform(0.6, 1.3, (nb, k))
+                    root = c[big][:, None, :] + nn[big][:, None, :] * (0.4 * h[big])[:, None, None] \
+                        + d * (0.6 * ww[big])[:, None, None]
+                    curl = _normalize(np.cross(d, nn[big][:, None, :]) + 1e-9)
+                    tsg = np.array([0.0, 0.5, 1.0])
+                    pts = (root[:, :, None, :] + d[:, :, None, :] * (L[..., None, None] * tsg[None, None, :, None])
+                           + curl[:, :, None, :] * (0.35 * L[..., None, None] * tsg[None, None, :, None] ** 2)
+                           - nn[big][:, None, None, :] * (0.25 * L[..., None, None] * tsg[None, None, :, None] ** 2))
+                    pts = pts.reshape(-1, 3, 3)
+                    nf = len(pts)
+                    fr = (ww[big] * 0.06)[:, None].repeat(k, 1).reshape(-1)
+                    T = _normalize(pts[:, 2] - pts[:, 0])
+                    ref = np.where(np.abs(T[:, 2:3]) < 0.9, np.array([[0.0, 0.0, 1.0]]), np.array([[1.0, 0.0, 0.0]]))
+                    e1 = _normalize(np.cross(T, ref))
+                    e2 = np.cross(T, e1)
+                    th = np.array([0.0, 2.0944, 4.1888])
+                    ringv = (np.cos(th)[None, :, None] * e1[:, None, :] + np.sin(th)[None, :, None] * e2[:, None, :])
+                    taper = np.array([1.0, 0.6, 0.0])
+                    Vf = pts[:, :, None, :] + (fr[:, None, None, None] * taper[None, :, None, None]) * ringv[:, None, :, :]
+                    Vf = Vf.reshape(-1, 3)
+                    offf = (np.arange(nf) * 9)[:, None, None]
+                    ii = np.arange(2)[:, None]
+                    jj = np.arange(3)[None, :]
+                    b0 = ii * 3 + jj
+                    b1 = ii * 3 + (jj + 1) % 3
+                    qf = np.stack([b0, b1, b1 + 3, b0 + 3], -1).reshape(-1, 4)
+                    parts.append(_mesh(Vf, (qf[None] + offf).reshape(-1, 4), None, None, None,
+                                       {"spine_t": np.zeros(len(Vf), np.float32),
+                                        "wool": np.ones(len(Vf), np.float32)}))
         return MeshData.concatenate(parts), n_sp

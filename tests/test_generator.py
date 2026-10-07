@@ -442,6 +442,31 @@ class TestSucculents(unittest.TestCase):
                 elif getattr(a, "parent", None) is not b and i < j:
                     self.assertFalse(eng._arm_collides(a, specs[i][2], b, specs[j][2]))
 
+    def test_areole_normals_point_outward(self):
+        """Areole normals (spines, wool, flowers) agree with the stem surface normal, also at the apex."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        for key in ("lophophora_williamsii", "carnegiea_gigantea", "echinocactus_grusonii"):
+            e = CactusEngine(CACTUS_CATALOG[key].profile)
+            cap = {}
+            orig = e._spines
+
+            def spy(pos, nrm, tan, scale, apex, rng, budget=60000, cap=cap, orig=orig):
+                cap.update(pos=pos, nrm=nrm, apex=apex)
+                return orig(pos, nrm, tan, scale, apex, rng, budget)
+            e._spines = spy
+            r = e.generate(seed=4, detail=0.5, spine_budget=100)
+            V = r.stem.vertices.astype(float)
+            VN = np.zeros_like(V)
+            for st, tot in zip(r.stem.loop_start, r.stem.loop_total):
+                idx = r.stem.loop_vertex[st:st + tot]
+                VN[idx] += np.cross(V[idx[1]] - V[idx[0]], V[idx[2]] - V[idx[0]])
+            P, N, A = cap["pos"], cap["nrm"], cap["apex"]
+            sel = np.flatnonzero(A > 0.5)[:60]
+            for i in sel:
+                j = np.argmin(((V - P[i]) ** 2).sum(1))
+                self.assertGreater(float(N[i] @ VN[j]), 0.0, key)
+
     def test_candelabra_crown_is_filled(self):
         """Pachycereus weberi: branch columns cover the crown disc, including the centre (no hollow vase)."""
         from core.succulent_db import CACTUS_CATALOG
