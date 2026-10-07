@@ -1,217 +1,210 @@
 """
-Blender Mesh and Object Construction Engine.
-Translates botanical skeletons into continuous quad meshes with Gielis buttressing,
-branch collars, UV coordinates, and in-place real-time geometry updating.
+Blender mesh and object construction.
+
+Writes core.mesh_engine.MeshData straight into Blender meshes with foreach_set
+(no per-vertex Python lists) and updates the plant objects in place.
 """
 
-import math
 import numpy as np
 
 try:
     import bpy
-    import bmesh
-    from mathutils import Vector, Matrix
     BLENDER_AVAILABLE = True
 except ImportError:
     BLENDER_AVAILABLE = False
 
 try:
-    from ..core.mesh_engine import BotanicalMeshEngine, MeshConfig
+    from ..core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData, collar_bark_age
     from ..core.gielis import GielisProfile
 except (ImportError, ValueError):
-    from core.mesh_engine import BotanicalMeshEngine, MeshConfig
+    from core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData, collar_bark_age
     from core.gielis import GielisProfile
+
+
+def populate_mesh(mesh: "bpy.types.Mesh", data: MeshData, smooth: bool = True):
+    """Replaces a mesh's geometry with MeshData using bulk buffer writes."""
+    mesh.clear_geometry()
+    n_v, n_l, n_f = len(data.vertices), len(data.loop_vertex), len(data.loop_start)
+    if n_v == 0:
+        mesh.update()
+        return
+    mesh.vertices.add(n_v)
+    mesh.vertices.foreach_set("co", data.vertices.astype(np.float32).ravel())
+    mesh.loops.add(n_l)
+    mesh.loops.foreach_set("vertex_index", data.loop_vertex.astype(np.int32))
+    mesh.polygons.add(n_f)
+    mesh.polygons.foreach_set("loop_start", data.loop_start.astype(np.int32))
+    try:
+        mesh.polygons.foreach_set("loop_total", data.loop_total.astype(np.int32))
+    except (AttributeError, TypeError, RuntimeError):
+        pass  # Derived from loop_start in Blender 4.0+
+    mesh.update(calc_edges=True)
+
+    uv_layer = mesh.uv_layers.get("UVMap") or mesh.uv_layers.new(name="UVMap")
+    uv_layer.data.foreach_set("uv", data.loop_uv.astype(np.float32).ravel())
+
+    for name, values in data.point_attributes.items():
+        values = np.asarray(values)
+        if values.ndim == 2:
+            kind, field = 'FLOAT_VECTOR', "vector"
+        elif values.dtype.kind in "iu":
+            kind, field = 'INT', "value"
+        else:
+            kind, field = 'FLOAT', "value"
+        attr = mesh.attributes.get(name)
+        if attr is None or attr.data_type != kind or attr.domain != 'POINT':
+            if attr is not None:
+                mesh.attributes.remove(attr)
+            attr = mesh.attributes.new(name=name, type=kind, domain='POINT')
+        attr.data.foreach_set(field, values.astype(np.int32 if kind == 'INT' else np.float32).ravel())
+
+    if smooth:
+        mesh.polygons.foreach_set("use_smooth", np.ones(n_f, dtype=bool))
+    mesh.update()
 
 
 class BlenderMeshBuilder:
     """Builds and updates Blender objects from procedural botanical data."""
 
-    def __init__(self, plant_result, radial_resolution: int = 12, buttress_profile: GielisProfile = None):
+    def __init__(self, plant_result, radial_resolution: int = 12, buttress_profile: GielisProfile = None,
+                 twig_resolution: int = None):
         self.result = plant_result
         self.preset = plant_result.preset
+        al = self.preset.allometry
         self.config = MeshConfig(
             radial_resolution=radial_resolution,
-            twig_resolution=max(6, radial_resolution // 2),
-            collar_flare_factor=1.35,
-            buttress_profile=buttress_profile
+            twig_resolution=twig_resolution or max(4, radial_resolution // 2),
+            collar_flare_factor=1.0,
+            buttress_profile=buttress_profile,
+            flare_amplitude=al.buttress_amplitude,
+            flare_decay=al.buttress_decay,
         )
         self.mesh_engine = BotanicalMeshEngine(self.config)
 
-    def build_or_update_plant(
-        self,
-        context,
-        existing_root=None,
-        leaf_density: float = 1.0,
-        leaf_scale: float = 1.0,
-        show_leaves: bool = True,
-        use_subsurf: bool = False
-    ) -> dict:
-        """
-        Builds a new plant or updates an existing one in-place in real time.
-        """
-        if not BLENDER_AVAILABLE:
-            raise RuntimeError("Blender (bpy) is not available.")
-
-        collection = context.scene.collection
-
-        root_name = f"PPG_{self.preset.scientific_name.replace(' ', '_')}"
-        wood_name = f"{root_name}_Wood"
-        foliage_name = f"{root_name}_Foliage"
-
-        # Find active PPG plant in scene to update in-place without duplicating
+    def _find_root(self, context, root_name):
         active_root_name = context.scene.get("ppg_active_root_name")
-        root_obj = existing_root
-        if not root_obj and active_root_name:
-            root_obj = bpy.data.objects.get(active_root_name)
-
-        if not root_obj or root_obj.name not in context.scene.objects:
-            if context.active_object and context.active_object.name.startswith("PPG_"):
-                cand = context.active_object
-                while cand.parent and cand.parent.name.startswith("PPG_"):
-                    cand = cand.parent
-                root_obj = cand
+        root_obj = bpy.data.objects.get(active_root_name) if active_root_name else None
+        if root_obj is None or root_obj.name not in context.scene.objects:
+            active = getattr(context, "active_object", None)
+            if active is not None and active.name.startswith("PPG_"):
+                while active.parent and active.parent.name.startswith("PPG_"):
+                    active = active.parent
+                root_obj = active
             else:
-                root_obj = bpy.data.objects.get(root_name)
-
-        if not root_obj or root_obj.name not in context.scene.objects:
+                root_obj = None
+        if root_obj is None or root_obj.name not in context.scene.objects:
             root_obj = bpy.data.objects.new(root_name, None)
             root_obj.empty_display_type = 'PLAIN_AXES'
-            collection.objects.link(root_obj)
-        else:
+            context.scene.collection.objects.link(root_obj)
+            cursor = context.scene.cursor.location
+            root_obj.location = cursor
+        elif not root_obj.name.startswith(root_name):
             root_obj.name = root_name
+        context.scene["ppg_active_root_name"] = root_obj.name
+        return root_obj
 
-        context.scene["ppg_active_root_name"] = root_name
-
-        # -------------------------------------------------------------
-        # 1. Build or Update Continuous Quad Wood Mesh
-        # -------------------------------------------------------------
-        wood_data = self.mesh_engine.build_wood_mesh(
-            skeleton=self.result.skeleton_graph,
-            total_height_m=self.result.total_height_m,
-            gielis_profile=self.config.buttress_profile
-        )
-
-        wood_obj = None
+    @staticmethod
+    def _child(context, root_obj, suffix, name):
         for child in root_obj.children:
-            if "_Wood" in child.name:
-                wood_obj = child
-                break
+            if child.name.endswith(suffix) or suffix in child.name:
+                if child.name != name:
+                    child.name = name
+                    child.data.name = name
+                return child
+        mesh = bpy.data.meshes.new(name)
+        obj = bpy.data.objects.new(name, mesh)
+        context.scene.collection.objects.link(obj)
+        obj.parent = root_obj
+        return obj
 
-        if not wood_obj or wood_obj.name not in context.scene.objects:
-            mesh = bpy.data.meshes.new(wood_name)
-            wood_obj = bpy.data.objects.new(wood_name, mesh)
-            collection.objects.link(wood_obj)
-            wood_obj.parent = root_obj
+    def build_or_update_plant(self, context, existing_root=None, leaf_density: float = 1.0,
+                              leaf_scale: float = 1.0, show_leaves: bool = True, use_subsurf: bool = False,
+                              show_roots: bool = True, junction_quality: str = 'FUSED',
+                              fuse_detail: float = 10.0, fuse_smoothing: int = 6, hero_min_radius: float = 0.025,
+                              sleeve_detail: float = 4.0, max_sleeves: int = 400) -> dict:
+        if not BLENDER_AVAILABLE:
+            raise RuntimeError("Blender (bpy) is not available.")
+        root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
+        root_obj = existing_root or self._find_root(context, root_name)
+        for c in root_obj.children:   # Objects of the succulent growth forms on a reused root
+            if c.name.endswith(("_Stem", "_Spines", "_Leaves", "_Armature", "_RosetteBase", "_SuccRoots")):
+                c.hide_viewport = c.hide_render = True
+
+        # Wood (stem flutes aligned with the main roots)
+        self.config.flute_azimuth = getattr(self.result, "flute_azimuth", None)
+        root_graph = getattr(self.result, "root_graph", None) if show_roots else None
+        fuse_junctions = junction_quality in ('FUSED', 'HERO')
+        if fuse_junctions:
+            # Stem, limbs and roots fused into one continuous surface at their junctions
+            from .junctions import build_fused_wood
+            wood_data = build_fused_wood(self.mesh_engine, [self.result.skeleton_graph, root_graph],
+                                         self.result.total_height_m, self.config.buttress_profile,
+                                         detail=fuse_detail, smooth_iterations=fuse_smoothing,
+                                         quality=junction_quality, hero_min_radius=hero_min_radius,
+                                         sleeve_detail=sleeve_detail, max_sleeves=max_sleeves)
         else:
-            wood_obj.name = wood_name
-            mesh = wood_obj.data
+            wood_data = self.mesh_engine.build_wood_mesh(self.result.skeleton_graph, self.result.total_height_m,
+                                                         self.config.buttress_profile)
+        # Bark at the root collar: roots and stem base share the age of the collar
+        trunk = self.result.skeleton_graph.axes[0]
+        z = trunk.positions[:, 2]
+        collar = np.array([np.interp(0.0, z, trunk.positions[:, k]) for k in range(3)])
+        r_collar = float(np.interp(0.0, z, trunk.radii))
+        zone = getattr(getattr(self.result.preset, "roots", None), "zrt_dbh_ratio", 2.2) * self.result.dbh_m
+        wood_data = collar_bark_age(wood_data, collar, r_collar, zone)
+        wood_obj = self._child(context, root_obj, "_Wood", f"{root_obj.name}_Wood")
+        populate_mesh(wood_obj.data, wood_data)
+        wood_obj.hide_viewport = wood_obj.hide_render = False
+        self._assign_vertex_groups(wood_obj, wood_data.point_attributes.get("branch_order"))
+        mod = wood_obj.modifiers.get("PPG_Subsurf")
+        if use_subsurf and mod is None:
+            mod = wood_obj.modifiers.new(name="PPG_Subsurf", type='SUBSURF')
+            mod.levels = 1
+            mod.render_levels = 2
+        elif not use_subsurf and mod is not None:
+            wood_obj.modifiers.remove(mod)
 
-        # Populate mesh in-place
-        self._populate_mesh(mesh, wood_data["vertices"], wood_data["faces"], wood_data["uvs"])
-
-        # Create Vertex Groups for Trunk vs Branches
-        self._assign_vertex_groups(wood_obj, wood_data["vertex_orders"])
-
-        # Optional Subsurf modifier
-        if use_subsurf:
-            if "PPG_Subsurf" not in wood_obj.modifiers:
-                mod = wood_obj.modifiers.new(name="PPG_Subsurf", type='SUBSURF')
-                mod.levels = 1
-                mod.render_levels = 2
+        # Roots
+        roots_obj = self._child(context, root_obj, "_Roots", f"{root_obj.name}_Roots")
+        if not fuse_junctions and root_graph is not None and root_graph.axes:
+            populate_mesh(roots_obj.data, collar_bark_age(self.mesh_engine.build_wood_mesh(
+                root_graph, self.result.total_height_m, None, trunk_index=-1), collar, r_collar, zone))
+            roots_obj.hide_viewport = False
+            roots_obj.hide_render = False
         else:
-            if "PPG_Subsurf" in wood_obj.modifiers:
-                wood_obj.modifiers.remove(wood_obj.modifiers["PPG_Subsurf"])
+            roots_obj.data.clear_geometry()
+            roots_obj.hide_viewport = True
+            roots_obj.hide_render = True
 
-        # -------------------------------------------------------------
-        # 2. Build or Update Anchored Foliage Mesh
-        # -------------------------------------------------------------
-        foliage_obj = None
-        for child in root_obj.children:
-            if "_Foliage" in child.name:
-                foliage_obj = child
-                break
-
+        # Foliage
+        foliage_obj = self._child(context, root_obj, "_Foliage", f"{root_obj.name}_Foliage")
         if show_leaves and leaf_density > 0.0:
-            foliage_data = self.mesh_engine.build_anchored_leaves(
-                skeleton=self.result.skeleton_graph,
-                master_leaf_data=self.result.leaf_mesh_data,
-                leaf_density=leaf_density,
-                leaf_scale=leaf_scale,
-                seed=42
-            )
-
-            if not foliage_obj or foliage_obj.name not in context.scene.objects:
-                f_mesh = bpy.data.meshes.new(foliage_name)
-                foliage_obj = bpy.data.objects.new(foliage_name, f_mesh)
-                collection.objects.link(foliage_obj)
-                foliage_obj.parent = root_obj
-            else:
-                foliage_obj.name = foliage_name
-                f_mesh = foliage_obj.data
-                f_mesh.name = foliage_name
-
-            self._populate_mesh(f_mesh, foliage_data["vertices"], foliage_data["faces"], foliage_data["uvs"])
+            foliage = self.mesh_engine.build_foliage_mesh(self.result.foliage, self.result.leaf_mesh_data, leaf_scale)
+            populate_mesh(foliage_obj.data, foliage, smooth=True)
             foliage_obj.hide_viewport = False
             foliage_obj.hide_render = False
         else:
-            if foliage_obj:
-                foliage_obj.hide_viewport = True
-                foliage_obj.hide_render = True
+            foliage_obj.data.clear_geometry()
+            foliage_obj.hide_viewport = True
+            foliage_obj.hide_render = True
 
-        # Store botanical custom properties on root
+        r = self.result
         root_obj["scientific_name"] = self.preset.scientific_name
         root_obj["common_name"] = self.preset.common_name
         root_obj["family"] = self.preset.family
-        root_obj["dbh_m"] = self.result.dbh_m
-        root_obj["total_height_m"] = self.result.total_height_m
-        root_obj["crown_radius_m"] = self.result.crown_radius_m
+        root_obj["dbh_m"] = r.dbh_m
+        root_obj["total_height_m"] = r.total_height_m
+        root_obj["crown_radius_m"] = r.crown_radius_m
+        root_obj["leaf_count"] = r.leaf_count
+        return {"root": root_obj, "wood": wood_obj, "foliage": foliage_obj, "roots": roots_obj}
 
-        return {
-            "root": root_obj,
-            "wood": wood_obj,
-            "foliage": foliage_obj
-        }
-
-    def _populate_mesh(self, mesh: "bpy.types.Mesh", verts: list, faces: list, uvs: list):
-        """Efficiently populates or updates a Blender Mesh using fast C-buffers."""
-        mesh.clear_geometry()
-        mesh.from_pydata(verts, [], faces)
-        mesh.update()
-
-        # Vectorized fast UV mapping
-        if uvs and len(uvs) == len(verts) and len(mesh.loops) > 0:
-            uv_layer = mesh.uv_layers.get("UVMap") or mesh.uv_layers.new(name="UVMap")
-            loop_vert_indices = np.empty(len(mesh.loops), dtype=np.int32)
-            mesh.loops.foreach_get('vertex_index', loop_vert_indices)
-            uv_arr = np.array(uvs, dtype=np.float32)
-            loop_uvs = uv_arr[loop_vert_indices].ravel()
-            uv_layer.data.foreach_set('uv', loop_uvs)
-
-        # Vectorized smooth shading
-        if len(mesh.polygons) > 0:
-            mesh.polygons.foreach_set('use_smooth', [True] * len(mesh.polygons))
-
-    def _assign_vertex_groups(self, obj: "bpy.types.Object", orders: list):
-        """Creates vertex groups for Trunk (order 0), Scaffolds (order 1), and Twigs efficiently."""
-        if not orders:
+    @staticmethod
+    def _assign_vertex_groups(obj, orders):
+        if orders is None or len(orders) == 0:
             return
-
-        for name in ["Trunk", "Scaffolds", "Twigs"]:
-            if name not in obj.vertex_groups:
-                obj.vertex_groups.new(name=name)
-
-        vg_trunk = obj.vertex_groups["Trunk"]
-        vg_scaffold = obj.vertex_groups["Scaffolds"]
-        vg_twigs = obj.vertex_groups["Twigs"]
-
-        orders_arr = np.array(orders)
-        trunk_idx = np.where(orders_arr == 0)[0].tolist()
-        scaffold_idx = np.where(orders_arr == 1)[0].tolist()
-        twigs_idx = np.where(orders_arr >= 2)[0].tolist()
-
-        if trunk_idx:
-            vg_trunk.add(trunk_idx, 1.0, 'REPLACE')
-        if scaffold_idx:
-            vg_scaffold.add(scaffold_idx, 1.0, 'REPLACE')
-        if twigs_idx:
-            vg_twigs.add(twigs_idx, 1.0, 'REPLACE')
+        orders = np.asarray(orders)
+        for name, sel in (("Trunk", orders == 0), ("Scaffolds", orders == 1), ("Twigs", orders >= 2)):
+            vg = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
+            idx = np.nonzero(sel)[0].tolist()
+            if idx:
+                vg.add(idx, 1.0, 'REPLACE')

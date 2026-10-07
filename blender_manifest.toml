@@ -1,9 +1,9 @@
 schema_version = "1.0.0"
 
 id = "procedural_plant_generator"
-version = "0.1.0"
+version = "1.0.0"
 name = "Procedural Plant Generator"
-tagline = "Empirical data-driven botanical 3D plant generator"
+tagline = "Botanical trait-driven trees, succulents and flowers"
 maintainer = "Miguel Diaz de Leon-Munoz <migueldlm1307@gmail.com>"
 type = "add-on"
 
@@ -12,14 +12,18 @@ tags = ["Add Mesh", "Modeling", "Animation"]
 blender_version_min = "4.2.0"
 
 description = """
-Procedural Plant Generator is a scientifically grounded botanical 3D asset generator for Blender.
-Unlike conventional plant generators that rely on purely artistic heuristics or arbitrary sliders,
-this tool couples procedural geometric synthesis with real-world empirical botanical datasets:
-- Global Tree Allometry (TALLO & Awesome-Forests): Height, DBH, crown radius, and Leonardo/pipe tapering.
-- Architectural Growth Models (Hallé-Oldeman): Rauh, Massart, Troll, and Attims branching dynamics.
-- Leaf Morphometrics (LeavesBank & PlantCLEF): Fourier boundary descriptors and serration modeling.
-- Leaf Venation Networks & Biomechanics (Dryad doi:10.5061/dryad.1g1jwsv36 / Matos, Duarte et al. 2025 & LVD2021):
-  Hierarchical venation topology, vein density (VLA), and physical leaf drooping.
+Procedural Plant Generator builds trees from measurable botanical traits:
+- Allometry (DBH, height, crown radius) and a beta crown envelope.
+- Halle-Oldeman architecture, apical dominance, phyllotaxis, tropisms and self-weight bending.
+- Leaf-architecture descriptors (base/apex angles, lobes, teeth, compound leaves, needles) with
+  hierarchical venation rendered into leaf textures (VLA-sized areoles, seasonal senescence).
+- Leaf-area-index driven foliage, procedural bark, and a trait space for blending species and variants.
+- Root systems from the literature (taproot, heart, plate, fibrous, buttress) fused with the stem.
+- Cacti (ribs, spiral tubercles, areoles, spines, wool, arms, cladodes) and rosette succulents
+  (Agave, Aloe, Echeveria) with their root systems.
+- Flowers built from floral diagrams (whorled or spiral, zygomorphy, fused corollas, capitula) and
+  inflorescences, standalone or placed on any plant.
+- Age-dependent procedural bark, seam-free across forks and root collars.
 """
 
 license = ["SPDX:GPL-3.0-or-later"]
