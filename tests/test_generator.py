@@ -422,6 +422,35 @@ class TestSucculents(unittest.TestCase):
                        (np.linalg.norm(pts - gj[7], axis=1) < 0.25 * gj[4])
                 self.assertFalse(np.any(eng._pad_inside(pts[~near], gj, inflate=0.98)), f"pads {i} and {j}")
 
+    def test_bark_age_attribute(self):
+        """Wood meshes carry the local axis radius (bark age proxy); thin twigs keep a young periderm."""
+        from core.species_db import get_species_preset
+        from core.plant_pipeline import BotanicalPlantPipeline
+        from core.mesh_engine import BotanicalMeshEngine
+        res = BotanicalPlantPipeline(get_species_preset("quercus_robur")).generate(seed=2, leaf_density=0.0,
+                                                                                 roots=False)
+        mesh = BotanicalMeshEngine().build_wood_mesh(res.skeleton_graph, res.total_height_m)
+        r = mesh.point_attributes["bark_radius"]
+        self.assertEqual(len(r), len(mesh.vertices))
+        self.assertAlmostEqual(float(r.max()), float(max(a.radii.max() for a in res.skeleton_graph.axes)), places=4)
+        onset = get_species_preset("quercus_robur").bark.onset_radius_cm * 0.01
+        self.assertGreater(float(np.mean(r < 0.5 * onset)), 0.3)       # Much of the crown is young bark
+        self.assertGreater(float(r.max()), 2.0 * onset)                 # The trunk is fully fissured
+
+    def test_cladode_faces_wound_outward(self):
+        """Every cladode face points away from the pad centre (consistent winding, no dark shading ring)."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        e = CactusEngine(CACTUS_CATALOG["opuntia_ficus_indica"].profile)
+        up = np.array([0.0, 0.0, 1.0])
+        mesh, _, _ = e._pad(np.zeros(3), up, 0.0, 0.4, np.random.default_rng(1), 1.0)
+        centre = e._pad_frame(np.zeros(3), up, 0.0, 0.4)[0]
+        V = mesh.vertices.astype(float)
+        for st, tot in zip(mesh.loop_start, mesh.loop_total):
+            idx = mesh.loop_vertex[st:st + tot]
+            fn = np.cross(V[idx[1]] - V[idx[0]], V[idx[2]] - V[idx[0]])
+            self.assertGreater(float(fn @ (V[idx].mean(0) - centre)), 0.0)
+
     def test_candelabra_secondary_arms(self):
         from core.succulent_db import CACTUS_CATALOG
         from core.cactus import CactusEngine, StemAxis

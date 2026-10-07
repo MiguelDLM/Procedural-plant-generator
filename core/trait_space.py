@@ -101,6 +101,8 @@ TRAITS: list[TraitSpec] = [
     # Bark
     TraitSpec("bark.feature_scale_m", 0.005, 0.5, log=True, cv=0.08),
     TraitSpec("bark.relief", 0.0, 1.0, cv=0.06),
+    TraitSpec("bark.onset_radius_cm", 0.1, 30.0, log=True, cv=0.1),
+    TraitSpec("bark.weathering", 0.0, 1.0, cv=0.08),
     # Roots
     TraitSpec("roots.lateral_count", 1, 16, integer=True, cv=0.0),
     TraitSpec("roots.spread_crown_ratio", 0.3, 4.0, cv=0.08),
@@ -122,6 +124,8 @@ COLOR_TRAITS = [
     "leaf_morphology.autumn_color",
     "bark.base_color",
     "bark.secondary_color",
+    "bark.young_color",
+    "bark.inner_color",
 ]
 
 CATEGORICAL_TRAITS = [

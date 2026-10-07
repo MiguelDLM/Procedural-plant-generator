@@ -237,81 +237,189 @@ def create_bark_material(name: str, bark=None) -> "bpy.types.Material":
     s = 1.0 / max(0.005, float(bark.feature_scale_m))  # Features per metre
     mapping.inputs['Scale'].default_value = (s, s, s)
 
-    noise = nodes.new('ShaderNodeTexNoise')
-    noise.location = (-800, 300)
-    _set(noise, 4.0, "Scale")
-    _set(noise, 6.0, "Detail")
-    links.new(mapping.outputs['Vector'], noise.inputs['Vector'])
+    Qv = mapping.outputs['Vector']           # Bark-feature units (1 = one plate / fissure spacing)
 
+    def mnode(op, a, b=None, loc=(0, 0), c=None, clamp=False):
+        m = nodes.new('ShaderNodeMath')
+        m.operation = op
+        m.location = loc
+        m.use_clamp = clamp
+        for i, v in enumerate((a, b, c)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                m.inputs[i].default_value = v
+            else:
+                links.new(v, m.inputs[i])
+        return m.outputs[0]
+
+    def smooth(x, lo, hi, loc):
+        m = nodes.new('ShaderNodeMapRange')
+        m.interpolation_type = 'SMOOTHSTEP'
+        m.location = loc
+        for name, v in (("From Min", lo), ("From Max", hi)):
+            if isinstance(v, (int, float)):
+                m.inputs[name].default_value = v
+            else:
+                links.new(v, m.inputs[name])
+        links.new(x, m.inputs['Value'])
+        return m.outputs['Result']
+
+    def mixc(fac, a, b, loc, blend='MIX'):
+        m = nodes.new('ShaderNodeMix')
+        m.data_type = 'RGBA'
+        m.blend_type = blend
+        m.location = loc
+        for sock, v in ((m.inputs[0], fac), (m.inputs[6], a), (m.inputs[7], b)):
+            if isinstance(v, (int, float, tuple)):
+                sock.default_value = v
+            else:
+                links.new(v, sock)
+        return m.outputs[2]
+
+    def voronoi(vec, scale, feature, loc, rand=1.0):
+        v = nodes.new('ShaderNodeTexVoronoi')
+        v.location = loc
+        v.voronoi_dimensions = '3D'
+        v.feature = feature
+        _set(v, scale, "Scale")
+        _set(v, rand, "Randomness")
+        links.new(vec, v.inputs['Vector'])
+        return v
+
+    def noise_tex(vec, scale, detail, loc, rough=0.55):
+        n = nodes.new('ShaderNodeTexNoise')
+        n.location = loc
+        _set(n, scale, "Scale")
+        _set(n, detail, "Detail")
+        _set(n, rough, "Roughness")
+        links.new(vec, n.inputs['Vector'])
+        return n
+
+    # --- Local bark age from the axis radius (pipe model: thicker = older) -----------------------------
+    r_attr = nodes.new('ShaderNodeAttribute')
+    r_attr.location = (-1500, -400)
+    r_attr.attribute_name = "bark_radius"
+    onset = 0.01 * max(0.05, float(getattr(bark, "onset_radius_cm", 4.0)))
+    r = r_attr.outputs['Fac']
+    age = smooth(r, 0.5 * onset, 2.0 * onset, (-1250, -400))            # Young periderm -> rhytidome
+    old = smooth(r, 2.0 * onset, 9.0 * onset, (-1250, -550))            # Fissures keep widening
+
+    # Domain warp: organic, non-cellular outlines
+    warp_n = noise_tex(Qv, 1.6, 4.0, (-1000, 350))
     warp = nodes.new('ShaderNodeMix')
     warp.data_type = 'VECTOR'
-    warp.location = (-600, 100)
-    warp.inputs[0].default_value = 0.08
-    links.new(mapping.outputs['Vector'], warp.inputs[4])
-    links.new(noise.outputs['Color'], warp.inputs[5])
+    warp.location = (-800, 300)
+    warp.inputs[0].default_value = 0.22
+    links.new(Qv, warp.inputs[4])
+    links.new(warp_n.outputs['Color'], warp.inputs[5])
+    W = warp.outputs[1]
+    fine = noise_tex(Qv, 14.0, 6.0, (-800, 600), 0.6)                    # Fibrous micro-texture
+    detail_n = fine.outputs['Fac']
 
-    if pattern in ("Fissured", "Plated", "Lenticelled", "Fibrous", "Annulated"):
-        vor = nodes.new('ShaderNodeTexVoronoi')
-        vor.location = (-400, 100)
-        vor.voronoi_dimensions = '3D'
-        vor.feature = 'DISTANCE_TO_EDGE'
-        links.new(warp.outputs[1], vor.inputs['Vector'])
-        ramp = nodes.new('ShaderNodeValToRGB')
-        ramp.location = (-150, 100)
-        ramp.color_ramp.elements[0].position = 0.0
-        ramp.color_ramp.elements[1].position = {"Fissured": 0.12, "Lenticelled": 0.06, "Fibrous": 0.2,
-                                                 "Annulated": 0.15}.get(pattern, 0.05)
-        links.new(vor.outputs['Distance'], ramp.inputs['Fac'])
-        inv = nodes.new('ShaderNodeMath')
-        inv.operation = 'SUBTRACT'
-        inv.location = (100, 100)
-        inv.inputs[0].default_value = 1.0
-        links.new(ramp.outputs['Color'], inv.inputs[1])
-        fac_socket = inv.outputs[0]
-        height_socket = ramp.outputs['Color']
+    # --- Mature rhytidome height field H (0 fissure bottom .. 1 ridge / plate top) ----------------------
+    big_edge = voronoi(W, 1.0, 'DISTANCE_TO_EDGE', (-600, 200))
+    cell = voronoi(W, 1.0, 'F1', (-600, 0))                              # Per-plate random colour/height
+    small_edge = voronoi(W, 3.3, 'DISTANCE_TO_EDGE', (-600, -200))       # Secondary checking
+    cell_v = mnode('MULTIPLY', cell.outputs['Color'], 1.0, (-400, 0))
+    E1, E2 = big_edge.outputs['Distance'], small_edge.outputs['Distance']
+    if pattern == "Fissured":
+        width = mnode('MULTIPLY_ADD', old, 0.16, (-400, 400), 0.05)
+        ridge = mnode('POWER', smooth(E1, 0.0, width, (-250, 300)), 0.55, (-100, 300))   # Rounded ridges
+        chk = smooth(E2, 0.0, 0.05, (-250, 150))
+        Hm = mnode('MULTIPLY', ridge, mnode('MULTIPLY_ADD', chk, 0.25, (-100, 150), 0.75), (50, 250))
+        Hm = mnode('MULTIPLY', Hm, mnode('MULTIPLY_ADD', detail_n, 0.3, (50, 100), 0.7), (200, 250))
+    elif pattern == "Fibrous":
+        # Long, stringy strands (Sequoiadendron, Taxodium, Cupressus): axially stretched noise ridges with
+        # a few deeper splits between broad fibre bundles
+        strands = noise_tex(W, 5.0, 8.0, (-600, 450), 0.5)
+        fib = smooth(strands.outputs['Fac'], 0.35, 0.65, (-250, 450))
+        split = smooth(E1, 0.0, 0.12, (-250, 300))
+        Hm = mnode('MULTIPLY', mnode('MULTIPLY_ADD', fib, 0.6, (-100, 400), 0.4), split, (50, 250))
+    elif pattern == "Plated":
+        width = mnode('MULTIPLY_ADD', old, 0.10, (-400, 400), 0.04)
+        plate = smooth(E1, 0.0, width, (-250, 300))                       # Flat-topped scales
+        tier = mnode('MULTIPLY_ADD', cell_v, 0.35, (-100, 100), 0.65)     # Plates at different heights
+        Hm = mnode('MULTIPLY', plate, tier, (50, 250))
+        Hm = mnode('MULTIPLY', Hm, mnode('MULTIPLY_ADD', detail_n, 0.2, (50, 100), 0.8), (200, 250))
+    elif pattern == "Lenticelled":
+        dash = mnode('SUBTRACT', 1.0, smooth(E1, 0.0, 0.05, (-250, 300)), (-100, 300))
+        Hm = mnode('SUBTRACT', mnode('MULTIPLY_ADD', detail_n, 0.1, (50, 100), 0.9), mnode('MULTIPLY', dash, 0.5,
+                   (50, 300)), (200, 250))
+    elif pattern == "Annulated":
+        Hm = mnode('POWER', smooth(E1, 0.0, 0.18, (-250, 300)), 0.6, (50, 250))
     elif pattern == "Peeling":
-        patches = nodes.new('ShaderNodeTexNoise')
-        patches.location = (-400, 100)
-        _set(patches, 2.0, "Scale")
-        _set(patches, 3.0, "Detail")
-        links.new(warp.outputs[1], patches.inputs['Vector'])
-        ramp = nodes.new('ShaderNodeValToRGB')
-        ramp.location = (-150, 100)
-        ramp.color_ramp.elements[0].position = 0.47
-        ramp.color_ramp.elements[1].position = 0.53
-        links.new(patches.outputs['Fac'], ramp.inputs['Fac'])
-        fac_socket = ramp.outputs['Color']
-        height_socket = ramp.outputs['Color']
+        patches = noise_tex(W, 0.9, 3.0, (-600, 400))
+        layer = smooth(patches.outputs['Fac'], 0.46, 0.54, (-250, 400))
+        lip = mnode('SUBTRACT', 1.0, mnode('ABSOLUTE', mnode('MULTIPLY_ADD', layer, 2.0, (-250, 250), -1.0),
+                    None, (-100, 250)), (50, 250))
+        # Freshly exposed underbark (low H) vs older outer patches (high H), raised lips at patch edges
+        Hm = mnode('ADD', mnode('MULTIPLY_ADD', layer, 0.6, (50, 400), 0.25), mnode('MULTIPLY', lip, 0.15, (200, 300)),
+                   (350, 300))
     else:  # Smooth
-        ramp = nodes.new('ShaderNodeValToRGB')
-        ramp.location = (-150, 100)
-        ramp.color_ramp.elements[0].position = 0.35
-        ramp.color_ramp.elements[1].position = 0.75
-        links.new(noise.outputs['Fac'], ramp.inputs['Fac'])
-        fac_socket = ramp.outputs['Color']
-        height_socket = noise.outputs['Fac']
+        Hm = mnode('MULTIPLY_ADD', detail_n, 0.15, (50, 250), 0.85)
 
-    # Colour: base vs secondary (furrows / lenticels / underbark) with fine mottling
-    mix = nodes.new('ShaderNodeMix')
-    mix.data_type = 'RGBA'
-    mix.location = (350, 200)
-    mix.inputs[6].default_value = _srgb_to_linear(bark.base_color)
-    mix.inputs[7].default_value = _srgb_to_linear(bark.secondary_color)
-    links.new(fac_socket, mix.inputs[0])
+    # --- Young periderm: smooth, with transverse lenticels -------------------------------------------
+    len_v = voronoi(Qv, 2.5, 'F1', (-600, -450), 0.9)
+    lent = mnode('SUBTRACT', 1.0, smooth(len_v.outputs['Distance'], 0.04, 0.09, (-400, -450)), (-250, -450))
+    Hy = mnode('SUBTRACT', mnode('MULTIPLY_ADD', detail_n, 0.08, (-250, -600), 0.92),
+               mnode('MULTIPLY', lent, 0.25, (-100, -450)), (50, -500))
+    H = nodes.new('ShaderNodeMix')
+    H.data_type = 'FLOAT'
+    H.location = (400, -100)
+    links.new(age, H.inputs[0])
+    links.new(Hy, H.inputs[2])
+    links.new(Hm, H.inputs[3])
+    Hs = H.outputs[0]
 
-    mottle = nodes.new('ShaderNodeMix')
-    mottle.data_type = 'RGBA'
-    mottle.blend_type = 'OVERLAY'
-    mottle.location = (560, 200)
-    mottle.inputs[0].default_value = 0.35
-    links.new(mix.outputs[2], mottle.inputs[6])
-    links.new(noise.outputs['Color'], mottle.inputs[7])
-    links.new(mottle.outputs[2], bsdf.inputs['Base Color'])
+    # --- Colour: depth-dependent (inner bark at the bottom, weathered grey ridge tops) -----------------
+    base = _srgb_to_linear(bark.base_color)
+    sec = _srgb_to_linear(bark.secondary_color)
+    inner = _srgb_to_linear(getattr(bark, "inner_color", None) or bark.secondary_color)
+    if pattern == "Peeling":       # Exfoliating barks expose pale underbark, not a dark furrow
+        inner = sec
+    young = _srgb_to_linear(getattr(bark, "young_color", None) or bark.base_color)
+    fiss = mixc(smooth(Hs, 0.0, 0.3, (550, 450)), inner, sec, (700, 450))
+    hsv = nodes.new('ShaderNodeHueSaturation')
+    hsv.location = (550, 650)
+    hsv.inputs['Color'].default_value = base
+    links.new(mnode('MULTIPLY_ADD', cell_v, 0.35, (400, 700), 0.82), hsv.inputs['Value'])
+    plate_c = hsv.outputs['Color']
+    colm = mixc(smooth(Hs, 0.12, 0.55, (700, 300)), fiss, plate_c, (900, 400))
+    weather = mnode('MULTIPLY', smooth(Hs, 0.65, 1.0, (700, 150)), 0.7 * float(getattr(bark, "weathering", 0.35)),
+                    (850, 150))
+    colm = mixc(weather, colm, _srgb_to_linear((0.56, 0.55, 0.52)), (1050, 300))
+    coly = mixc(mnode('MULTIPLY', lent, 0.6, (700, -350)), young, mixc(0.5, young, sec, (700, -500)), (900, -400))
+    col = mixc(age, coly, colm, (1200, 100))
+    # Large-scale variation along the tree (avoid a uniform tint)
+    tc = nodes.new('ShaderNodeTexCoord')
+    tc.location = (700, 800)
+    macro = noise_tex(tc.outputs['Object'], 0.6, 2.0, (900, 800))
+    col = mixc(0.18, col, macro.outputs['Color'], (1350, 200), 'OVERLAY')
+    # Cavity: crotches, collar folds and deep furrows darken (local ambient occlusion)
+    ao = nodes.new('ShaderNodeAmbientOcclusion')
+    ao.location = (1350, 450)
+    ao.only_local = True
+    ao.samples = 8
+    _set(ao, max(0.05, 2.0 * float(bark.feature_scale_m)), "Distance")
+    col = mixc(0.55, col, ao.outputs['Color'], (1500, 250), 'MULTIPLY')
+    links.new(col, bsdf.inputs['Base Color'])
+    out.location = (2100, 0)
+    bsdf.location = (1800, 0)
 
+    rough = nodes.new('ShaderNodeMapRange')
+    rough.location = (1500, -200)
+    rough.inputs['To Min'].default_value = min(1.0, float(bark.roughness) + 0.1)
+    rough.inputs['To Max'].default_value = max(0.3, float(bark.roughness) - 0.15)
+    links.new(Hs, rough.inputs['Value'])
+    links.new(rough.outputs['Result'], bsdf.inputs['Roughness'])
+
+    # Relief: bump from H (world-scaled), stronger on old bark, plus fibrous micro-bump
     bump = nodes.new('ShaderNodeBump')
-    bump.location = (560, -200)
-    _set(bump, 0.25 + 0.75 * float(bark.relief), "Strength")
-    _set(bump, 0.004 + 0.02 * float(bark.relief), "Distance")
-    links.new(height_socket, bump.inputs['Height'])
+    bump.location = (1500, -450)
+    relief = float(bark.relief)
+    links.new(mnode('MULTIPLY_ADD', age, 0.6 * relief, (1300, -550), 0.25 + 0.15 * relief), bump.inputs['Strength'])
+    _set(bump, max(0.002, 0.35 * relief * float(bark.feature_scale_m)), "Distance")
+    links.new(mnode('MULTIPLY_ADD', detail_n, 0.08, (1300, -450), Hs), bump.inputs['Height'])
     links.new(bump.outputs['Normal'], bsdf.inputs['Normal'])
     return mat

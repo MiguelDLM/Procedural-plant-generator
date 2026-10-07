@@ -886,6 +886,9 @@ class CactusEngine:
             faces_q.append([last_b + j, rim + j, rim + (j + 1) % nf, last_b + (j + 1) % nf])
         attrs = {"rib": np.ones(len(V), np.float32), "tubercle": np.zeros(len(V), np.float32),
                  "height_rel": np.full(len(V), 0.5, np.float32)}
+        # The quad rings were wound inward while the centre fans face outward; mixed winding made smooth
+        # shading average opposite normals into a dark ring around each pad centre. All faces outward.
+        faces_q = [list(f)[::-1] for f in faces_q]
         mesh = _mesh(V, faces_q, faces_t, None, None, attrs)
 
         # Areoles: equal-area spiral on both faces (disc model of Vogel 1979)

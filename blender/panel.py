@@ -286,6 +286,10 @@ if BLENDER_AVAILABLE:
         bark_color2: COL("Furrow Colour", (0.14, 0.12, 0.10))
         bark_scale: F("Feature Size (m)", 0.06, 0.005, 0.5)
         bark_relief: F("Relief", 0.8, 0.0, 1.0)
+        bark_color_young: COL("Young Bark Colour", (0.42, 0.40, 0.34), "Smooth periderm of thin, young axes")
+        bark_onset_cm: F("Fissuring Onset (cm)", 4.0, 0.1, 30.0,
+                         "Axis radius at which the mature bark pattern appears; fissures widen beyond it")
+        bark_weathering: F("Weathering", 0.35, 0.0, 1.0, "Grey, bleached ridge tops on old bark")
 
         # Roots
         show_roots: BoolProperty(name="Show Roots", default=True, update=U)
@@ -613,7 +617,8 @@ class PPG_PT_Bark(_PPGSub, Panel):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        for name in ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief"):
+        for name in ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief", "bark_color_young",
+                     "bark_onset_cm", "bark_weathering"):
             col.prop(p, name)
 
 

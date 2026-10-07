@@ -644,6 +644,50 @@ for _key, (_system, _biome, _depth, _spread, _extra) in ROOT_TRAITS.items():
     _preset.roots = RootProfile(**_kw)
 
 
+# Bark ageing: radius (cm) at which the rhytidome pattern replaces the smooth young periderm, and the
+# periderm colour of young axes (sRGB). Field-guide descriptions: smooth silvery young oaks and ashes,
+# orange upper trunk of Scots pine, reddish-brown birch and cherry twigs, early-furrowed Robinia.
+BARK_AGE = {
+    "quercus_robur": dict(onset_radius_cm=5.0, young_color=(0.47, 0.47, 0.42), weathering=0.45),
+    "quercus_rubra": dict(onset_radius_cm=6.0, young_color=(0.50, 0.50, 0.47)),
+    "quercus_agrifolia": dict(onset_radius_cm=6.0, young_color=(0.50, 0.49, 0.45)),
+    "castanea_sativa": dict(onset_radius_cm=6.0, young_color=(0.45, 0.36, 0.29)),
+    "acer_pseudoplatanus": dict(onset_radius_cm=8.0, young_color=(0.52, 0.50, 0.45)),
+    "acer_saccharum": dict(onset_radius_cm=6.0, young_color=(0.50, 0.48, 0.44)),
+    "aesculus_hippocastanum": dict(onset_radius_cm=8.0, young_color=(0.46, 0.41, 0.36)),
+    "betula_pendula": dict(onset_radius_cm=1.0, young_color=(0.40, 0.22, 0.16), weathering=0.1),
+    "populus_tremula": dict(onset_radius_cm=12.0, young_color=(0.58, 0.60, 0.50)),
+    "populus_nigra_italica": dict(onset_radius_cm=5.0, young_color=(0.55, 0.55, 0.48)),
+    "salix_babylonica": dict(onset_radius_cm=4.0, young_color=(0.52, 0.48, 0.30)),
+    "prunus_avium": dict(onset_radius_cm=1.5, young_color=(0.42, 0.24, 0.19), weathering=0.15),
+    "malus_domestica": dict(onset_radius_cm=5.0, young_color=(0.45, 0.35, 0.28)),
+    "pinus_sylvestris": dict(onset_radius_cm=12.0, young_color=(0.78, 0.45, 0.25), weathering=0.2),
+    "pinus_pinea": dict(onset_radius_cm=8.0, young_color=(0.55, 0.38, 0.28)),
+    "picea_abies": dict(onset_radius_cm=10.0, young_color=(0.50, 0.32, 0.22)),
+    "sequoiadendron_giganteum": dict(onset_radius_cm=6.0, young_color=(0.50, 0.30, 0.22)),
+    "taxodium_mucronatum": dict(onset_radius_cm=3.0, young_color=(0.48, 0.34, 0.26)),
+    "cupressus_sempervirens": dict(onset_radius_cm=3.0, young_color=(0.45, 0.36, 0.28)),
+    "platanus_hispanica": dict(onset_radius_cm=5.0, young_color=(0.50, 0.45, 0.35)),
+    "eucalyptus_globulus": dict(onset_radius_cm=4.0, young_color=(0.62, 0.62, 0.52)),
+    "tilia_cordata": dict(onset_radius_cm=6.0, young_color=(0.45, 0.38, 0.30)),
+    "ulmus_minor": dict(onset_radius_cm=4.0, young_color=(0.44, 0.38, 0.32)),
+    "fraxinus_excelsior": dict(onset_radius_cm=8.0, young_color=(0.56, 0.56, 0.51)),
+    "juglans_regia": dict(onset_radius_cm=7.0, young_color=(0.60, 0.60, 0.56)),
+    "robinia_pseudoacacia": dict(onset_radius_cm=2.5, young_color=(0.45, 0.40, 0.33), weathering=0.5),
+    "olea_europaea": dict(onset_radius_cm=6.0, young_color=(0.55, 0.55, 0.50), weathering=0.5),
+    "liriodendron_tulipifera": dict(onset_radius_cm=8.0, young_color=(0.50, 0.50, 0.42)),
+    "liquidambar_styraciflua": dict(onset_radius_cm=3.0, young_color=(0.48, 0.42, 0.32)),
+    "phoenix_canariensis": dict(onset_radius_cm=0.1),
+}
+for _key, _kw in BARK_AGE.items():
+    _b = SPECIES_CATALOG[_key].bark
+    for _f, _v in _kw.items():
+        setattr(_b, _f, _v)
+for _preset in SPECIES_CATALOG.values():      # Smooth barks stay as they are at every age
+    if _preset.bark.pattern == BP.SMOOTH and _preset.bark.young_color is not None:
+        _preset.bark.onset_radius_cm = 0.1
+
+
 def get_preset_names() -> list[tuple[str, str, str]]:
     """Returns (id, label, description) tuples for a Blender enum, sorted by family then name."""
     items = []

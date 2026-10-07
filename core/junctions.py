@@ -206,7 +206,8 @@ def sector_slab(parent: Axis, lo: int, hi: int, az: float, half_angle: float, of
     return MeshData(verts.astype(np.float32), f.ravel(), np.arange(len(f), dtype=np.int32) * 4,
                     np.full(len(f), 4, dtype=np.int32), np.zeros((f.size, 2), np.float32),
                     {"branch_order": np.full(len(verts), parent.order, dtype=np.int32),
-                     "bark_base": zeros, "bark_along": zeros})
+                     "bark_base": zeros, "bark_along": zeros,
+                     "bark_radius": np.zeros(len(verts), np.float32)})
 
 
 def junction_sleeves(thin: list[Axis], graphs: list[BranchingGraph], r_min: float, tile: float,

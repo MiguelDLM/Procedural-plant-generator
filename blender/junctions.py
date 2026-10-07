@@ -101,7 +101,8 @@ def _fuse(mesh_engine, axes, voxel: float, smooth_iterations: int, gielis, total
         orders = np.array([a.order for a in uv_axes])[table["axis"][nearest]].astype(np.int32)
         base, along = bark_coordinates(verts.astype(float), nearest, table)
         return MeshData(verts.astype(np.float32), lv, ls, lt, uvs,
-                        {"branch_order": orders, "bark_base": base, "bark_along": along})
+                        {"branch_order": orders, "bark_base": base, "bark_along": along,
+                         "bark_radius": table["r"][nearest].astype(np.float32)})
     tree = KDTree(len(table["pos"]))
     for i, p in enumerate(table["pos"]):
         tree.insert(p, i)
@@ -118,7 +119,8 @@ def _fuse(mesh_engine, axes, voxel: float, smooth_iterations: int, gielis, total
     orders = np.array([a.order for a in axes])[table["axis"][nearest]].astype(np.int32)
     base, along = bark_coordinates(verts.astype(float), nearest, table)
     return MeshData(verts.astype(np.float32), lv, ls, lt, uvs,
-                    {"branch_order": orders, "bark_base": base, "bark_along": along})
+                    {"branch_order": orders, "bark_base": base, "bark_along": along,
+                     "bark_radius": table["r"][nearest].astype(np.float32)})
 
 
 _CACHE: dict = {}

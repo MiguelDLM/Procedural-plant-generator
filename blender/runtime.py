@@ -123,6 +123,9 @@ PROP_MAP: list[tuple[str, str]] = [
     ("bark_color2", "bark.secondary_color"),
     ("bark_scale", "bark.feature_scale_m"),
     ("bark_relief", "bark.relief"),
+    ("bark_color_young", "bark.young_color"),
+    ("bark_onset_cm", "bark.onset_radius_cm"),
+    ("bark_weathering", "bark.weathering"),
     ("root_system", "roots.system"),
     ("root_laterals", "roots.lateral_count"),
     ("root_spread", "roots.spread_crown_ratio"),
@@ -352,7 +355,7 @@ def _ensure_leaf_material(root, preset, props, model, shoot_leaves):
 
 
 def _ensure_bark_material(root, preset):
-    key = _key(preset.bark, "bark-3d-v2")
+    key = _key(preset.bark, "bark-3d-v4")
     name = f"{root.name}_BarkMat"
     mat = bpy.data.materials.get(name)
     if mat is not None and mat.get("ppg_key") == key:

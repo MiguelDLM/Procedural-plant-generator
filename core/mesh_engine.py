@@ -212,7 +212,9 @@ class BotanicalMeshEngine:
         return MeshData(verts.astype(np.float32), loops.astype(np.int32), starts.astype(np.int32),
                         totals.astype(np.int32), uv.astype(np.float32),
                         {"branch_order": np.repeat(orders, per_axis).astype(np.int32),
-                         "bark_base": bark_base.astype(np.float32), "bark_along": bark_along.astype(np.float32)})
+                         "bark_base": bark_base.astype(np.float32), "bark_along": bark_along.astype(np.float32),
+                         # Local axis radius: proxy for bark age (pipe model), drives the young -> old bark
+                         "bark_radius": np.repeat(R[:, :, None], n, axis=2).reshape(-1).astype(np.float32)})
 
     @staticmethod
     def build_foliage_mesh(instances: FoliageInstances, card: dict, leaf_scale: float = 1.0) -> MeshData:
