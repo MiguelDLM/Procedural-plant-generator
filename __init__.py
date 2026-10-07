@@ -8,10 +8,10 @@ descriptors (Ellis et al. 2009), hierarchical venation and a normalised trait sp
 bl_info = {
     "name": "Procedural Plant Generator",
     "author": "Miguel Diaz de Leon-Munoz",
-    "version": (0, 3, 0),
+    "version": (1, 0, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Plant Gen",
-    "description": "Interactive real-time botanical tree generator backed by empirical traits and Plant Ontology",
+    "description": "Botanical trait-driven trees, succulents and flowers backed by empirical traits and Plant Ontology",
     "category": "Add Mesh",
 }
 

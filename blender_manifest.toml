@@ -1,9 +1,9 @@
 schema_version = "1.0.0"
 
 id = "procedural_plant_generator"
-version = "0.3.0"
+version = "1.0.0"
 name = "Procedural Plant Generator"
-tagline = "Botanical trait-driven tree generator"
+tagline = "Botanical trait-driven trees, succulents and flowers"
 maintainer = "Miguel Diaz de Leon-Munoz <migueldlm1307@gmail.com>"
 type = "add-on"
 
@@ -18,7 +18,12 @@ Procedural Plant Generator builds trees from measurable botanical traits:
 - Leaf-architecture descriptors (base/apex angles, lobes, teeth, compound leaves, needles) with
   hierarchical venation rendered into leaf textures (VLA-sized areoles, seasonal senescence).
 - Leaf-area-index driven foliage, procedural bark, and a trait space for blending species and variants.
-- Cacti (ribs, spiral tubercles, areoles, spines, arms, cladodes) and rosette succulents (Agave, Aloe, Echeveria).
+- Root systems from the literature (taproot, heart, plate, fibrous, buttress) fused with the stem.
+- Cacti (ribs, spiral tubercles, areoles, spines, wool, arms, cladodes) and rosette succulents
+  (Agave, Aloe, Echeveria) with their root systems.
+- Flowers built from floral diagrams (whorled or spiral, zygomorphy, fused corollas, capitula) and
+  inflorescences, standalone or placed on any plant.
+- Age-dependent procedural bark, seam-free across forks and root collars.
 """
 
 license = ["SPDX:GPL-3.0-or-later"]
