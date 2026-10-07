@@ -1,6 +1,6 @@
 """
 Blender 3D Viewport UI Panel and Property Groups.
-Features an interactive Empirical Botanical Trait Inspector.
+Features an interactive Empirical Botanical Trait Inspector with Plant Ontology grounding.
 """
 
 try:
@@ -13,7 +13,12 @@ except ImportError:
     Panel = object
     PropertyGroup = object
 
-from data.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
+try:
+    from ..core.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
+    from ..core.ontology import get_po_term
+except (ImportError, ValueError):
+    from core.species_db import get_preset_names, get_species_preset, SPECIES_CATALOG
+    from core.ontology import get_po_term
 
 
 class PPG_Properties(PropertyGroup):
@@ -33,10 +38,10 @@ class PPG_Properties(PropertyGroup):
 
     dbh_m: FloatProperty(
         name="DBH (Diameter)",
-        description="Stem Diameter at Breast Height (1.3m) in meters",
+        description="Stem Diameter at Breast Height (1.3m) in meters [PO:0004712]",
         default=0.45,
         min=0.02,
-        max=2.50,
+        max=4.50,
         step=1.0,
         precision=2,
         unit='LENGTH'
@@ -44,7 +49,7 @@ class PPG_Properties(PropertyGroup):
 
     leaf_density: FloatProperty(
         name="Foliage Density",
-        description="Relative density of leaves on terminal branches",
+        description="Relative density of leaves on terminal branches [PO:0025004]",
         default=1.0,
         min=0.0,
         max=2.0,
@@ -73,7 +78,7 @@ class PPG_Properties(PropertyGroup):
 
     show_traits: BoolProperty(
         name="Empirical Trait Inspector",
-        description="Display scientific trait values from empirical datasets",
+        description="Display scientific trait values from empirical datasets and Plant Ontology",
         default=True
     )
 
@@ -95,12 +100,14 @@ class PPG_PT_MainPanel(Panel):
         # 1. Species Selection
         # -------------------------------------------------------------
         box = layout.box()
-        box.label(text="Botanical Taxon", icon='OUTLINER_OB_ARMATURE')
+        box.label(text="Botanical Taxon (Plant Ontology)", icon='OUTLINER_OB_ARMATURE')
         box.prop(props, "species_enum", text="")
 
         col = box.column(align=True)
         col.label(text=f"Family: {preset.family} | Biome: {preset.biome}")
-        col.label(text=f"Habit: {preset.growth_habit}")
+        col.label(text=f"Habit: {preset.growth_habit} [{preset.po_growth_form}]")
+        if preset.notes:
+            col.label(text=f"Note: {preset.notes[:45]}...")
 
         # -------------------------------------------------------------
         # 2. Empirical Trait Inspector
@@ -120,30 +127,30 @@ class PPG_PT_MainPanel(Panel):
             col.scale_y = 0.9
 
             # Allometry box
-            col.label(text="Allometry (TALLO & Forests):", icon='DRIVER_DISTANCE')
+            col.label(text="Allometry (TALLO & Forests) [PO:0004712]:", icon='DRIVER_DISTANCE')
             col.label(text=f" • H Power Law: H = {preset.allometry.height_a}·D^{preset.allometry.height_b}")
             col.label(text=f" • Crown Radius: CR = {preset.allometry.crown_radius_c}·D^{preset.allometry.crown_radius_d}")
             col.label(text=f" • Leonardo Exponent: Δ = {preset.allometry.pipe_exponent_delta}")
 
             col.separator()
             # Architecture box
-            col.label(text="Architecture (Hallé-Oldeman):", icon='CON_KINEMATIC')
+            col.label(text="Architecture (Hallé-Oldeman) [PO:0025029]:", icon='CON_KINEMATIC')
             col.label(text=f" • Model: {preset.architecture.model.value}")
             col.label(text=f" • Branch Angle: {preset.architecture.branch_angle_mean_deg:.1f}°")
             col.label(text=f" • Phyllotaxis: {preset.architecture.phyllotaxis.value}")
 
             col.separator()
             # Venation and Lamina box
-            col.label(text="Leaf & Venation (Dryad & LeavesBank):", icon='MESH_GRID')
+            col.label(text="Leaf & Venation (Dryad & Runions) [PO:0020039]:", icon='MESH_GRID')
             col.label(text=f" • Archetype: {preset.leaf_morphology.archetype.value}")
-            col.label(text=f" • Margin: {preset.leaf_morphology.margin_type.value}")
-            col.label(text=f" • Venation Pattern: {preset.venation.pattern.value}")
+            col.label(text=f" • Margin [PO:0020042]: {preset.leaf_morphology.margin_type.value}")
+            col.label(text=f" • Venation [PO:0005022]: {preset.venation.pattern.value}")
             col.label(text=f" • Vein Density (VLA): {preset.venation.vla_mm_per_mm2} mm/mm²")
             col.label(text=f" • 2nd Vein Pairs: {preset.venation.secondary_vein_pairs}")
 
             col.separator()
             # Biomechanics box
-            col.label(text="Biomechanics:", icon='PHYSICS')
+            col.label(text="Biomechanics & Wood Density [PO:0005352]:", icon='PHYSICS')
             col.label(text=f" • Wood Density: {preset.biomechanics.wood_density_g_cm3} g/cm³")
             col.label(text=f" • Leaf Mass per Area: {preset.biomechanics.leaf_mass_per_area_g_m2} g/m²")
 
@@ -170,4 +177,4 @@ class PPG_PT_MainPanel(Panel):
 
         row = layout.row(align=True)
         row.operator("ppg.generate_leaf", text="Generate Macro Leaf (3D Veins)", icon='CURVE_DATA')
-        row.operator("ppg.export_traits", text="Export Trait Report", icon='TEXT')
+        row.operator("ppg.export_traits", text="Export Botanical Report", icon='TEXT')

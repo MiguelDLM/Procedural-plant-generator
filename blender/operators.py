@@ -14,10 +14,18 @@ except ImportError:
     BLENDER_AVAILABLE = False
     Operator = object
 
-from data.species_db import get_species_preset, SPECIES_CATALOG
-from core.plant_pipeline import BotanicalPlantPipeline
-from blender.mesh_builder import BlenderMeshBuilder
-from blender.materials import create_bark_material, create_foliage_material
+try:
+    from ..core.species_db import get_species_preset, SPECIES_CATALOG
+    from ..core.plant_pipeline import BotanicalPlantPipeline
+    from ..core.ontology import PLANT_ONTOLOGY_REGISTRY, get_po_term
+    from .mesh_builder import BlenderMeshBuilder
+    from .materials import create_bark_material, create_foliage_material
+except (ImportError, ValueError):
+    from core.species_db import get_species_preset, SPECIES_CATALOG
+    from core.plant_pipeline import BotanicalPlantPipeline
+    from core.ontology import PLANT_ONTOLOGY_REGISTRY, get_po_term
+    from blender.mesh_builder import BlenderMeshBuilder
+    from blender.materials import create_bark_material, create_foliage_material
 
 
 class PPG_OT_GeneratePlant(Operator):
@@ -95,7 +103,8 @@ class PPG_OT_GenerateLeaf(Operator):
             foliage_mat = create_foliage_material()
             leaf_obj.data.materials.append(foliage_mat)
             vein_mat = create_foliage_material("Botanical_Vein_PBR")
-            vein_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.20, 0.45, 0.10, 1.0)
+            if "Principled BSDF" in vein_mat.node_tree.nodes:
+                vein_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.20, 0.45, 0.10, 1.0)
             vein_obj.data.materials.append(vein_mat)
 
         bpy.ops.object.select_all(action='DESELECT')
@@ -110,7 +119,7 @@ class PPG_OT_GenerateLeaf(Operator):
 
 
 class PPG_OT_ExportTraits(Operator):
-    """Export the active species empirical traits to a JSON report"""
+    """Export the active species empirical traits to a JSON report with Plant Ontology terms"""
     bl_idname = "ppg.export_traits"
     bl_label = "Export Botanical Report"
     bl_options = {'REGISTER'}
@@ -132,14 +141,21 @@ class PPG_OT_ExportTraits(Operator):
             "family": preset.family,
             "biome": preset.biome,
             "growth_habit": preset.growth_habit,
-            "allometry": {
+            "plant_ontology": {
+                "growth_form": {"id": preset.po_growth_form, "name": get_po_term(preset.po_growth_form).name if get_po_term(preset.po_growth_form) else "shoot system"},
+                "stem": {"id": "PO:0009046", "name": "stem"},
+                "leaf_lamina": {"id": "PO:0020039", "name": "leaf lamina"},
+                "leaf_vein": {"id": "PO:0005022", "name": "leaf vein"},
+                "leaf_areole": {"id": "PO:0005026", "name": "leaf areole"}
+            },
+            "allometry_tallo": {
                 "height_power_law": f"H = {preset.allometry.height_a} * (DBH_cm)^{preset.allometry.height_b}",
                 "crown_radius_law": f"CR = {preset.allometry.crown_radius_c} * (DBH_cm)^{preset.allometry.crown_radius_d}",
                 "max_height_m": preset.allometry.height_max_m,
                 "pipe_delta": preset.allometry.pipe_exponent_delta,
                 "wood_density_g_cm3": preset.allometry.wood_density_g_cm3
             },
-            "architecture": {
+            "architecture_halle_oldeman": {
                 "model": preset.architecture.model.value,
                 "branch_angle_deg": preset.architecture.branch_angle_mean_deg,
                 "phyllotaxis": preset.architecture.phyllotaxis.value,
@@ -153,7 +169,7 @@ class PPG_OT_ExportTraits(Operator):
                 "aspect_ratio": preset.leaf_morphology.aspect_ratio,
                 "teeth_count": preset.leaf_morphology.teeth_count
             },
-            "venation_network": {
+            "venation_network_duarte_runions": {
                 "pattern": preset.venation.pattern.value,
                 "vein_length_per_area_vla": preset.venation.vla_mm_per_mm2,
                 "secondary_vein_pairs": preset.venation.secondary_vein_pairs,

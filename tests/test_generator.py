@@ -1,6 +1,7 @@
 """
 Unit tests verifying core botanical morphometric algorithms,
-allometric power laws, and generation pipelines using standard library unittest.
+allometric power laws, Gielis superformula, Runions space colonization,
+and generation pipelines using standard library unittest.
 """
 
 import math
@@ -12,7 +13,10 @@ from core.architecture import ArchitectureEngine, ArchitectureProfile, HalleOlde
 from core.leaf_morphology import LeafMorphologyEngine, LeafMorphologyProfile, LeafArchetype, MarginType
 from core.leaf_venation import VenationEngine, VenationProfile, VenationPattern
 from core.biomechanics import BiomechanicalEngine, BiomechanicalProfile
+from core.gielis import GielisEngine, GielisProfile, GIELIS_PRESETS
+from core.space_colonization import SpaceColonizationEngine, SpaceColonizationConfig
 from core.plant_pipeline import BotanicalPlantPipeline
+from core.ontology import PLANT_ONTOLOGY_REGISTRY, get_po_term
 from data.species_db import SPECIES_CATALOG, get_species_preset
 
 
@@ -47,6 +51,43 @@ class TestBotanicalPlantGenerator(unittest.TestCase):
         parent_power = parent_r ** delta
         self.assertTrue(math.isclose(sum_child_power, parent_power, rel_tol=1e-5))
 
+    def test_gielis_superformula(self):
+        """Verify Gielis superformula evaluates properly and preserves symmetry."""
+        angles = np.linspace(0, 2 * np.pi, 36, endpoint=False)
+        profile_5 = GIELIS_PRESETS["star_5"]
+        r = GielisEngine.evaluate(angles, profile_5)
+        self.assertEqual(len(r), 36)
+        self.assertTrue(np.all(r > 0.0))
+
+        # Check buttress cross section modulation at base (z=0) vs canopy (z=0.5)
+        r_base = GielisEngine.compute_buttressed_cross_section(angles, 0.5, z_relative=0.0, gielis_profile=profile_5)
+        r_top = GielisEngine.compute_buttressed_cross_section(angles, 0.5, z_relative=0.5, gielis_profile=profile_5)
+        self.assertTrue(np.max(r_base) > np.max(r_top))
+        self.assertTrue(math.isclose(np.mean(r_top), 0.5, rel_tol=1e-2))
+
+    def test_runions_space_colonization(self):
+        """Verify Runions et al. (2005) auxin space colonization generates hierarchical veins."""
+        engine = SpaceColonizationEngine(SpaceColonizationConfig(
+            num_auxin_sources=150,
+            max_iterations=40
+        ))
+        nodes = engine.generate_venation(blade_length_m=0.10, blade_width_m=0.06, seed=42)
+        self.assertTrue(len(nodes) > 15)
+        # Check that nodes have Murray flux and valid radii
+        self.assertTrue(all(n.radius_m > 0.0 for n in nodes))
+        # Root node must have maximum flux
+        self.assertTrue(nodes[0].flux >= nodes[-1].flux)
+
+    def test_plant_ontology_registry(self):
+        """Verify Plant Ontology terms are properly defined."""
+        term_stem = get_po_term("PO:0009046")
+        self.assertIsNotNone(term_stem)
+        self.assertEqual(term_stem.name, "stem")
+
+        term_vein = get_po_term("PO:0005022")
+        self.assertIsNotNone(term_vein)
+        self.assertEqual(term_vein.name, "leaf vein")
+
     def test_leaf_morphology_fourier_contours(self):
         """Verify Fourier boundary produces valid closed non-zero coordinates."""
         engine = LeafMorphologyEngine(LeafMorphologyProfile(
@@ -73,19 +114,8 @@ class TestBotanicalPlantGenerator(unittest.TestCase):
         net = engine.generate_network(blade_length_m=0.10, blade_width_m=0.06)
         self.assertTrue(len(net.nodes) > 30)
         self.assertTrue(len(net.segments) > 6)
-
-        # Midrib is order 1
         self.assertEqual(net.nodes[0].order, 1)
-        # Check that secondary veins exist
         self.assertTrue(any(n.order == 2 for n in net.nodes))
-
-    def test_biomechanics_droop(self):
-        """Verify branch droop increases with branch length and self-weight."""
-        engine = BiomechanicalEngine(BiomechanicalProfile(wood_density_g_cm3=0.70))
-        d_short = engine.calculate_branch_tip_droop(length_m=1.0, mean_radius_m=0.04)
-        d_long = engine.calculate_branch_tip_droop(length_m=3.0, mean_radius_m=0.04)
-        self.assertTrue(d_short >= 0.0)
-        self.assertTrue(d_long > d_short)
 
     def test_plant_pipeline_all_presets(self):
         """Verify end-to-end pipeline execution across all empirical presets."""

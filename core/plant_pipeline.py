@@ -1,18 +1,21 @@
 """
 Full Procedural Botanical Plant Generation Pipeline.
 Integrates allometric scaling, Hallé-Oldeman branching architectures,
-leaf morphometrics, venation networks, and biomechanics.
+leaf morphometrics, venation networks, Gielis superformula buttressing, and Plant Ontology.
 """
 
 from dataclasses import dataclass
 import numpy as np
 
-from core.allometry import AllometricEngine, AllometricProfile
-from core.architecture import ArchitectureEngine, ArchitectureProfile, BranchingGraph
-from core.leaf_morphology import LeafMorphologyEngine, LeafMorphologyProfile
-from core.leaf_venation import VenationEngine, VenationProfile, LeafVeinNetwork
-from core.biomechanics import BiomechanicalEngine, BiomechanicalProfile
-from data.species_db import BotanicalSpeciesPreset, get_species_preset
+from .allometry import AllometricEngine, AllometricProfile
+from .architecture import ArchitectureEngine, ArchitectureProfile, BranchingGraph
+from .leaf_morphology import LeafMorphologyEngine, LeafMorphologyProfile
+from .leaf_venation import VenationEngine, VenationProfile, LeafVeinNetwork
+from .biomechanics import BiomechanicalEngine, BiomechanicalProfile
+from .space_colonization import SpaceColonizationEngine, SpaceColonizationConfig
+from .gielis import GielisEngine, GielisProfile
+from .species_preset import BotanicalSpeciesPreset
+from .ontology import get_po_term
 
 
 @dataclass
@@ -44,6 +47,7 @@ class BotanicalPlantPipeline:
         self.leaf_morphology = LeafMorphologyEngine(preset.leaf_morphology)
         self.venation = VenationEngine(preset.venation)
         self.biomechanics = BiomechanicalEngine(preset.biomechanics)
+        self.space_colonization = SpaceColonizationEngine()
 
     def generate(
         self,
@@ -59,7 +63,7 @@ class BotanicalPlantPipeline:
 
         dbh_m = float(np.clip(dbh_m, self.preset.allometry.dbh_min_m, self.preset.allometry.dbh_max_m))
 
-        # 1. Compute empirical allometric dimensions
+        # 1. Compute empirical allometric dimensions (TALLO)
         height_m = self.allometry.calculate_height(dbh_m)
         crown_radius_m = self.allometry.calculate_crown_radius(dbh_m)
         crown_depth_m = self.allometry.calculate_crown_depth(height_m)
@@ -91,7 +95,7 @@ class BotanicalPlantPipeline:
         # 4. Generate master leaf 3D mesh
         leaf_mesh = self.leaf_morphology.generate_3d_leaf_mesh(grid_x=12, grid_y=24)
 
-        # 5. Generate empirical leaf venation graph
+        # 5. Generate empirical leaf venation graph (Duarte et al. 2025 & Runions et al. 2005)
         blade_len_m = self.preset.leaf_morphology.blade_length_cm * 0.01
         blade_width_m = blade_len_m / self.preset.leaf_morphology.aspect_ratio
         vein_net = self.venation.generate_network(blade_len_m, blade_width_m)

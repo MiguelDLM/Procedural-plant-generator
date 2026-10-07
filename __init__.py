@@ -1,7 +1,7 @@
 """
 Procedural Plant Generator - Blender Extension
 A scientifically grounded botanical procedural plant and tree generator
-backed by empirical datasets (TALLO, Dryad, LeavesBank, PlantCLEF).
+backed by empirical datasets (TALLO, Dryad, LeavesBank, PlantCLEF, Plant Ontology, Gielis 2003, Runions et al. 2005).
 """
 
 bl_info = {
@@ -10,17 +10,9 @@ bl_info = {
     "version": (0, 1, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Plant Gen",
-    "description": "Data-driven botanical 3D plant and tree generator backed by empirical traits",
+    "description": "Data-driven botanical 3D plant and tree generator backed by empirical traits and Plant Ontology",
     "category": "Add Mesh",
 }
-
-import sys
-from pathlib import Path
-
-# Ensure package submodules are importable
-package_root = Path(__file__).resolve().parent
-if str(package_root) not in sys.path:
-    sys.path.insert(0, str(package_root))
 
 try:
     import bpy
@@ -30,8 +22,8 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 if BLENDER_AVAILABLE:
-    from blender.panel import PPG_Properties, PPG_PT_MainPanel
-    from blender.operators import (
+    from .blender.panel import PPG_Properties, PPG_PT_MainPanel
+    from .blender.operators import (
         PPG_OT_GeneratePlant,
         PPG_OT_GenerateLeaf,
         PPG_OT_ExportTraits,
