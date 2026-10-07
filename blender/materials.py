@@ -9,7 +9,9 @@ by core.leaf_texture), with
 - gloss from cuticle wax.
 
 Bark: procedural node graph per rhytidome pattern (fissured, plated, peeling,
-lenticelled, fibrous, smooth, annulated) driven by the species BarkProfile.
+lenticelled, fibrous, smooth, annulated) driven by the species BarkProfile, on
+seam-free 3D bark coordinates so the pattern keeps a constant world scale and
+stays continuous across forks, fused junctions and root flares.
 """
 
 try:
@@ -208,13 +210,32 @@ def create_bark_material(name: str, bark=None) -> "bpy.types.Material":
     links.new(bsdf.outputs['BSDF'], out.inputs['Surface'])
     _set(bsdf, float(bark.roughness), "Roughness")
 
-    # UV: U wraps the circumference, V runs along the axis (1 UV unit = bark tile)
-    uv = nodes.new('ShaderNodeTexCoord')
-    uv.location = (-1200, 0)
+    # Seam-free 3D bark coordinates (world metres): Q = bark_base + k * bark_along, where bark_along runs
+    # along the axis from its origin and bark_base holds the radial offset. k < 1 elongates features
+    # along the axis (fissures, fibres), k > 1 elongates them around it (lenticels, leaf-scar rings).
+    k = {"Fissured": 0.25, "Plated": 0.55, "Lenticelled": 3.0, "Fibrous": 0.08, "Annulated": 5.0,
+         "Peeling": 0.7}.get(pattern, 0.5)
+    a_base = nodes.new('ShaderNodeAttribute')
+    a_base.location = (-1500, 100)
+    a_base.attribute_name = "bark_base"
+    a_along = nodes.new('ShaderNodeAttribute')
+    a_along.location = (-1500, -100)
+    a_along.attribute_name = "bark_along"
+    scale_k = nodes.new('ShaderNodeVectorMath')
+    scale_k.operation = 'SCALE'
+    scale_k.location = (-1300, -100)
+    links.new(a_along.outputs['Vector'], scale_k.inputs[0])
+    scale_k.inputs['Scale'].default_value = k
+    q = nodes.new('ShaderNodeVectorMath')
+    q.operation = 'ADD'
+    q.location = (-1150, 0)
+    links.new(a_base.outputs['Vector'], q.inputs[0])
+    links.new(scale_k.outputs['Vector'], q.inputs[1])
     mapping = nodes.new('ShaderNodeMapping')
     mapping.location = (-1000, 0)
-    links.new(uv.outputs['UV'], mapping.inputs['Vector'])
-    s = 0.6 / max(0.005, float(bark.feature_scale_m))  # Features per tile
+    links.new(q.outputs['Vector'], mapping.inputs['Vector'])
+    s = 1.0 / max(0.005, float(bark.feature_scale_m))  # Features per metre
+    mapping.inputs['Scale'].default_value = (s, s, s)
 
     noise = nodes.new('ShaderNodeTexNoise')
     noise.location = (-800, 300)
@@ -229,27 +250,17 @@ def create_bark_material(name: str, bark=None) -> "bpy.types.Material":
     links.new(mapping.outputs['Vector'], warp.inputs[4])
     links.new(noise.outputs['Color'], warp.inputs[5])
 
-    fac_socket = None
-    height_socket = None
-    if pattern in ("Fissured", "Plated", "Lenticelled"):
+    if pattern in ("Fissured", "Plated", "Lenticelled", "Fibrous", "Annulated"):
         vor = nodes.new('ShaderNodeTexVoronoi')
         vor.location = (-400, 100)
+        vor.voronoi_dimensions = '3D'
         vor.feature = 'DISTANCE_TO_EDGE'
         links.new(warp.outputs[1], vor.inputs['Vector'])
-        if pattern == "Fissured":
-            mapping.inputs['Scale'].default_value = (s, s * 0.22, 1.0)   # Long vertical ridges
-        elif pattern == "Plated":
-            mapping.inputs['Scale'].default_value = (s, s * 0.55, 1.0)
-        else:
-            mapping.inputs['Scale'].default_value = (s * 0.25, s * 2.0, 1.0)  # Horizontal lenticel dashes
         ramp = nodes.new('ShaderNodeValToRGB')
         ramp.location = (-150, 100)
-        if pattern == "Lenticelled":
-            ramp.color_ramp.elements[0].position = 0.0
-            ramp.color_ramp.elements[1].position = 0.06
-        else:
-            ramp.color_ramp.elements[0].position = 0.0
-            ramp.color_ramp.elements[1].position = 0.12 if pattern == "Fissured" else 0.05
+        ramp.color_ramp.elements[0].position = 0.0
+        ramp.color_ramp.elements[1].position = {"Fissured": 0.12, "Lenticelled": 0.06, "Fibrous": 0.2,
+                                                 "Annulated": 0.15}.get(pattern, 0.05)
         links.new(vor.outputs['Distance'], ramp.inputs['Fac'])
         inv = nodes.new('ShaderNodeMath')
         inv.operation = 'SUBTRACT'
@@ -258,30 +269,7 @@ def create_bark_material(name: str, bark=None) -> "bpy.types.Material":
         links.new(ramp.outputs['Color'], inv.inputs[1])
         fac_socket = inv.outputs[0]
         height_socket = ramp.outputs['Color']
-    elif pattern in ("Fibrous", "Annulated"):
-        wave = nodes.new('ShaderNodeTexWave')
-        wave.location = (-400, 100)
-        wave.wave_type = 'BANDS'
-        wave.bands_direction = 'X' if pattern == "Fibrous" else 'Y'
-        _set(wave, 1.0, "Scale")
-        _set(wave, 9.0 if pattern == "Fibrous" else 2.0, "Distortion")
-        _set(wave, 4.0, "Detail")
-        mapping.inputs['Scale'].default_value = (s, s, 1.0)
-        links.new(warp.outputs[1], wave.inputs['Vector'])
-        ramp = nodes.new('ShaderNodeValToRGB')
-        ramp.location = (-150, 100)
-        ramp.color_ramp.elements[0].position = 0.25
-        ramp.color_ramp.elements[1].position = 0.7
-        links.new(wave.outputs['Fac'], ramp.inputs['Fac'])
-        inv = nodes.new('ShaderNodeMath')
-        inv.operation = 'SUBTRACT'
-        inv.location = (100, 100)
-        inv.inputs[0].default_value = 1.0
-        links.new(ramp.outputs['Color'], inv.inputs[1])
-        fac_socket = inv.outputs[0]
-        height_socket = ramp.outputs['Color']
     elif pattern == "Peeling":
-        mapping.inputs['Scale'].default_value = (s * 0.6, s * 0.35, 1.0)
         patches = nodes.new('ShaderNodeTexNoise')
         patches.location = (-400, 100)
         _set(patches, 2.0, "Scale")
@@ -295,7 +283,6 @@ def create_bark_material(name: str, bark=None) -> "bpy.types.Material":
         fac_socket = ramp.outputs['Color']
         height_socket = ramp.outputs['Color']
     else:  # Smooth
-        mapping.inputs['Scale'].default_value = (s * 0.3, s * 0.3, 1.0)
         ramp = nodes.new('ShaderNodeValToRGB')
         ramp.location = (-150, 100)
         ramp.color_ramp.elements[0].position = 0.35

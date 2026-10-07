@@ -311,7 +311,7 @@ def _ensure_leaf_material(root, preset, props, model, shoot_leaves):
 
 
 def _ensure_bark_material(root, preset):
-    key = _key(preset.bark)
+    key = _key(preset.bark, "bark-3d-v2")
     name = f"{root.name}_BarkMat"
     mat = bpy.data.materials.get(name)
     if mat is not None and mat.get("ppg_key") == key:
@@ -358,8 +358,9 @@ def update_tree_geometry(context):
         built = builder.build_or_update_plant(
             context=context, leaf_density=props.leaf_density, leaf_scale=props.leaf_scale,
             show_leaves=props.show_leaves, use_subsurf=props.use_subsurf, show_roots=props.show_roots,
-            fuse_junctions=props.fuse_junctions, fuse_detail=props.fuse_detail,
-            fuse_smoothing=props.fuse_smoothing)
+            junction_quality=props.junction_quality, fuse_detail=props.fuse_detail,
+            fuse_smoothing=props.fuse_smoothing, hero_min_radius=props.hero_min_radius_cm * 0.01,
+            sleeve_detail=props.sleeve_detail, max_sleeves=props.hero_max_junctions)
 
         if props.assign_materials:
             root = built["root"]

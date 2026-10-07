@@ -130,6 +130,7 @@ class Axis:
     frame_n0: np.ndarray | None = None # Bark/ring reference normal inherited from a split axis
     v_offset: float = 0.0              # Arc length of this piece's first sample along the original axis
     u_rep: float | None = None         # Circumferential bark repeat inherited from a split axis
+    bark_origin: np.ndarray | None = None  # Base point of the original axis (3D bark coordinates)
 
     @property
     def tangents(self) -> np.ndarray:

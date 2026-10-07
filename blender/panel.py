@@ -257,11 +257,17 @@ if BLENDER_AVAILABLE:
         radial_resolution: I("Trunk Sides", 12, 4, 32)
         twig_resolution: I("Twig Sides", 5, 3, 16)
         use_subsurf: BoolProperty(name="Subdivision Surface", default=False, update=U)
-        fuse_junctions: BoolProperty(name="Fuse Junctions", default=True, update=U,
-                                     description="Merge stem, limbs and roots into one continuous surface "
-                                                 "(voxel union + smoothing) instead of intersecting tubes")
+        junction_quality: EnumProperty(name="Junctions", default='FUSED', update=U, items=[
+            ('TUBES', "Tubes", "Intersecting tubes: fastest, for forests and distant trees"),
+            ('FUSED', "Fused", "Stem, limb bases and roots fused into one surface: for many trees"),
+            ('HERO', "Hero", "Fused plus local fillets at every fine-branch insertion: few close-up trees")])
         fuse_detail: F("Fusion Detail", 10.0, 3.0, 30.0, "Voxels per stem radius (higher = finer, slower)")
         fuse_smoothing: I("Fillet Smoothing", 6, 0, 30, "Laplacian iterations rounding crotches and flares")
+        hero_min_radius_cm: F("Finest Fused Branch (cm)", 2.5, 0.3, 20.0,
+                              "Branches thicker than this (past their collar) get a fused fillet (Hero)")
+        sleeve_detail: F("Fillet Detail", 4.0, 2.0, 12.0, "Voxels per branch radius at fine insertions (Hero)")
+        hero_max_junctions: IntProperty(name="Max Fused Junctions", default=400, min=10, max=20000, update=U,
+                                        description="Thickest insertions fused first; bounds Hero cost")
         assign_materials: BoolProperty(name="Materials", default=True, update=U)
 else:
     PPG_Properties = None
@@ -499,10 +505,14 @@ class PPG_PT_Topology(_PPGSub, Panel):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        col.prop(p, "fuse_junctions")
-        if p.fuse_junctions:
+        col.prop(p, "junction_quality")
+        if p.junction_quality != 'TUBES':
             col.prop(p, "fuse_detail")
             col.prop(p, "fuse_smoothing")
+        if p.junction_quality == 'HERO':
+            col.prop(p, "hero_min_radius_cm")
+            col.prop(p, "sleeve_detail")
+            col.prop(p, "hero_max_junctions")
         col.separator()
         for name in ("radial_resolution", "twig_resolution", "use_subsurf", "assign_materials"):
             col.prop(p, name)

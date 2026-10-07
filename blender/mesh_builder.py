@@ -45,13 +45,18 @@ def populate_mesh(mesh: "bpy.types.Mesh", data: MeshData, smooth: bool = True):
 
     for name, values in data.point_attributes.items():
         values = np.asarray(values)
-        kind = 'INT' if values.dtype.kind in "iu" else 'FLOAT'
+        if values.ndim == 2:
+            kind, field = 'FLOAT_VECTOR', "vector"
+        elif values.dtype.kind in "iu":
+            kind, field = 'INT', "value"
+        else:
+            kind, field = 'FLOAT', "value"
         attr = mesh.attributes.get(name)
         if attr is None or attr.data_type != kind or attr.domain != 'POINT':
             if attr is not None:
                 mesh.attributes.remove(attr)
             attr = mesh.attributes.new(name=name, type=kind, domain='POINT')
-        attr.data.foreach_set("value", values.astype(np.int32 if kind == 'INT' else np.float32))
+        attr.data.foreach_set(field, values.astype(np.int32 if kind == 'INT' else np.float32).ravel())
 
     if smooth:
         mesh.polygons.foreach_set("use_smooth", np.ones(n_f, dtype=bool))
@@ -114,8 +119,9 @@ class BlenderMeshBuilder:
 
     def build_or_update_plant(self, context, existing_root=None, leaf_density: float = 1.0,
                               leaf_scale: float = 1.0, show_leaves: bool = True, use_subsurf: bool = False,
-                              show_roots: bool = True, fuse_junctions: bool = True, fuse_detail: float = 10.0,
-                              fuse_smoothing: int = 6) -> dict:
+                              show_roots: bool = True, junction_quality: str = 'FUSED',
+                              fuse_detail: float = 10.0, fuse_smoothing: int = 6, hero_min_radius: float = 0.025,
+                              sleeve_detail: float = 4.0, max_sleeves: int = 400) -> dict:
         if not BLENDER_AVAILABLE:
             raise RuntimeError("Blender (bpy) is not available.")
         root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
@@ -124,12 +130,15 @@ class BlenderMeshBuilder:
         # Wood (stem flutes aligned with the main roots)
         self.config.flute_azimuth = getattr(self.result, "flute_azimuth", None)
         root_graph = getattr(self.result, "root_graph", None) if show_roots else None
+        fuse_junctions = junction_quality in ('FUSED', 'HERO')
         if fuse_junctions:
             # Stem, limbs and roots fused into one continuous surface at their junctions
             from .junctions import build_fused_wood
             wood_data = build_fused_wood(self.mesh_engine, [self.result.skeleton_graph, root_graph],
                                          self.result.total_height_m, self.config.buttress_profile,
-                                         detail=fuse_detail, smooth_iterations=fuse_smoothing)
+                                         detail=fuse_detail, smooth_iterations=fuse_smoothing,
+                                         quality=junction_quality, hero_min_radius=hero_min_radius,
+                                         sleeve_detail=sleeve_detail, max_sleeves=max_sleeves)
         else:
             wood_data = self.mesh_engine.build_wood_mesh(self.result.skeleton_graph, self.result.total_height_m,
                                                          self.config.buttress_profile)

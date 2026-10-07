@@ -155,7 +155,17 @@ class BotanicalMeshEngine:
         sx = np.sqrt(aspect)[:, :, None, None]
         offs = (cos_a[None, None, :, None] * N[:, :, None, :] * sx
                 + sin_a[None, None, :, None] * B[:, :, None, :] / sx)
-        verts = (P[:, :, None, :] + ring_r[..., None] * offs).reshape(-1, 3)
+        radial = ring_r[..., None] * offs
+        verts = (P[:, :, None, :] + radial).reshape(-1, 3)
+        # 3D bark coordinates (seam-free, world scale): Q = bark_base + k * bark_along in the shader
+        origin = P[:, 0, :].copy()
+        if axes is not None:
+            for g, a in enumerate(axes):
+                if a.bark_origin is not None:
+                    origin[g] = a.bark_origin
+        along = np.broadcast_to((P - origin[:, None, :])[:, :, None, :], radial.shape)
+        bark_base = (origin[:, None, None, :] + radial).reshape(-1, 3)
+        bark_along = along.reshape(-1, 3)
 
         # Quads between rings (local indices, then offset per axis)
         ring = np.arange(k - 1)[:, None] * n
@@ -201,7 +211,8 @@ class BotanicalMeshEngine:
         starts = np.concatenate([[0], np.cumsum(totals[:-1])])
         return MeshData(verts.astype(np.float32), loops.astype(np.int32), starts.astype(np.int32),
                         totals.astype(np.int32), uv.astype(np.float32),
-                        {"branch_order": np.repeat(orders, per_axis).astype(np.int32)})
+                        {"branch_order": np.repeat(orders, per_axis).astype(np.int32),
+                         "bark_base": bark_base.astype(np.float32), "bark_along": bark_along.astype(np.float32)})
 
     @staticmethod
     def build_foliage_mesh(instances: FoliageInstances, card: dict, leaf_scale: float = 1.0) -> MeshData:

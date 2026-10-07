@@ -22,7 +22,7 @@ from core.trait_space import to_vector, from_vector, blend, mutate, distance, ne
 from data.species_db import SPECIES_CATALOG, get_species_preset
 from core.roots import RootSystemEngine, RootProfile, RootSystemType, sample_depth, JACKSON_BETA
 from core.junctions import (split_axes, graph_of, sample_table, nearest_samples, cylindrical_uvs, u_repeats,
-                            axis_tangents, default_n0)
+                            axis_tangents, default_n0, junction_sleeves, bark_coordinates)
 
 
 def _mask(archetype, **kw):
@@ -251,19 +251,23 @@ class TestJunctions(unittest.TestCase):
     def test_split_keeps_thick_parts_and_continuity(self):
         r, (thick, thin) = self._split()
         self.assertTrue(thick and thin)
-        self.assertTrue(all(a.radii[:-2].min() >= 0.1 - 1e-9 for a in thick if len(a.radii) > 2))
+        # Fused parts are thick up to the hand-over tail (last 4 samples narrow progressively)
+        self.assertTrue(all(a.radii[:-4].min() >= 0.1 - 1e-9 for a in thick if len(a.radii) > 4))
         trunk = r.skeleton_graph.axes[0]
         n0 = default_n0(axis_tangents(trunk.positions)[0])[0]
         pieces = [a for a in thick + thin if getattr(a, "is_trunk", False)]
         self.assertGreaterEqual(len(pieces), 1)
         for a in pieces:
             self.assertTrue(np.allclose(a.frame_n0, n0))             # Same bark frame on both sides of the cut
-            self.assertEqual(a.u_rep, u_repeats(trunk.radii[0], 0.6))
+            self.assertTrue(np.allclose(a.bark_origin, trunk.positions[0]))
         if len(pieces) == 2:
-            t, c = pieces
-            i = len(t.radii) - 3
-            self.assertAlmostEqual(c.v_offset, float(t.arc_length[i]), places=6)  # Arc length continues
-            self.assertTrue(np.allclose(c.positions[0], t.positions[i]))      # Tube starts inside the fused part
+            fused, tube = pieces
+            # The tube starts on the original axis, inside the fused part, at its recorded arc length
+            sa = trunk.arc_length
+            expect = np.array([np.interp(tube.v_offset, sa, trunk.positions[:, k]) for k in range(3)])
+            self.assertTrue(np.allclose(tube.positions[0], expect, atol=1e-6))
+            self.assertLess(tube.v_offset, fused.arc_length[-1])
+            self.assertLess(tube.radii[0], np.interp(tube.v_offset, sa, trunk.radii))  # Grows in from inside
 
     def test_cylindrical_uvs_match_tube_uvs(self):
         """On an undeformed tube surface the fused-UV formula reproduces the tube's own bark coordinates."""
@@ -286,6 +290,36 @@ class TestJunctions(unittest.TestCase):
         lo = np.full(len(mesh.loop_start), np.inf)
         np.minimum.at(lo, f, uv[:, 0])
         self.assertLess(float((span - lo).max()), period / 2)
+
+    def test_hero_sleeves(self):
+        r, (thick, thin) = self._split()
+        graphs = [r.skeleton_graph, r.root_graph]
+        sleeves, rest = junction_sleeves(thin, graphs, 0.025, 0.6, detail=4, max_sleeves=50,
+                                         fused_threshold=0.1, fused_voxel=0.04)
+        self.assertEqual(len(sleeves), 50)                       # Bounded by max_sleeves (thickest first)
+        self.assertEqual(len(rest), len(thin))                   # Every thin axis still has its tube
+        for sl in sleeves:
+            m = sl["slab"]
+            V = m.vertices.astype(float)
+            F = m.loop_vertex.reshape(-1, 4)
+            vol = sum(np.dot(V[a], np.cross(V[b], V[c])) + np.dot(V[a], np.cross(V[c], V[d])) for a, b, c, d in F) / 6
+            self.assertGreater(vol, 0.0)                         # Outward winding (required by the level set)
+            base = sl["tubes"][0]
+            self.assertLess(base.radii[-1], base.radii[0])       # Base tucks into the restarting tube
+
+    def test_bark_coordinates_are_seam_free(self):
+        """3D bark coordinates of fused points equal those of the tube they came from."""
+        r, (thick, _) = self._split()
+        trunk = [a for a in thick if getattr(a, "is_trunk", False)][:1]
+        mesh = BotanicalMeshEngine(MeshConfig(smooth_caps=False)).build_wood_mesh(graph_of(trunk), r.total_height_m,
+                                                                                  None, trunk_index=-1)
+        table = sample_table(trunk)
+        V = mesh.vertices.astype(float)
+        near = nearest_samples(V, table["pos"], table["r"])
+        base, along = bark_coordinates(V, near, table)
+        q_fused = base + 0.25 * along
+        q_tube = mesh.point_attributes["bark_base"] + 0.25 * mesh.point_attributes["bark_along"]
+        self.assertLess(np.median(np.linalg.norm(q_fused - q_tube, axis=1)), 0.02)
 
     def test_thin_bark_not_stretched(self):
         self.assertAlmostEqual(float(u_repeats(0.02, 0.6)), 2 * math.pi * 0.02 / 0.6, places=6)
