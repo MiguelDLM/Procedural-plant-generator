@@ -127,6 +127,9 @@ class Axis:
     n_children: int = 0
     aspect: np.ndarray | None = None   # Per-sample vertical/horizontal cross-section ratio (root I-beams)
     frame_up: bool = False             # Orient ring frames to world up (needed for vertical plank sections)
+    frame_n0: np.ndarray | None = None # Bark/ring reference normal inherited from a split axis
+    v_offset: float = 0.0              # Arc length of this piece's first sample along the original axis
+    u_rep: float | None = None         # Circumferential bark repeat inherited from a split axis
 
     @property
     def tangents(self) -> np.ndarray:

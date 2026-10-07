@@ -114,7 +114,8 @@ class BlenderMeshBuilder:
 
     def build_or_update_plant(self, context, existing_root=None, leaf_density: float = 1.0,
                               leaf_scale: float = 1.0, show_leaves: bool = True, use_subsurf: bool = False,
-                              show_roots: bool = True) -> dict:
+                              show_roots: bool = True, fuse_junctions: bool = True, fuse_detail: float = 10.0,
+                              fuse_smoothing: int = 6) -> dict:
         if not BLENDER_AVAILABLE:
             raise RuntimeError("Blender (bpy) is not available.")
         root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
@@ -122,8 +123,16 @@ class BlenderMeshBuilder:
 
         # Wood (stem flutes aligned with the main roots)
         self.config.flute_azimuth = getattr(self.result, "flute_azimuth", None)
-        wood_data = self.mesh_engine.build_wood_mesh(self.result.skeleton_graph, self.result.total_height_m,
-                                                     self.config.buttress_profile)
+        root_graph = getattr(self.result, "root_graph", None) if show_roots else None
+        if fuse_junctions:
+            # Stem, limbs and roots fused into one continuous surface at their junctions
+            from .junctions import build_fused_wood
+            wood_data = build_fused_wood(self.mesh_engine, [self.result.skeleton_graph, root_graph],
+                                         self.result.total_height_m, self.config.buttress_profile,
+                                         detail=fuse_detail, smooth_iterations=fuse_smoothing)
+        else:
+            wood_data = self.mesh_engine.build_wood_mesh(self.result.skeleton_graph, self.result.total_height_m,
+                                                         self.config.buttress_profile)
         wood_obj = self._child(context, root_obj, "_Wood", f"{root_obj.name}_Wood")
         populate_mesh(wood_obj.data, wood_data)
         self._assign_vertex_groups(wood_obj, wood_data.point_attributes.get("branch_order"))
@@ -137,8 +146,7 @@ class BlenderMeshBuilder:
 
         # Roots
         roots_obj = self._child(context, root_obj, "_Roots", f"{root_obj.name}_Roots")
-        root_graph = getattr(self.result, "root_graph", None)
-        if show_roots and root_graph is not None and root_graph.axes:
+        if not fuse_junctions and root_graph is not None and root_graph.axes:
             populate_mesh(roots_obj.data, self.mesh_engine.build_wood_mesh(
                 root_graph, self.result.total_height_m, None, trunk_index=-1))
             roots_obj.hide_viewport = False

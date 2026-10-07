@@ -20,6 +20,7 @@ import numpy as np
 from .architecture import BranchingGraph
 from .foliage import FoliageInstances
 from .gielis import GielisEngine, GielisProfile
+from .junctions import axis_frames, default_n0, u_repeats
 
 
 @dataclass
@@ -33,6 +34,7 @@ class MeshConfig:
     flare_decay: float = 12.0
     bark_tile_m: float = 0.6
     flute_azimuth: float | None = None  # World azimuth of one Gielis lobe (aligned with a main root)
+    start_caps: bool = False            # Close axis bases too (watertight tubes for volumetric fusion)
 
 
 @dataclass
@@ -96,22 +98,24 @@ class BotanicalMeshEngine:
             if len(axis.radii) < 2:
                 continue
             n = max(3, int(cfg.radial_resolution if axis.order <= 1 else cfg.twig_resolution))
-            if i == trunk_index and g_prof.m > 0:
-                n = max(n, int(6 * g_prof.m))  # Enough vertices per flute to show it
-            key = (len(axis.radii), n, i == trunk_index and not axis.frame_up, axis.frame_up)
+            is_trunk = (i == trunk_index or getattr(axis, "is_trunk", False)) and not axis.frame_up
+            if is_trunk and g_prof.m > 0:
+                n = max(n, int(6 * g_prof.m))
+            key = (len(axis.radii), n, is_trunk, axis.frame_up, i if is_trunk else -1)
             groups.setdefault(key, []).append(i)
         parts = []
-        for (k, n, is_trunk, frame_up), ids in groups.items():
+        for (k, n, is_trunk, frame_up, _), ids in groups.items():
             P = np.stack([skeleton.axes[i].positions for i in ids])
             R = np.stack([skeleton.axes[i].radii for i in ids]).astype(float)
             A = np.stack([skeleton.axes[i].aspect if skeleton.axes[i].aspect is not None else np.ones(k)
                           for i in ids]).astype(float)
             orders = np.array([skeleton.axes[i].order for i in ids])
-            parts.append(self._tube_group(P, R, orders, n, is_trunk, total_height_m, g_prof, A, frame_up))
+            axes = [skeleton.axes[i] for i in ids]
+            parts.append(self._tube_group(P, R, orders, n, is_trunk, total_height_m, g_prof, A, frame_up, axes))
         return MeshData.concatenate(parts)
 
     def _tube_group(self, P, R, orders, n, is_trunk, total_height_m, g_prof, aspect=None,
-                    frame_up=False) -> MeshData:
+                    frame_up=False, axes=None) -> MeshData:
         cfg = self.config
         G, k, _ = P.shape
         # Tangents and a projection frame (stable for axes turning < 90 deg)
@@ -120,20 +124,13 @@ class BotanicalMeshEngine:
         T[:, 0] = P[:, 1] - P[:, 0]
         T[:, -1] = P[:, -1] - P[:, -2]
         T = _rows_normalize(T)
-        ref = np.where(np.abs(T[:, 0, 2:3]) > 0.9, np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0]))
-        n0 = _rows_normalize(np.cross(T[:, 0], ref))
-        N = n0[:, None, :] - np.sum(n0[:, None, :] * T, axis=-1, keepdims=True) * T
-        bad = np.linalg.norm(N, axis=-1) < 1e-4
-        if np.any(bad):
-            N[bad] = np.cross(T[bad], np.array([1.0, 0.0, 0.0]))
-        N = _rows_normalize(N)
-        if frame_up:
-            # N follows world up so vertically elongated (plank) sections stand upright
-            up = np.array([0.0, 0.0, 1.0])
-            Nu = up - np.sum(up * T, axis=-1, keepdims=True) * T
-            ok = np.linalg.norm(Nu, axis=-1) > 0.2
-            N = np.where(ok[..., None], _rows_normalize(Nu), N)
-        B = np.cross(T, N)
+        n0 = default_n0(T[:, 0])
+        if axes is not None:
+            for g, a in enumerate(axes):
+                if a.frame_n0 is not None:
+                    n0[g] = a.frame_n0
+        # frame_up: N follows world up so vertically elongated (plank) sections stand upright
+        N, B = axis_frames(T, n0, frame_up)
 
         angles = np.linspace(0.0, 2 * math.pi, n, endpoint=False)
         cos_a, sin_a = np.cos(angles), np.sin(angles)
@@ -171,8 +168,11 @@ class BotanicalMeshEngine:
 
         # Bark UVs: U repeats with circumference, V with arc length
         seg_len = np.linalg.norm(np.diff(P, axis=1), axis=-1)
-        v_coord = np.concatenate([np.zeros((G, 1)), np.cumsum(seg_len, axis=1)], axis=1) / cfg.bark_tile_m
-        u_rep = np.maximum(1, np.round(2 * math.pi * R[:, 0] / cfg.bark_tile_m))
+        v_off = np.array([a.v_offset for a in axes])[:, None] if axes is not None else np.zeros((G, 1))
+        v_coord = (np.concatenate([np.zeros((G, 1)), np.cumsum(seg_len, axis=1)], axis=1) + v_off) / cfg.bark_tile_m
+        u_rep = u_repeats(R[:, 0], cfg.bark_tile_m)
+        if axes is not None:
+            u_rep = np.array([a.u_rep if a.u_rep is not None else u for a, u in zip(axes, u_rep)])
         u_lo = (np.arange(n) / n)[None, None, :] * u_rep[:, None, None]
         u_hi = ((np.arange(n) + 1) / n)[None, None, :] * u_rep[:, None, None]
         v0 = np.broadcast_to(v_coord[:, :-1, None], (G, k - 1, n))
@@ -184,10 +184,16 @@ class BotanicalMeshEngine:
 
         if cfg.smooth_caps:
             caps = ((k - 1) * n + np.arange(n))[None, :] + (np.arange(G) * per_axis)[:, None]
-            loops = np.concatenate([quads, caps], axis=1).reshape(-1)
             cap_uv = np.broadcast_to(np.stack([0.5 + 0.5 * cos_a, 0.5 + 0.5 * sin_a], 1), (G, n, 2))
-            uv = np.concatenate([quad_uv, cap_uv], axis=1).reshape(-1, 2)
-            totals = np.tile(np.concatenate([np.full((k - 1) * n, 4), [n]]), G)
+            blocks, uv_blocks, tot = [quads, caps], [quad_uv, cap_uv], [np.full((k - 1) * n, 4), [n]]
+            if cfg.start_caps:
+                base = np.arange(n)[::-1][None, :] + (np.arange(G) * per_axis)[:, None]  # Reversed: faces outward
+                blocks.append(base)
+                uv_blocks.append(cap_uv[:, ::-1])
+                tot.append([n])
+            loops = np.concatenate(blocks, axis=1).reshape(-1)
+            uv = np.concatenate(uv_blocks, axis=1).reshape(-1, 2)
+            totals = np.tile(np.concatenate(tot), G)
         else:
             loops = quads.reshape(-1)
             uv = quad_uv.reshape(-1, 2)

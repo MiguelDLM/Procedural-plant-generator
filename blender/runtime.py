@@ -357,7 +357,9 @@ def update_tree_geometry(context):
                                      buttress_profile=gielis, twig_resolution=props.twig_resolution)
         built = builder.build_or_update_plant(
             context=context, leaf_density=props.leaf_density, leaf_scale=props.leaf_scale,
-            show_leaves=props.show_leaves, use_subsurf=props.use_subsurf, show_roots=props.show_roots)
+            show_leaves=props.show_leaves, use_subsurf=props.use_subsurf, show_roots=props.show_roots,
+            fuse_junctions=props.fuse_junctions, fuse_detail=props.fuse_detail,
+            fuse_smoothing=props.fuse_smoothing)
 
         if props.assign_materials:
             root = built["root"]

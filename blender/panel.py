@@ -257,6 +257,11 @@ if BLENDER_AVAILABLE:
         radial_resolution: I("Trunk Sides", 12, 4, 32)
         twig_resolution: I("Twig Sides", 5, 3, 16)
         use_subsurf: BoolProperty(name="Subdivision Surface", default=False, update=U)
+        fuse_junctions: BoolProperty(name="Fuse Junctions", default=True, update=U,
+                                     description="Merge stem, limbs and roots into one continuous surface "
+                                                 "(voxel union + smoothing) instead of intersecting tubes")
+        fuse_detail: F("Fusion Detail", 10.0, 3.0, 30.0, "Voxels per stem radius (higher = finer, slower)")
+        fuse_smoothing: I("Fillet Smoothing", 6, 0, 30, "Laplacian iterations rounding crotches and flares")
         assign_materials: BoolProperty(name="Materials", default=True, update=U)
 else:
     PPG_Properties = None
@@ -494,6 +499,11 @@ class PPG_PT_Topology(_PPGSub, Panel):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
+        col.prop(p, "fuse_junctions")
+        if p.fuse_junctions:
+            col.prop(p, "fuse_detail")
+            col.prop(p, "fuse_smoothing")
+        col.separator()
         for name in ("radial_resolution", "twig_resolution", "use_subsurf", "assign_materials"):
             col.prop(p, name)
 

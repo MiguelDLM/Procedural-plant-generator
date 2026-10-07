@@ -21,6 +21,8 @@ from core.ontology import get_po_term
 from core.trait_space import to_vector, from_vector, blend, mutate, distance, nearest_species, TRAITS
 from data.species_db import SPECIES_CATALOG, get_species_preset
 from core.roots import RootSystemEngine, RootProfile, RootSystemType, sample_depth, JACKSON_BETA
+from core.junctions import (split_axes, graph_of, sample_table, nearest_samples, cylindrical_uvs, u_repeats,
+                            axis_tangents, default_n0)
 
 
 def _mask(archetype, **kw):
@@ -238,6 +240,56 @@ class TestForks(unittest.TestCase):
         for a in leaders:
             self.assertGreater(a.radii[0], 0.8 * trunk.radii[-1])   # Starts with the stem's girth
             self.assertLess(a.radii[len(a.radii) // 3], a.radii[0])  # and tapers to its pipe radius
+
+
+class TestJunctions(unittest.TestCase):
+    def _split(self):
+        r = BotanicalPlantPipeline(get_species_preset("quercus_robur")).generate(seed=3, leaf_budget=500)
+        thr = 0.04 * 2.5
+        return r, split_axes([r.skeleton_graph, r.root_graph], thr, 0.6)
+
+    def test_split_keeps_thick_parts_and_continuity(self):
+        r, (thick, thin) = self._split()
+        self.assertTrue(thick and thin)
+        self.assertTrue(all(a.radii[:-2].min() >= 0.1 - 1e-9 for a in thick if len(a.radii) > 2))
+        trunk = r.skeleton_graph.axes[0]
+        n0 = default_n0(axis_tangents(trunk.positions)[0])[0]
+        pieces = [a for a in thick + thin if getattr(a, "is_trunk", False)]
+        self.assertGreaterEqual(len(pieces), 1)
+        for a in pieces:
+            self.assertTrue(np.allclose(a.frame_n0, n0))             # Same bark frame on both sides of the cut
+            self.assertEqual(a.u_rep, u_repeats(trunk.radii[0], 0.6))
+        if len(pieces) == 2:
+            t, c = pieces
+            i = len(t.radii) - 3
+            self.assertAlmostEqual(c.v_offset, float(t.arc_length[i]), places=6)  # Arc length continues
+            self.assertTrue(np.allclose(c.positions[0], t.positions[i]))      # Tube starts inside the fused part
+
+    def test_cylindrical_uvs_match_tube_uvs(self):
+        """On an undeformed tube surface the fused-UV formula reproduces the tube's own bark coordinates."""
+        r, (thick, _) = self._split()
+        eng = BotanicalMeshEngine(MeshConfig(radial_resolution=16, smooth_caps=False))
+        trunk = [a for a in thick if getattr(a, "is_trunk", False)][:1]
+        mesh = eng.build_wood_mesh(graph_of(trunk), r.total_height_m, None, trunk_index=-1)
+        table = sample_table(trunk)
+        near = nearest_samples(mesh.vertices.astype(float), table["pos"], table["r"])
+        uv = cylindrical_uvs(mesh.vertices.astype(float), mesh.loop_vertex, mesh.loop_start, mesh.loop_total,
+                             near, table, 0.6)
+        period = table["u_rep"][0]
+        du = np.abs(((uv[:, 0] - mesh.loop_uv[:, 0]) + period / 2) % period - period / 2)
+        self.assertLess(np.median(du), 0.02 * period)
+        self.assertLess(np.median(np.abs(uv[:, 1] - mesh.loop_uv[:, 1])), 0.05)
+        # Faces are unwrapped: no face spans more than half a period in U
+        f = np.repeat(np.arange(len(mesh.loop_start)), mesh.loop_total)
+        span = np.zeros(len(mesh.loop_start))
+        np.maximum.at(span, f, uv[:, 0])
+        lo = np.full(len(mesh.loop_start), np.inf)
+        np.minimum.at(lo, f, uv[:, 0])
+        self.assertLess(float((span - lo).max()), period / 2)
+
+    def test_thin_bark_not_stretched(self):
+        self.assertAlmostEqual(float(u_repeats(0.02, 0.6)), 2 * math.pi * 0.02 / 0.6, places=6)
+        self.assertEqual(float(u_repeats(0.5, 0.6)), 5.0)
 
 
 class TestMeshes(unittest.TestCase):
