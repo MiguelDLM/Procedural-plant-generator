@@ -37,6 +37,21 @@ class MeshConfig:
     start_caps: bool = False            # Close axis bases too (watertight tubes for volumetric fusion)
 
 
+def collar_bark_age(mesh: "MeshData", base, r_collar: float, zone: float) -> "MeshData":
+    """
+    Roots are as old as the stem at the root collar, so their bark must age like the stem base there
+    rather than by their own (smaller) radius. The bark-age radius is raised towards the collar radius
+    with distance d from the collar: r_bark = max(r, r_collar * exp(-d / zone)), zone ~ the zone of rapid
+    taper (2.2 x DBH). Away from the collar, roots keep the younger bark of their own girth.
+    """
+    br = mesh.point_attributes.get("bark_radius")
+    if br is None or len(br) == 0 or r_collar <= 0:
+        return mesh
+    d = np.linalg.norm(mesh.vertices.astype(np.float64) - np.asarray(base, float)[None, :], axis=1)
+    mesh.point_attributes["bark_radius"] = np.maximum(br, r_collar * np.exp(-d / max(zone, 1e-3))).astype(np.float32)
+    return mesh
+
+
 @dataclass
 class MeshData:
     vertices: np.ndarray                        # (N, 3) float32

@@ -422,6 +422,19 @@ class TestSucculents(unittest.TestCase):
                        (np.linalg.norm(pts - gj[7], axis=1) < 0.25 * gj[4])
                 self.assertFalse(np.any(eng._pad_inside(pts[~near], gj, inflate=0.98)), f"pads {i} and {j}")
 
+    def test_handover_hides_fused_tail(self):
+        """The fused tail narrows well inside the continuing tube, so remesh inflation (~1 voxel at a
+        4-voxel radius) cannot make it poke out as a step."""
+        from core.architecture import Axis
+        from core.junctions import handover
+        P = np.stack([np.linspace(0, 2.0, 40), np.zeros(40), np.zeros(40)], 1)
+        ax = Axis(P, np.linspace(0.2, 0.02, 40), 1, None, None, 0.0)
+        s_cut, ov = 1.0, 0.3
+        (fp, fr, _), (tp, tr, _), s0 = handover(ax, s_cut, ov)
+        r_cut = float(np.interp(s_cut, ax.arc_length, ax.radii))
+        self.assertLessEqual(fr[-1], 0.5 * float(np.interp(s_cut + ov, ax.arc_length, ax.radii)) / 0.9 + 1e-9)
+        self.assertLess(fr[-1] + 0.25 * r_cut, float(np.interp(fp[-1, 0], tp[:, 0], tr)))   # 1 voxel = r/4
+
     def test_bark_age_attribute(self):
         """Wood meshes carry the local axis radius (bark age proxy); thin twigs keep a young periderm."""
         from core.species_db import get_species_preset

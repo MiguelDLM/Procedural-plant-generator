@@ -89,7 +89,7 @@ def resample_axis(ax: Axis, q: np.ndarray):
     return pos, rad, asp
 
 
-def handover(ax: Axis, s_cut: float, overlap: float, tuck: float = 0.6, grow_from: float = 0.85):
+def handover(ax: Axis, s_cut: float, overlap: float, tuck: float = 0.45, grow_from: float = 0.85):
     """
     Tangential hand-over between a fused part and the tube that continues it.
 

@@ -124,6 +124,11 @@ def _fuse(mesh_engine, axes, voxel: float, smooth_iterations: int, gielis, total
 
 
 _CACHE: dict = {}
+FUSE_BAND_VOXELS = 1.5e6     # Surface voxels allowed in one fused level set (memory / time budget)
+# Axes are fused only while their radius spans at least this many voxels: below ~4 the level set cannot
+# resolve the tucked hand-over tail, which the remesh inflates by ~1 voxel, leaving a visible step where
+# the continuing tube starts (seen as cut, offset roots on slender conifers).
+FUSE_MIN_VOXELS = 4.0
 
 
 def _key(axes_groups, *extra) -> str:
@@ -146,18 +151,25 @@ def build_fused_wood(mesh_engine, graphs, total_height_m: float, gielis, detail:
     trunk = graphs[0].axes[0]
     r_base = float(np.interp(0.0, trunk.positions[:, 2], trunk.radii))
     voxel = max(0.008, r_base / max(2.0, detail))
-    # Bound the level-set resolution by the extent of the fused region (small trees, long roots)
-    thick, _ = split_axes(graphs, 2.5 * voxel, cfg.bark_tile_m)
-    if thick:
-        pts = np.vstack([a.positions for a in thick])
-        voxel = max(voxel, float(np.max(pts.max(0) - pts.min(0))) / 320.0)
-    thick, thin = split_axes(graphs, 2.5 * voxel, cfg.bark_tile_m)
+    # Bound the level-set resolution by the fused *surface area*: the sparse level set only stores a
+    # narrow band around the surface, so cost scales with area / voxel^2, not with the bounding box.
+    # (An extent bound made tall slender trees, e.g. Pinus sylvestris, so coarse that their main roots
+    # fell below the fusion threshold and stayed loose tubes.)
+    for _ in range(3):
+        thick, _ = split_axes(graphs, FUSE_MIN_VOXELS * voxel, cfg.bark_tile_m)
+        area = sum(float(np.sum(2.0 * np.pi * 0.5 * (a.radii[1:] + a.radii[:-1])
+                                * np.linalg.norm(np.diff(a.positions, axis=0), axis=1))) for a in thick)
+        v_area = math.sqrt(area / FUSE_BAND_VOXELS) if area > 0 else voxel
+        if v_area <= voxel * 1.001:
+            break
+        voxel = v_area
+    thick, thin = split_axes(graphs, FUSE_MIN_VOXELS * voxel, cfg.bark_tile_m)
 
     sleeves = []
     if quality == "HERO":
         sleeves, thin = junction_sleeves(thin, graphs, max(hero_min_radius, 1e-3), cfg.bark_tile_m,
                                          detail=sleeve_detail, max_sleeves=max_sleeves,
-                                         fused_threshold=2.5 * voxel, fused_voxel=voxel)
+                                         fused_threshold=FUSE_MIN_VOXELS * voxel, fused_voxel=voxel)
 
     settings = (round(voxel, 6), smooth_iterations, gielis, cfg.radial_resolution, cfg.twig_resolution,
                 cfg.flute_azimuth, quality, round(hero_min_radius, 5), sleeve_detail, max_sleeves)

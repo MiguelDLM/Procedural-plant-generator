@@ -14,10 +14,10 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 try:
-    from ..core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData
+    from ..core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData, collar_bark_age
     from ..core.gielis import GielisProfile
 except (ImportError, ValueError):
-    from core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData
+    from core.mesh_engine import BotanicalMeshEngine, MeshConfig, MeshData, collar_bark_age
     from core.gielis import GielisProfile
 
 
@@ -145,6 +145,13 @@ class BlenderMeshBuilder:
         else:
             wood_data = self.mesh_engine.build_wood_mesh(self.result.skeleton_graph, self.result.total_height_m,
                                                          self.config.buttress_profile)
+        # Bark at the root collar: roots and stem base share the age of the collar
+        trunk = self.result.skeleton_graph.axes[0]
+        z = trunk.positions[:, 2]
+        collar = np.array([np.interp(0.0, z, trunk.positions[:, k]) for k in range(3)])
+        r_collar = float(np.interp(0.0, z, trunk.radii))
+        zone = getattr(getattr(self.result.preset, "roots", None), "zrt_dbh_ratio", 2.2) * self.result.dbh_m
+        wood_data = collar_bark_age(wood_data, collar, r_collar, zone)
         wood_obj = self._child(context, root_obj, "_Wood", f"{root_obj.name}_Wood")
         populate_mesh(wood_obj.data, wood_data)
         wood_obj.hide_viewport = wood_obj.hide_render = False
@@ -160,8 +167,8 @@ class BlenderMeshBuilder:
         # Roots
         roots_obj = self._child(context, root_obj, "_Roots", f"{root_obj.name}_Roots")
         if not fuse_junctions and root_graph is not None and root_graph.axes:
-            populate_mesh(roots_obj.data, self.mesh_engine.build_wood_mesh(
-                root_graph, self.result.total_height_m, None, trunk_index=-1))
+            populate_mesh(roots_obj.data, collar_bark_age(self.mesh_engine.build_wood_mesh(
+                root_graph, self.result.total_height_m, None, trunk_index=-1), collar, r_collar, zone))
             roots_obj.hide_viewport = False
             roots_obj.hide_render = False
         else:
