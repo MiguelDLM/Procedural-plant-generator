@@ -4,99 +4,91 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://python.org)
 [![Pure Python](https://img.shields.io/badge/Dependencies-NumPy%20only-brightgreen.svg)]()
-[![Plant Ontology](https://img.shields.io/badge/Plant%20Ontology-Planteome%20Standard-success.svg)](https://plantontology.org/)
 
-**Procedural Plant Generator** is an empirical, data-driven botanical 3D plant and tree generation extension for **Blender 4.2+ and Blender 5.1+**.
-
-Unlike conventional procedural generators (such as Sapling Tree Gen or generic L-systems) that rely on arbitrary heuristic sliders and visual guesswork, **PPG grounds its mathematical morphogenesis directly in peer-reviewed botanical datasets, allometric scaling laws, biomechanics, the Plant Ontology, and computational botany algorithms.**
+**Procedural Plant Generator** is a Blender 4.2+ / 5.x extension that builds trees from **measurable botanical traits** instead of artistic sliders. Every species is a point in a normalised *trait space*: allometry, crown envelope, branching architecture, leaf-architecture descriptors, venation, leaf area index and bark. New plants are made by editing traits, blending species, or sampling intraspecific variation.
 
 ---
 
-## 🔬 Scientific Foundations & Empirical Datasets
+## What is modelled, and how
 
-PPG bridges plant phenotyping, forestry remote sensing, and computational botany with procedural computer graphics by integrating the following datasets and foundational papers:
-
-| Domain | Empirical Dataset / Scientific Literature | Biological & Algorithmic Role in PPG |
+| Level | Model | Parameters (all editable) |
 | :--- | :--- | :--- |
-| **Macro-Allometry & Crown Scaling** | **[TALLO Global Tree Allometry](https://developers.google.com/earth-engine/datasets/catalog/TALLO_TALLO_V1)** *(Jucker et al., 2022; Zenodo: 10.5281/zenodo.6637599)* & **[Awesome-Forests](https://github.com/blutjens/awesome-forests)** | Quantifies Stem Diameter ($DBH$) $\leftrightarrow$ Total Height ($H$), Crown Radius ($CR$), Crown Depth ($CD$), and Leonardo da Vinci pipe model tapering ($r_0^\Delta = \sum r_i^\Delta$). |
-| **Trunk Cross-Sections & Buttressing** | **Gielis Superformula** *(Gielis, 2003; Modular Tree)* | Generates fluted trunk cross-sections, multi-lobed basal buttresses ($m=3, 4, 5, 6, 8$), and elliptical reaction-wood stems using the generalized superformula. |
-| **Branching Architecture** | **Hallé-Oldeman Architectural Classification** *(Hallé, Oldeman & Tomlinson, 1978)* + QSM LiDAR / Tree-Gen / UitTree | Rhythmic orthotropic vs plagiotropic growth models (**Rauh**, **Massart**, **Troll**, **Attims**), calibrated branching insertion angles, and phyllotaxis ($137.5^\circ$ golden divergence, decussate, distichous). |
-| **Leaf Contours & Morphometrics** | **[LeavesBank Dataset](https://github.com/aaslihanyildirim/LeavesBank-Dataset/)** *(Yildirim et al., 2024)* & **[PlantCLEF 2025](https://www.imageclef.org/PlantCLEF2025)** | 198k+ segmented leaf contours parameterized via **Elliptic Fourier Descriptors (EFD)** and continuous forward-leaning serration/dentation waveforms. |
-| **Venation Networks & Auxin Simulation** | **[Runions et al., 2005](https://doi.org/10.1145/1073204.1073251)** & **[Dryad Dataset: Leaf Architecture for 122 Species](https://datadryad.org/dataset/doi:10.5061/dryad.1g1jwsv36)** *(Matos, Boakye, Duarte et al., 2025; ESA Bulletin: 10.1002/bes2.2206)* | **Space Colonization Algorithm** driven by auxin attractors within the lamina, combined with empirical measurements of **Vein Length per Area ($VLA$)**, primary-secondary hierarchies, Murray's hydraulic scaling, and physical cantilever droop under gravity. |
-| **Standardized Terminology & Anatomy** | **[Plant Ontology (PO)](https://plantontology.org/)** *(Planteome / OBO)* | Standardized anatomical anchoring across shoot systems (`PO:0009006`), stems (`PO:0009046`), leaf lamina (`PO:0020039`), leaf veins (`PO:0005022`), and areoles (`PO:0005026`). |
+| **Size** | Saturating height–DBH and power-law crown allometry; coefficients are fitted per species from anchor values (DBH, height, crown radius). | DBH, H<sub>max</sub>, height/crown exponents, crown depth ratio |
+| **Crown silhouette** | Beta envelope E(u) = u<sup>a</sup>(1−u)<sup>b</sup>/max with a = kp, b = k(1−p): conical, ovoid, spherical, columnar and umbrella crowns are points of one 2-D space (cf. Horn 1971). Laterals are sized so their *horizontal reach* meets the envelope. | widest position p, fullness k |
+| **Architecture** | Hallé–Oldeman models (Rauh, Massart, Troll, Attims, Corner); apical dominance separates **excurrent** (single leader) from **decurrent** (codominant leaders) crowns; phyllotaxis (spiral/decussate/distichous/whorled) sets lateral azimuths; plagiotropy flattens sprays; gravitropism/phototropism/tortuosity and cantilever **self-weight bending** are integrated while each axis grows, so children always stay attached. | branch & twig angles, frequency, length ratio, tropisms, whorl size, max order |
+| **Wood radii** | Pipe model: an axis cross-section is shared among its laterals in proportion to the foliage they carry, r<sub>i</sub> = R·(L<sub>i</sub>²/ΣL²)<sup>1/Δ</sup>, with near-conical taper to fine tips; Gielis superformula flutes and root flare on the trunk. | Δ, buttress lobes m, flare amplitude/decay, n1–n3 |
+| **Leaf outline** | Each foliar unit is a union of **blades** (lamina, lobe, leaflet, needle). A blade's half-width w(t) is two cubic Béziers whose end tangents are the botanical **base and apex angles** (Manual of Leaf Architecture, Ellis et al. 2009). Lobes are smooth-unioned blades (pinnate along the midvein, palmate from the petiole); compound leaves, needle fascicles, conifer sprays and palm fronds use the same primitive. | L/W, widest point, base/apex angle & curvature, cordate depth, asymmetry, apical notch, falcate bend, lobes, margin teeth, leaflets |
+| **Margin** | Tooth waveforms per type: serrate, doubly serrate, dentate, crenate, sinuate, spinose. | count, depth, skew |
+| **Venation** | Per blade: midvein, secondaries by pattern (craspedodromous, brochidodromous with marginal loops, eucamptodromous, actinodromous with basal primaries, parallelodromous, dichotomous flabellate), percurrent tertiaries, and a Voronoi minor reticulum whose areole width follows **VLA** (d ≈ 2/VLA for a polygonal network). Radii follow a hydraulic hierarchy. | pattern, VLA, secondary pairs/angle/arcuation, reticulation |
+| **Leaf texture** | Pure-NumPy raster of colour + alpha + vein height: mesophyll mottling, lighter veins, petiole/twig tissue, and **senescence** that invades from margins and intercostal areas while tissue along veins stays green longest. | colours (adaxial, abaxial, vein, autumn), gloss, season |
+| **Foliage** | Cards carry a single leaf or a **leafy shoot** (several leaves in phyllotaxis on a stem, younger leaves smaller). Their number comes from **leaf area index** × crown projection ÷ unit leaf area; their tilt follows the species' **mean leaf angle** (planophile ↔ erectophile). Palms get an apical frond rosette. | LAI, mean leaf angle, leaves per shoot, card budget |
+| **Forks & collars** | Every inserted axis starts with nearly its parent's girth and tapers exponentially to its pipe-model radius (branch collar); codominant leaders grow out of the stem top as one swelling crotch. Root-collar flare lives in the skeleton radii, so axes inserted higher see the real girth. | — |
+| **Roots** | Root-system types after Köstler et al. (1968): taproot, heart, plate, plus buttress and fibrous (palms). Collar flow shared by Leonardo's rule (verified for coarse roots by Oppelt et al. 2001); zone of rapid taper ≈ 2.2 × DBH; lateral/sinker depths sampled from Y(d) = 1 − β<sup>d</sup> with biome β from Jackson et al. (1996, Table 1); maximum depth after Canadell et al. (1996). Near the stem, main laterals have vertically elongated (plank) sections and a concave top edge, so flares and buttresses grow out of the trunk; stem flutes are aligned with them, and buttress ends carry sinkers (Crook et al. 1997). | system, laterals, spread/crown, max depth, β, taproot share, ZRT, sinker spacing, surface exposure, plank, collar height, knees |
+| **Bark** | Procedural shader per rhytidome type: fissured, plated, peeling, lenticelled, fibrous, smooth, annulated. | colours, feature size, relief |
+
+### Trait space
+
+`core/trait_space.py` maps ~70 continuous traits to [0, 1] (log scale where they span orders of magnitude) plus colours; categorical traits are carried alongside.
+
+- `blend(a, b, t)` – morphological interpolation between two species (UI: **Variants → Blend**)
+- `mutate(p, amount, seed)` – intraspecific variant, each trait perturbed by its typical coefficient of variation (UI: **Variation**)
+- `distance`, `nearest_species` – the trait report lists the closest catalogue species.
 
 ---
 
-## 📐 Mathematical Formulations
+## Species catalogue (37)
 
-### 1. Gielis Superformula (2003) for Stem Cross-Sections & Buttresses
-$$r(\theta) = \left( \left|\frac{1}{a} \cos\left(\frac{m \theta}{4}\right)\right|^{n_2} + \left|\frac{1}{b} \sin\left(\frac{m \theta}{4}\right)\right|^{n_3} \right)^{-\frac{1}{n_1}}$$
-Near ground level ($z < 0.2$), Gielis fluted buttresses ($m=3$ to $8$) produce biological buttressed flares as seen in giant rainforest and montane trees (*Ficus*, *Sequoiadendron*).
+| Group | Species |
+| :--- | :--- |
+| Fagaceae | *Quercus robur*, *Q. rubra*, *Q. agrifolia*, *Fagus sylvatica*, *Castanea sativa* |
+| Sapindaceae | *Acer palmatum*, *A. pseudoplatanus*, *A. saccharum*, *Aesculus hippocastanum* |
+| Betulaceae / Salicaceae | *Betula pendula*, *Populus tremula*, *P. nigra* 'Italica', *Salix babylonica* |
+| Other broadleaves | *Tilia cordata*, *Platanus × hispanica*, *Liriodendron tulipifera*, *Liquidambar styraciflua*, *Ulmus minor*, *Prunus avium*, *Malus domestica*, *Magnolia grandiflora*, *Ficus elastica*, *Olea europaea*, *Cercis canadensis*, *Eucalyptus globulus*, *Ceiba pentandra* |
+| Compound leaves | *Fraxinus excelsior*, *Juglans regia*, *Robinia pseudoacacia* |
+| Gymnosperms | *Ginkgo biloba*, *Pinus sylvestris*, *P. pinea*, *Picea abies*, *Sequoiadendron giganteum*, *Taxodium mucronatum* (ahuehuete), *Cupressus sempervirens* |
+| Monocots | *Phoenix canariensis* |
 
-### 2. Space Colonization Auxin Venation (Runions et al., 2005)
-Auxin hormone attractors $S$ within the leaf blade exert directional pull on nearby vein nodes $V$ within perception distance $d_I$:
-$$\vec{D}_v = \frac{\sum_{s \in S_v} \frac{s - v}{\|s - v\|}}{\left\| \sum_{s \in S_v} \frac{s - v}{\|s - v\|} \right\|}$$
-Vein segments advance by step size $\delta$ and consume sources within kill distance $d_K$. Segment radii scale according to Murray's hydraulic law:
-$$r_v = r_{\text{base}} \cdot \left(\text{flux}_v\right)^{1 / \gamma} \quad (\gamma \approx 2.6 - 3.0)$$
-
-### 3. Height-DBH & Crown Scaling (TALLO)
-$$H(D) = H_{\max} \cdot \left(1 - \exp\left(-\frac{a \cdot D^b}{H_{\max}}\right)\right)$$
-$$CR(D) = c \cdot D^d$$
-
-### 4. Leonardo da Vinci's Pipe Model
-$$r_{\text{parent}}^\Delta = \sum_{i=1}^{n} r_{\text{child}, i}^\Delta \quad (\Delta \approx 2.1 - 2.5)$$
+Trait values are typical adult ranges compiled from general botanical references. They are approximations chosen to reproduce each species' habit and leaf form, not statistical fits to a specific dataset. Adding a species only needs measurable anchors; see `species()` in `core/species_db.py`.
 
 ---
 
-## 🌳 Real-World Botanical Presets
+## Installation (Blender 4.2+ / 5.x)
 
-PPG provides real-world tree presets with full biological traits and Plant Ontology metadata:
-
-1. **Quercus robur** (*English Oak*): Massive canopy, high wood density (0.71 g/cm³), Rauh architecture, lobed leaves, craspedodromous venation ($VLA = 7.4$ mm/mm²).
-2. **Quercus agrifolia** (*Coast Live Oak*): Gnarled crooked branches, convex spiny-dentate leaves, high sclerophylly ($VLA = 9.8$ mm/mm²).
-3. **Acer palmatum** (*Japanese Maple*): Decussate branching, 5-lobed palmate leaves, actinodromous primary veins ($VLA = 8.8$ mm/mm²).
-4. **Acer pseudoplatanus** (*Sycamore Maple*): Robust canopy maple, Rauh model, serrate palmate lamina ($VLA = 7.6$ mm/mm²).
-5. **Betula pendula** (*Silver Birch*): Pendulous weeping twigs (positive gravitropism), doubly serrate ovate leaves, craspedodromous veins ($VLA = 9.6$ mm/mm²).
-6. **Fagus sylvatica** (*European Beech*): Troll sympodial architecture with planar zig-zag foliage sprays, high shade tolerance ($VLA = 6.8$ mm/mm²).
-7. **Ficus elastica** (*Rubber Fig*): Massive fluted Gielis buttress roots ($m=5$), thick leathery leaves, brochidodromous looping veins ($VLA = 11.2$ mm/mm²).
-8. **Pinus sylvestris** (*Scots Pine*): Massart tiered whorls, acicular needle foliage, conifer allometry ($VLA = 2.8$ mm/mm²).
-9. **Sequoiadendron giganteum** (*Giant Sequoia*): Massive DBH (up to 4.5m), Gielis $m=8$ fluted buttress base, conical crown, thick bark.
-10. **Ginkgo biloba** (*Maidenhair Tree*): Ancient gymnosperm, fan-shaped flabellate leaves with open dichotomous venation.
-11. **Eucalyptus globulus** (*Tasmanian Blue Gum*): Attims monopodial continuous architecture, falcate-lanceolate leaves, high vein density ($VLA = 12.4$ mm/mm²).
-12. **Populus tremula** (*Common Aspen*): Rapid pioneer allometry, aerodynamic flattened flutter petiole, crenate leaves ($VLA = 8.2$ mm/mm²).
-
----
-
-## 📦 Installation in Blender 4.2+ / 5.1+
-
-This add-on is a **pure Python** extension (NumPy is bundled with Blender).
-
-1. In Blender:
-   - Go to `Edit` > `Preferences` > `Add-ons` (or `Get Extensions`).
-   - Click the top-right down-arrow menu > `Install from Disk...`.
-   - Select the `procedural-plant-generator` folder or zipped archive.
+1. `Edit > Preferences > Get Extensions > ⌄ > Install from Disk…` and select the zipped folder.
 2. Enable **Procedural Plant Generator**.
-3. Access the tool in the **3D Viewport Sidebar (`N` key) > `Plant Gen`**.
+3. Open **3D Viewport > Sidebar (N) > Plant Gen**.
+
+Panels: *Species* · *Variants (Trait Space)* · *Trunk & Allometry* · *Crown & Branching* · *Leaf Shape* · *Venation & Colour* · *Foliage* · *Roots* · *Bark* · *Topology & Shading*. Changing the species loads all of its traits into the sliders; **Allometric Scaling** keeps height and crown consistent with DBH. Live updates are debounced, and leaf textures/materials are regenerated only when the leaf, venation, season or resolution parameters change.
+
+Typical cost on a desktop CPU: skeleton 0.2–0.5 s, meshes < 0.1 s, a 1024 px leaf texture ≈ 0.5 s (cached).
 
 ---
 
-## 🧪 Unit Tests
-
-Run the test suite verifying allometry, Gielis superformula, Space Colonization, and Plant Ontology:
+## Tests
 
 ```bash
 cd procedural-plant-generator
 python3 -m unittest discover -s tests -v
-# 7/7 tests pass in 0.31s
 ```
+
+The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth), venation hierarchy and VLA, textures and senescence, skeleton connectivity, apical dominance, fork collars, root depth distributions and root–stem merging, mesh consistency, trait-space round-trips/blends/mutations, and generation of every catalogue species.
 
 ---
 
-## 📚 References & Literature
+## References
 
-- **Gielis Superformula**: Gielis, J. (2003). *A generic geometric transformation that unifies a wide range of natural forms.* American Journal of Botany, 90(3), 333–344.
-- **Space Colonization Leaf Venation**: Runions, A., Fuhrer, M., Lane, B., Federl, P., Rolland-Lagan, A.-G., & Prusinkiewicz, P. (2005). *Modeling and visualization of leaf venation patterns.* ACM Transactions on Graphics (SIGGRAPH 2005), 24(3), 702–711.
-- **Venation Architecture & Mechanics**: Matos, I. S., Boakye, M., Antonio, M., Carlos, S., Chu, A., Duarte, M. A., et al. (2025). *Investigating the Functional and Architectural Diversity of Leaf Venation Networks.* The Bulletin of the Ecological Society of America, 106(1), e02206. Dryad DOI: [10.5061/dryad.1g1jwsv36](https://doi.org/10.5061/dryad.1g1jwsv36).
-- **TALLO Global Tree Allometry**: Jucker, T. et al. (2022). *Tallo: a global tree allometry and crown architecture database.* Global Change Biology.
-- **Plant Ontology**: Cooper, L. et al. (2018). *The Planteome database: an integrated resource for reference ontologies and annotations.* Nucleic Acids Research.
-- **Modular Tree**: Blender extension incorporating Gielis cross-sections and modular node-based branching.
+- Ellis, B. et al. (2009). *Manual of Leaf Architecture.* Cornell University Press.
+- Hallé, F., Oldeman, R. A. A. & Tomlinson, P. B. (1978). *Tropical Trees and Forests: An Architectural Analysis.* Springer.
+- Horn, H. S. (1971). *The Adaptive Geometry of Trees.* Princeton University Press.
+- Gielis, J. (2003). A generic geometric transformation that unifies a wide range of natural forms. *American Journal of Botany* 90(3): 333–344.
+- Runions, A. et al. (2005). Modeling and visualization of leaf venation patterns. *ACM Transactions on Graphics* 24(3): 702–711. (Space colonization is available in `core/space_colonization.py`.)
+- Sack, L. & Scoffoni, C. (2013). Leaf venation: structure, function, development, evolution, ecology and applications. *New Phytologist* 198: 983–1000.
+- Shinozaki, K. et al. (1964). A quantitative analysis of plant form – the pipe model theory. *Japanese Journal of Ecology* 14.
+- Jucker, T. et al. (2022). Tallo: a global tree allometry and crown architecture database. *Global Change Biology* 28: 5254–5268.
+- Köstler, J. N., Brückner, E. & Bibelriether, H. (1968). *Die Wurzeln der Waldbäume.* Paul Parey.
+- Jackson, R. B. et al. (1996). A global analysis of root distributions for terrestrial biomes. *Oecologia* 108: 389–411. doi:10.1007/BF00333714
+- Canadell, J. et al. (1996). Maximum rooting depth of vegetation types at the global scale. *Oecologia* 108: 583–595. doi:10.1007/BF00329030
+- Oppelt, A. L., Kurth, W. & Godbold, D. L. (2001). Topology, scaling relations and Leonardo's rule in root systems from African tree species. *Tree Physiology* 21: 117–128. doi:10.1093/treephys/21.2-3.117
+- Crook, M. J., Ennos, A. R. & Banks, J. R. (1997). The function of buttress roots. *Journal of Experimental Botany* 48: 1703–1716. doi:10.1093/jxb/48.9.1703
+- Danjon, F., Khuder, H. & Stokes, A. (2013). Deep phenotyping of coarse root architecture in *R. pseudoacacia*. *PLoS ONE* 8: e83548. doi:10.1371/journal.pone.0083548
+- Cooper, L. et al. (2018). The Planteome database. *Nucleic Acids Research* 46: D1168–D1180.
