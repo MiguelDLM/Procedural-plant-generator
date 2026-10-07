@@ -480,6 +480,32 @@ class TestSucculents(unittest.TestCase):
         self.assertGreaterEqual(np.sum(r_top < 0.35 * disc), 3)    # Inner columns near the axis
         self.assertGreaterEqual(np.sum(r_top > 0.7 * disc), 5)     # And an outer ring
 
+    def test_marginal_teeth_on_furled_leaves(self):
+        """Teeth follow the real (furled, clasped) leaf margin, including the young leaves of the spike."""
+        from core.succulent_db import ROSETTE_CATALOG
+        from core.rosette import RosetteEngine
+        for key in ("agave_americana", "aloe_vera"):
+            p = ROSETTE_CATALOG[key].profile
+            e = RosetteEngine(p)
+            orig = e._armature
+            worst = [0.0]
+
+            def spy(mid, dirs, lateral, normal, half_w, L, rng, grid=None, cx=None, p=p, orig=orig, worst=worst):
+                m = orig(mid, dirs, lateral, normal, half_w, L, rng, grid=grid, cx=cx)
+                A = m.vertices.reshape(-1, 6, 3)[(1 if p.terminal_spine_cm > 0 else 0):, :5].mean(1)
+                margins = [(grid[:-1, c], grid[1:, c]) for c in (int(np.argmax(cx)), int(np.argmin(cx)))]
+                for q in A:          # Distance to the nearer of the two margin polylines
+                    best = np.inf
+                    for a0, a1 in margins:
+                        ab = a1 - a0
+                        t = np.clip(((q - a0) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0, 1)
+                        best = min(best, float(np.sqrt(((a0 + ab * t[:, None] - q) ** 2).sum(1)).min()))
+                    worst[0] = max(worst[0], best)
+                return m
+            e._armature = spy
+            e.generate(seed=3, detail=0.8)
+            self.assertLess(worst[0], 0.003, key)      # Within 3 mm of the margin (base sunk ~1 mm)
+
     def test_rosette_stem_and_dead_leaves(self):
         from core.succulent_db import ROSETTE_CATALOG
         from core.rosette import RosetteEngine

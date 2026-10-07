@@ -264,7 +264,7 @@ class RosetteEngine:
             attrs["leaf_dead"].append(np.full(nu * nv, 1.0 if dead else 0.0))
             diam = max(diam, 2 * float(np.hypot(*(mid[-1] - centre)[:2])))
             if not dead:
-                arm_parts.append(self._armature(mid, dirs, lateral, normal, half_w, L, rng))
+                arm_parts.append(self._armature(mid, dirs, lateral, normal, half_w, L, rng, grid=P, cx=cx))
                 if 0.15 < age < 0.6:      # Axil of a mature leaf: lateral inflorescences emerge here
                     self._axil.append((base + UP * 0.01 * scale, _normalize(radial * 0.6 + UP)))
         V = np.vstack(verts)
@@ -276,8 +276,10 @@ class RosetteEngine:
         stem = self._stem(centre, stem_top, scale, az0, step, w0, rng)
         return leaves, MeshData.concatenate([a for a in arm_parts if a is not None]), stem, n, diam
 
-    def _armature(self, mid, dirs, lateral, normal, half_w, L, rng):
-        """Terminal spine and marginal teeth as small cones."""
+    def _armature(self, mid, dirs, lateral, normal, half_w, L, rng, grid=None, cx=None):
+        """Terminal spine and marginal teeth as small cones. With `grid` (the final, furled and clasped
+        leaf surface, nu x nv) the teeth sit on the actual margin vertices and point outward in the
+        surface, so they follow young leaves rolled into the central spike."""
         p = self.p
         cones = []
         if p.terminal_spine_cm > 0:
@@ -290,12 +292,31 @@ class RosetteEngine:
         if p.teeth_count > 0 and p.teeth_size_cm > 0:
             nu = len(mid)
             for side in (-1.0, 1.0):
+                if grid is not None:
+                    nv = grid.shape[1]
+                    ce = int(np.argmax(side * cx))                 # Margin column (cx = +-1)
+                    nb = [(ce - 1) % nv, (ce + 1) % nv]           # Its neighbours on both faces
                 for k in range(p.teeth_count):
                     f = 0.15 + 0.75 * (k + 0.5) / p.teeth_count
-                    j = int(f * (nu - 1))
-                    pos = mid[j] + side * lateral * half_w[j]
-                    d = _normalize(side * lateral + dirs[j] * p.teeth_hook)
                     size = p.teeth_size_cm * 0.01 * (0.6 + 0.4 * math.sin(math.pi * f))
+                    if grid is None:
+                        j = int(f * (nu - 1))
+                        pos = mid[j] + side * lateral * half_w[j]
+                        d = _normalize(side * lateral + dirs[j] * p.teeth_hook)
+                    else:
+                        # Interpolate along the deformed margin
+                        x = f * (nu - 1)
+                        j = min(int(x), nu - 2)
+                        t = x - j
+                        edge = grid[j, ce] * (1 - t) + grid[j + 1, ce] * t
+                        inner = 0.5 * (grid[j, nb[0]] + grid[j, nb[1]]) * (1 - t) + \
+                            0.5 * (grid[j + 1, nb[0]] + grid[j + 1, nb[1]]) * t
+                        along = _normalize(grid[j + 1, ce] - grid[j, ce])
+                        out = edge - inner
+                        if np.linalg.norm(out) < 1e-9:
+                            out = side * lateral
+                        d = _normalize(_normalize(out) + along * p.teeth_hook)
+                        pos = edge - _normalize(out) * size * 0.15      # Base slightly inside the margin
                     cones.append((pos, d, size, size * 0.35))
         if not cones:
             return None
