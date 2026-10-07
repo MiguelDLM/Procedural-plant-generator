@@ -304,7 +304,11 @@ class CactusEngine:
                 root_radius_mm=max(0.5, 0.06 * R0 * 1000 * p.root_core_ratio * 4),
                 tuber_length_m=p.tuber_length_cm * 0.01, tuber_radius_m=p.tuber_radius_ratio * R0,
                 display_depth_m=root_display_depth, seed=seed)
-        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots, ar_pos, ar_nrm, ar_flw)
+        if p.habit == CactusHabit.CLADODE:
+            fpos, fdir, fw = self._margin_sites
+        else:
+            fpos, fdir, fw = ar_pos, ar_nrm, ar_flw
+        return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots, fpos, fdir, fw)
 
     # ------------------------------------------------------------------
     def _arm_collides(self, ax1: StemAxis, r1: float, ax2: StemAxis, r2: float, start1: float = 0.10) -> bool:
@@ -793,13 +797,46 @@ class CactusEngine:
                         mesh, ar, rim = self._pad(pos, child_up, twist, child_L, rng, detail, parent_n=p_n)
                         pad_entry = {'idx': len(placed_pads), 'parent': parent['idx'], 'level': level + 1,
                                      'geom': cand_geom, 'scale': child_scale}
+                        parent.setdefault('child_phis', []).append(phi)
                         placed_pads.append(pad_entry)
                         parts.append((mesh, ar))
                         queue.append(pad_entry)
                         accepted = True
                         break
 
+        self._margin_sites = self._pad_flower_sites(placed_pads)
         return parts
+
+    def _pad_flower_sites(self, pads):
+        """
+        Opuntia flowers arise from areoles on the distal margin of the cladodes, in the plane of the pad,
+        mostly on terminal (youngest) pads. Sites near a daughter-pad insertion are skipped and each
+        flower's volume (pericarpel + perianth, ~8 cm) is tested against every cladode.
+        """
+        P, D, Wt = [], [], []
+        for pad in pads:
+            centre, e1, e2, n, L, W, Th, base = pad['geom']
+            used = pad.get('child_phis', [])
+            for phi in np.linspace(0.24 * math.pi, 0.76 * math.pi, 7):     # Upper (distal) margin only
+                if any(abs(phi - c) < 0.22 for c in used):
+                    continue
+                ob = 1.0 + 0.12 * math.sin(phi)
+                q = centre + 0.5 * W * ob * math.cos(phi) * e1 + 0.5 * L * ob * math.sin(phi) * e2
+                out = _normalize(math.cos(phi) / (0.5 * W) * e1 + math.sin(phi) / (0.5 * L) * e2)
+                axis = _normalize(out * 0.75 + UP * 0.45)
+                side = _normalize(np.cross(axis, n))
+                t = np.array([0.012, 0.03, 0.05, 0.07])[:, None]
+                probe = np.vstack([q + axis * t] + [q + axis * 0.06 + s * 0.025 * v
+                                                    for s in (-1, 1) for v in (side, n)])
+                if any(np.any(self._pad_inside(probe, other['geom'], inflate=1.02)) for other in pads):
+                    continue
+                P.append(q - out * 0.003)          # Seated in the margin areole
+                D.append(axis)
+                Wt.append(1.0 if not used else 0.1)       # Mostly last year's (terminal) pads
+        if not P:
+            z = np.zeros((0, 3))
+            return z, z, np.zeros(0)
+        return np.array(P), np.array(D), np.array(Wt)
 
     def _pad(self, base, up, roll, L, rng, detail, parent_n=None):
         p = self.p

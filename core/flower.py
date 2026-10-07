@@ -345,7 +345,7 @@ class FlowerEngine:
         if p.hypanthium_cm > 0 and not p.capitulum:
             hl = p.hypanthium_cm * 0.01
             t = np.linspace(0.0, 1.0, 6)
-            r = np.maximum(r_rec * (0.35 + 0.65 * np.sin(t * math.pi * 0.5)), 1e-4)
+            r = np.maximum(r_rec * (0.55 + 0.45 * np.sin(t * math.pi * 0.5)), 1e-4)   # Obovoid ovary / pericarpel
             r = np.maximum(r, r_rec * 0.8 if p.tube_length_cm <= 0 else r)
             pts = np.stack([np.zeros(6), np.zeros(6), -hl + hl * t], 1)
             tube_mesh(b, pts, r, sides, SEPAL, 0.0, 0.0, cap=False)

@@ -230,7 +230,9 @@ class InflorescenceEngine:
             cr, sr = math.cos(roll), math.sin(roll)
             Rz = np.array([[cr, -sr, 0], [sr, cr, 0], [0, 0, 1.0]])
             sc = flower_scale * rng.uniform(0.92, 1.08)
-            V = (m.vertices.astype(np.float64) @ (R @ Rz).T) * sc + pos
+            # The pedicel (or the areole) carries the base of the inferior ovary / hypanthium
+            lift = np.array([0.0, 0.0, self.f.hypanthium_cm * 0.01 if not self.f.capitulum else 0.25 * self.f.disc_radius_cm * 0.01])
+            V = ((m.vertices.astype(np.float64) + lift) @ (R @ Rz).T) * sc + pos
             parts.append(MeshData(V.astype(np.float32), m.loop_vertex, m.loop_start, m.loop_total, m.loop_uv,
                                   dict(m.point_attributes)))
         mesh = MeshData.concatenate(parts)
@@ -306,9 +308,10 @@ def tree_flower_sites(graph, infl: InflorescenceProfile, count: int, seed: int =
     return FlowerSites(P, D, rng.uniform(0.85, 1.15, len(P)))
 
 
-def surface_flower_sites(pos, normal, weight, count: int, seed: int = 0, lean: float = 0.6) -> FlowerSites:
+def surface_flower_sites(pos, normal, weight, count: int, seed: int = 0, lean: float = 0.6,
+                         min_dist: float = 0.0) -> FlowerSites:
     """Sites on a stem surface (cactus areoles): sampled by weight (e.g. near the apex), facing
-    outward-and-up."""
+    outward-and-up, at least `min_dist` apart (flowers must not overlap)."""
     rng = np.random.default_rng(seed + 541)
     w = np.asarray(weight, float)
     ok = np.flatnonzero(w > 1e-3)
@@ -317,6 +320,18 @@ def surface_flower_sites(pos, normal, weight, count: int, seed: int = 0, lean: f
         return FlowerSites(z, z, np.zeros(0))
     pr = w[ok] / w[ok].sum()
     k = min(count, len(ok))
-    idx = ok[rng.choice(len(ok), k, replace=False, p=pr)]
+    if min_dist > 0:
+        order = ok[rng.choice(len(ok), len(ok), replace=False, p=pr)]
+        chosen = []
+        P = np.asarray(pos)
+        for i in order:
+            if all(np.linalg.norm(P[i] - P[j]) >= min_dist for j in chosen):
+                chosen.append(i)
+                if len(chosen) >= k:
+                    break
+        idx = np.array(chosen, dtype=int)
+        k = len(idx)
+    else:
+        idx = ok[rng.choice(len(ok), k, replace=False, p=pr)]
     D = _normalize(np.asarray(normal)[idx] * (1 - lean) + UP * lean)
     return FlowerSites(np.asarray(pos)[idx], D, rng.uniform(0.85, 1.1, k))

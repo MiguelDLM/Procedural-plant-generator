@@ -367,7 +367,7 @@ FLOWER_CATALOG = {
         inf(I.SOLITARY, peduncle_cm=0.0, stem_radius_mm=1.0),
         arrangement=SP, spiral_tepals=18, petal_length_cm=3.0, petal_aspect=1.0, widest_position=0.75,
         apex_angle_deg=170, apex_curvature=0.9, truncation=0.4, opening_deg=30, inner_opening_deg=60,
-        inner_scale=0.9, reflex_deg=-5, cup=0.7, sepal_length_ratio=0.0, hypanthium_cm=4.0, hypanthium_scales=16,
+        inner_scale=0.9, reflex_deg=-5, cup=0.7, sepal_length_ratio=0.0, hypanthium_cm=3.2, hypanthium_scales=14,
         receptacle_radius_cm=1.2, stamen_count=250, stamen_length_ratio=0.4, stamen_spread_deg=30,
         anther_size_mm=1.0, carpels=8, style_length_ratio=0.55, stigma_size_mm=3.0,
         petal_color=(0.98, 0.80, 0.10), tip_color=(0.98, 0.82, 0.12), outer_color=(0.85, 0.50, 0.15),

@@ -662,6 +662,29 @@ class TestFlowers(unittest.TestCase):
             self.assertTrue(np.isfinite(r.mesh.vertices).all(), key)
             self.assertGreater(len(r.mesh.vertices), 50, key)
 
+    def test_opuntia_flowers_on_free_margins(self):
+        """Opuntia flowers sit on the pad margins, in the pad plane, and their volume clears every cladode."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        from core.inflorescence import surface_flower_sites
+        eng = CactusEngine(CACTUS_CATALOG["opuntia_ficus_indica"].profile)
+        geoms = []
+        orig = eng._pad
+
+        def spy(base, up, roll, L, rng, detail, parent_n=None):
+            geoms.append(eng._pad_frame(base, up, roll, L, parent_n))
+            return orig(base, up, roll, L, rng, detail, parent_n)
+        eng._pad = spy
+        r = eng.generate(seed=3, detail=0.4, spine_budget=100)
+        s = surface_flower_sites(r.flower_pos, r.flower_normal, r.flower_weight, 20, seed=1, lean=0.0, min_dist=0.07)
+        self.assertGreater(len(s), 3)
+        for q, d in zip(s.positions, s.directions):
+            probe = q + d * np.linspace(0.015, 0.08, 6)[:, None]       # Pericarpel and perianth along the axis
+            for g in geoms:
+                self.assertFalse(np.any(eng._pad_inside(probe, g, inflate=1.0)))
+        D = np.linalg.norm(s.positions[:, None] - s.positions[None], axis=-1) + np.eye(len(s)) * 9
+        self.assertGreaterEqual(float(D.min()), 0.07)
+
     def test_flower_sites_on_plants(self):
         from core.succulent_db import CACTUS_CATALOG, ROSETTE_CATALOG
         from core.cactus import CactusEngine

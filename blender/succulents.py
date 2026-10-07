@@ -459,7 +459,7 @@ def _root_material(name):
     return mat
 
 
-def _succulent_flowers(context, root, props, form, res):
+def _succulent_flowers(context, root, props, form, res, profile):
     from .flowers import update_flowers_on_plant, hide_flowers, flower_from_props, flower_site_count
     from ..core.inflorescence import surface_flower_sites, FlowerSites, FlowerSiteMode
     for c in root.children:
@@ -472,8 +472,13 @@ def _succulent_flowers(context, root, props, form, res):
     if form == GrowthForm.CACTUS:
         w = res.flower_weight
         n = flower_site_count(props, int(np.count_nonzero(w > 0.05)) // 12 + 1)
+        clad = getattr(getattr(profile, "habit", None), "value", "") == "Cladode"
+        if clad:     # Margin sites already carry their direction (in the pad plane)
+            n = flower_site_count(props, len(w))
+        f, _ = flower_from_props(props)
+        span = 0.01 * (f.petal_length_cm * 1.6 + f.receptacle_radius_cm) * props.flower_scale
         sites = surface_flower_sites(res.flower_pos, res.flower_normal, w, n, seed=props.seed,
-                                     lean=0.3 + 0.5 * ip.orientation)
+                                     lean=0.0 if clad else 0.3 + 0.5 * ip.orientation, min_dist=span)
     else:
         pos, dirs = res.terminal_sites if ip.site_mode == FlowerSiteMode.TERMINAL else res.axillary_sites
         rng = np.random.default_rng(props.seed + 3)
@@ -533,7 +538,7 @@ def update_succulent_geometry(context, props, find_root):
             _child(context, root, suffix, None, None)
         root["leaf_count"] = res.leaf_count
     _child(context, root, "_SuccRoots", res.roots if props.show_roots else None, _root_material(root.name))
-    _succulent_flowers(context, root, props, form, res)
+    _succulent_flowers(context, root, props, form, res, profile)
     root["scientific_name"] = preset.scientific_name
     root["common_name"] = preset.common_name
     root["family"] = preset.family
