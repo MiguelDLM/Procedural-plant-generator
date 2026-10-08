@@ -38,6 +38,8 @@ try:
         sync_fruits_to_plant
     from ..core.vegetable_db import VEGETABLE_CATALOG
     from . import vegetables as VG
+    from ..core.grass_db import GRASS_CATALOG
+    from . import grasses as GR
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -65,6 +67,8 @@ except (ImportError, ValueError):
         sync_fruits_to_plant
     from core.vegetable_db import VEGETABLE_CATALOG
     import blender.vegetables as VG
+    from core.grass_db import GRASS_CATALOG
+    import blender.grasses as GR
 
 
 # -----------------------------------------------------------------------------
@@ -162,6 +166,8 @@ def on_form_change(self, context):
         on_fruit_species(self, context)
     elif self.growth_form == 'Vegetable':
         on_vegetable_species(self, context)
+    elif self.growth_form == 'Grass':
+        on_grass_species(self, context)
     else:
         _sync_flowers(self)
         apply_succulent_preset(self, context)
@@ -173,6 +179,18 @@ def on_flower_species(self, context):
     set_updating(True)
     try:
         write_flower_to_props(self, self.flower_species)
+    finally:
+        set_updating(False)
+    if getattr(self, "auto_update", True):
+        schedule_update()
+
+
+def on_grass_species(self, context):
+    if is_updating():
+        return
+    set_updating(True)
+    try:
+        GR.write_grass_to_props(self, self.grass_species)
     finally:
         set_updating(False)
     if getattr(self, "auto_update", True):
@@ -481,7 +499,11 @@ if BLENDER_AVAILABLE:
             ('Fruit', "Fruit / Bunch", "A single fruit or bunch (apple, pear, pomegranate, grapes...) on its own",
              'SHADING_SOLID', 5),
             ('Vegetable', "Vegetable (root / tuber / head)", "Root crops (carrot, radish, beet), potato tubers and "
-             "brassica heads (cauliflower, broccoli, Romanesco)", 'OUTLINER_OB_POINTCLOUD', 6)]),
+             "brassica heads (cauliflower, broccoli, Romanesco)", 'OUTLINER_OB_POINTCLOUD', 6),
+            ('Grass', "Grass / Cereal", "Grasses: maize, wheat, barley, oats, rice, sorghum, sugarcane, lawn and "
+             "ornamental grasses; single clump or lawn / meadow patch", 'STRANDS', 7)]),
+        "grass_species": EnumProperty(name="Grass", items=enum_items("Grass"), default=item_number("zea_mays"),
+                                      update=on_grass_species),
         "vegetable_species": EnumProperty(name="Vegetable", items=enum_items("Vegetable"),
                                           default=item_number("daucus_carota"), update=on_vegetable_species),
         "veg_lift": FloatProperty(name="Lift (show underground)", default=0.0, min=0.0, max=1.5, update=U,
@@ -533,6 +555,7 @@ if BLENDER_AVAILABLE:
     PPG_Properties.__annotations__.update(vine_properties(U))
     PPG_Properties.__annotations__.update(fruit_properties(U))
     PPG_Properties.__annotations__.update(VG.vegetable_properties(U))
+    PPG_Properties.__annotations__.update(GR.grass_properties(U))
     PPG_Properties.__annotations__.update(forest_properties())
 else:
     PPG_Properties = None
@@ -597,6 +620,13 @@ class PPG_PT_MainPanel(Panel):
             box.prop(props, "species_enum", text="")
             spec = get_species_preset(props.species_enum)
             family, habit, biome = spec.family, spec.growth_habit, spec.biome
+        elif props.growth_form == 'Grass':
+            box.prop(props, "grass_species", text="")
+            spec = GRASS_CATALOG.get(props.grass_species)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
+            family, habit, biome = spec.family, props.gra_head, spec.common_name
         elif props.growth_form == 'Vegetable':
             box.prop(props, "vegetable_species", text="")
             spec = VEGETABLE_CATALOG.get(props.vegetable_species)
@@ -816,7 +846,7 @@ class PPG_PT_Topology(_PPGSub, Panel):
     bl_label = "Topology & Shading"
     bl_idname = "PPG_PT_topology"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Vine', 'Vegetable')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Vine', 'Vegetable', 'Grass')
 
     def draw(self, context):
         p = context.scene.ppg_properties
@@ -881,7 +911,7 @@ class PPG_PT_Presets(_PPGSub, Panel):
     bl_label = "Presets (Import / Export)"
     bl_idname = "PPG_PT_presets"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit', 'Vegetable')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit', 'Vegetable', 'Grass')
 
     def draw(self, context):
         draw_presets(self.layout, context.scene.ppg_properties)
@@ -1085,6 +1115,43 @@ def _veg_panel(index, title, prefix, names):
         "forms": ('Vegetable',), "draw": draw, "poll": poll})
 
 
+class PPG_PT_GrassPatch(_PPGSub, Panel):
+    bl_label = "Lawn / Meadow"
+    bl_idname = "PPG_PT_grass_patch"
+    forms = ('Grass',)
+
+    def draw_header(self, context):
+        self.layout.prop(context.scene.ppg_properties, "grass_patch", text="")
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.active = p.grass_patch
+        for name in ("grass_patch_size", "grass_patch_density", "grass_patch_spacing", "grass_patch_variants",
+                     "grass_patch_scale_var"):
+            col.prop(p, name)
+
+
+def _grass_panel(index, title, names):
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        draw_fields(col, p, "Grass", "profile", [(GR.GRA + n, n) for n in names], GR.grass_values(p))
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        if p is None or p.growth_form != 'Grass':
+            return False
+        values = GR.grass_values(p)
+        return any(applies("Grass", "profile", n, values) for n in names)
+    return type(f"PPG_PT_Grass_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_grass_{index}", "bl_options": {'DEFAULT_CLOSED'} if index else set(),
+        "forms": ('Grass',), "draw": draw, "poll": poll})
+
+
+GRASS_PANELS = (PPG_PT_GrassPatch,) + tuple(_grass_panel(i, t, n) for i, (t, n) in enumerate(GR.LAYOUT))
+
 VEG_PANELS = tuple(_veg_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(VG.LAYOUT))
 
 VINE_PANELS = (PPG_PT_VineGuide,) + tuple(_vine_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(VINE_LAYOUT))
@@ -1093,5 +1160,5 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
                          for i, (t, n) in enumerate(LAYOUT[f]))
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
-                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + VEG_PANELS + \
+                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + VEG_PANELS + GRASS_PANELS + \
                 (PPG_PT_Flowers,) + FLOWER_PANELS + FRUIT_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)

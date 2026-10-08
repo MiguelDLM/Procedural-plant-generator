@@ -11,7 +11,7 @@ the JSON Schema / field reference ("x-applies-when"), and a perturbation test th
 non-applicable field and checks that the generated geometry stays identical.
 
 Sections: Tree -> architecture, roots, bark, leaf_morphology; Cactus / Rosette -> profile;
-Flower -> flower, infl; Vine and Vegetable -> profile, leaf; Fruit -> fruit. Enum fields compare by value (e.g. habit == 'Cladode').
+Flower -> flower, infl; Vine and Vegetable -> profile, leaf; Fruit -> fruit; Grass -> profile. Enum fields compare by value (e.g. habit == 'Cladode').
 """
 
 from __future__ import annotations
@@ -186,6 +186,22 @@ RULES["Vegetable"] = {
         "rootlet_ranks": ("organ == 'Taproot' and rootlets > 0", "Only with rootlets"),
     },
     "leaf": dict(RULES["Tree"]["leaf_morphology"]),
+}
+
+_EAR = ("head == 'Maize' and ears > 0", "Only for maize ears")
+RULES["Grass"] = {
+    "profile": {
+        **{f: ("head != 'None'", "Only when the grass flowers") for f in (
+            "head_length_cm", "peduncle_cm", "spikelets", "spikelet_mm", "nod", "head_color")},
+        "head_width_cm": ("head in ('Panicle', 'Plume')", "Only for panicles and plumes"),
+        "branches": ("head in ('Panicle', 'Plume', 'One-sided', 'Maize')", "Not for spikes"),
+        "branch_angle_deg": ("head in ('Panicle', 'Plume', 'One-sided', 'Maize')", "Not for spikes"),
+        "awn_cm": ("head in ('Spike', 'Panicle', 'One-sided')", "Only for awned spikelets"),
+        "awn_color": ("head != 'None' and (awn_cm > 0 or head == 'Plume')", "Only with awns or plume hairs"),
+        "ears": ("head == 'Maize'", "Only for maize"),
+        **{f: _EAR for f in ("ear_node", "ear_length_cm", "ear_diameter_cm", "kernel_rows", "husk", "silk_cm",
+                             "kernel_color", "silk_color")},
+    },
 }
 
 def condition(form: str, section: str, field: str):

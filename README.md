@@ -88,6 +88,29 @@ sinensis*, *Pisum sativum*, *Cucumis sativus*, *Cucurbita pepo*, *Citrullus lana
 *Hedera helix* and *Passiflora caerulea*. Alpha-mapped leaf cards overlap densely in vines; the add-on raises
 Cycles' transparent bounces to 32 when needed (dense foliage otherwise renders black).
 
+### Grasses and cereals
+
+The **Grass / Cereal** growth form (`core/grass.py`) builds grasses phytomer by phytomer, after the
+architectural crop models ADEL-Maize / ADEL-Wheat (Fournier & Andrieu 1998), the maize phytomer geometry of
+Wen et al. (2021) and the tillering rules of Evers et al. (2005):
+
+- **Tillers** around the main shoot (only a share of them elongate a culm and flower; the others stay leafy).
+- **Culm**: internodes lengthening up the stem; one leaf per node, alternating at 180°. The **sheath** wraps
+  the culm, the **blade** starts at the ligule; blade length and width follow a bell along the culm (flag
+  leaf shorter). Blades are real ribbons, not cards: insertion angle, bending under their weight toward the
+  tip, V-fold along the pale midrib, twist, wavy margins (maize), fine parallel veins, dry tips.
+- **Inflorescences**: distichous **spikes** with awns (wheat, barley), **panicles** in whorls (oats, rice,
+  sorghum), silky **plumes** (pampas and fountain grass), comb-like **one-sided spikes** (blue grama), and in
+  maize the **tassel** plus **ears** on shanks: cob with staggered kernel rows, husk leaves (closed, or peeled
+  back with *Husk*) and silks.
+- **Roots**: fibrous crown roots and maize brace (prop) roots. **Ripeness** turns the plant straw-gold and
+  makes heavy heads nod.
+- **Lawn / Meadow**: several tuft variants scattered over a patch (tufts per m², minimum spacing, size
+  variation) with Geometry Nodes instancing.
+
+Presets: maize, bread wheat, barley, oats, rice, sorghum, sugarcane, perennial ryegrass (lawn), blue grama
+(navajita), fountain grass, pampas grass.
+
 ### Vegetables: root crops, tubers and heads
 
 The **Vegetable** growth form (`core/vegetable.py`) covers the harvested organs that are not fruits:
@@ -272,6 +295,9 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Cannon, W. A. (1911). *The Root Habits of Desert Plants.* Carnegie Institution of Washington, Publ. 131.
 - Snyman, H. A. (2005). A case study on in situ rooting profiles and water-use efficiency of cactus pears, *Opuntia ficus-indica* and *O. robusta*. *Journal of the Professional Association for Cactus Development* 7: 1–21.
 - Franco, A. C. & Nobel, P. S. (1990). Influences of root distribution and growth on predicted water uptake and interspecific competition. *Oecologia* 82: 151–157. doi:10.1007/BF00323528
+- Fournier, C. & Andrieu, B. (1998). A 3D architectural and process-based model of maize development. *Annals of Botany* 81: 233–250. doi:10.1006/anbo.1997.0549
+- Wen, W. et al. (2021). 3D phytomer-based geometric modelling method for plants — the case of maize. *AoB Plants* 13: plab055. doi:10.1093/aobpla/plab055
+- Evers, J. B. et al. (2005). Towards a generic architectural model of tillering in Gramineae, as exemplified by spring wheat. *New Phytologist* 166: 801–812. doi:10.1111/j.1469-8137.2005.01337.x
 - Azpeitia, E. et al. (2021). Cauliflower fractal forms arise from perturbations of floral gene networks. *Science* 373: 192–197. doi:10.1126/science.abg5999
 - Kieffer, M., Fuller, M. P. & Jellings, A. J. (1998). Explaining curd and spear geometry in broccoli, cauliflower and 'romanesco': quantitative variation in activity of primary meristems. *Planta* 206: 34–43.
 - Brewer, M. T. et al. (2006). Development of a controlled vocabulary and software application to analyze fruit shape variation in tomato and other plant species. *Plant Physiology* 141: 15–25. doi:10.1104/pp.106.077867

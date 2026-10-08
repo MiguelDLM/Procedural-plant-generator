@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
   "title": "Procedural Plant Generator preset",
-  "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable) or fruit described by measurable traits. See docs/PRESETS.md.",
+  "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable, grass) or fruit described by measurable traits. See docs/PRESETS.md.",
   "type": "object",
   "required": [
     "format",
@@ -31,7 +31,8 @@
         "Flower",
         "Vine",
         "Fruit",
-        "Vegetable"
+        "Vegetable",
+        "Grass"
       ]
     },
     "id": {
@@ -196,6 +197,22 @@
         "properties": {
           "preset": {
             "$ref": "#/$defs/VegetablePreset"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "growth_form": {
+            "const": "Grass"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preset": {
+            "$ref": "#/$defs/GrassPreset"
           }
         }
       }
@@ -4684,6 +4701,493 @@
         }
       },
       "description": "Trait values of a Vegetable preset (all optional when 'base' is given)."
+    },
+    "GrassProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tillers": {
+          "type": "integer",
+          "description": "Shoots of the clump: the main shoot plus its tillers (maize 1, wheat 3-6, rice 8-15, lawn tufts 20-40).",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 1
+        },
+        "tiller_spread_deg": {
+          "type": "number",
+          "description": "Lean of the outermost tillers",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 80.0,
+          "default": 15.0
+        },
+        "tiller_variation": {
+          "type": "number",
+          "description": "Tillers are shorter than the main shoot by up to this fraction",
+          "minimum": 0.0,
+          "maximum": 0.9,
+          "default": 0.2
+        },
+        "flowering_tillers": {
+          "type": "number",
+          "description": "Share of tillers that elongate a culm and flower (others stay leafy)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 1.0
+        },
+        "clump_radius_cm": {
+          "type": "number",
+          "description": "Radius of the base of the clump, cm.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "default": 2.0
+        },
+        "culm_height_m": {
+          "type": "number",
+          "description": "Base to the top of the culm (inflorescence excluded)",
+          "x-unit": "m",
+          "minimum": 0.0,
+          "maximum": 6.0,
+          "default": 1.0
+        },
+        "culm_radius_mm": {
+          "type": "number",
+          "description": "Culm (stem) radius at the base, mm.",
+          "x-unit": "mm",
+          "minimum": 0.3,
+          "maximum": 40.0,
+          "default": 2.0
+        },
+        "nodes": {
+          "type": "integer",
+          "description": "Elongated internodes / leaves on the culm",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 6
+        },
+        "internode_gradient": {
+          "type": "number",
+          "description": ">1: lower internodes short, upper long",
+          "minimum": 0.2,
+          "maximum": 4.0,
+          "default": 1.5
+        },
+        "basal_leaves": {
+          "type": "integer",
+          "description": "Extra leaves crowded at the base (tufts, rosettes)",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 0
+        },
+        "culm_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Culm and sheath colour (sRGB 0..1).",
+          "default": [
+            0.45,
+            0.55,
+            0.25
+          ]
+        },
+        "leaf_length_cm": {
+          "type": "number",
+          "description": "Length of the longest blade (from the ligule), cm.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 250.0,
+          "default": 30.0
+        },
+        "leaf_width_cm": {
+          "type": "number",
+          "description": "Width of the widest blade, cm.",
+          "x-unit": "cm",
+          "minimum": 0.05,
+          "maximum": 15.0,
+          "default": 1.2
+        },
+        "leaf_peak": {
+          "type": "number",
+          "description": "Position along the culm of the longest leaf (0 base .. 1 flag leaf)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6
+        },
+        "leaf_angle_deg": {
+          "type": "number",
+          "description": "Insertion angle between blade and culm",
+          "x-unit": "deg",
+          "minimum": 2.0,
+          "maximum": 85.0,
+          "default": 30.0
+        },
+        "leaf_droop": {
+          "type": "number",
+          "description": "Bending of the blade under its weight (0 stiff .. 1 hanging)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5
+        },
+        "leaf_twist_deg": {
+          "type": "number",
+          "description": "Twist along the blade",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 400.0,
+          "default": 60.0
+        },
+        "leaf_fold": {
+          "type": "number",
+          "description": "V-fold along the midrib",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "margin_wave": {
+          "type": "number",
+          "description": "Wavy margins (maize)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "sheath_fraction": {
+          "type": "number",
+          "description": "Share of the internode wrapped by the sheath",
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "default": 0.7
+        },
+        "leaf_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Blade colour (sRGB 0..1).",
+          "default": [
+            0.2,
+            0.42,
+            0.12
+          ]
+        },
+        "midrib_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the midrib (pale in maize and sorghum).",
+          "default": [
+            0.55,
+            0.65,
+            0.4
+          ]
+        },
+        "tip_dryness": {
+          "type": "number",
+          "description": "Dry, straw-coloured tips",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.15
+        },
+        "head": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Spike",
+            "Panicle",
+            "Plume",
+            "One-sided",
+            "Maize"
+          ],
+          "description": "Inflorescence: 'Spike' (wheat, barley), 'Panicle' (oats, rice, sorghum), 'Plume' (pampas and fountain grass), 'One-sided' (Bouteloua), 'Maize' (tassel and ears) or 'None' (leafy tufts, lawn).",
+          "default": "Spike"
+        },
+        "head_length_cm": {
+          "type": "number",
+          "description": "Length of the spike, panicle, plume, one-sided spikes or tassel, cm. Applies when: head != 'None'.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 80.0,
+          "default": 9.0,
+          "x-applies-when": "head != 'None'"
+        },
+        "head_width_cm": {
+          "type": "number",
+          "description": "Width of a panicle or plume, cm. Applies when: head in ('Panicle', 'Plume').",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 40.0,
+          "default": 1.5,
+          "x-applies-when": "head in ('Panicle', 'Plume')"
+        },
+        "peduncle_cm": {
+          "type": "number",
+          "description": "Bare culm above the flag leaf Applies when: head != 'None'.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 80.0,
+          "default": 8.0,
+          "x-applies-when": "head != 'None'"
+        },
+        "spikelets": {
+          "type": "integer",
+          "description": "Spikelets per head (spikes, panicles) or hairs of a plume. Applies when: head != 'None'.",
+          "minimum": 1,
+          "maximum": 800,
+          "default": 20,
+          "x-applies-when": "head != 'None'"
+        },
+        "spikelet_mm": {
+          "type": "number",
+          "description": "Spikelet length, mm. Applies when: head != 'None'.",
+          "x-unit": "mm",
+          "minimum": 1.0,
+          "maximum": 40.0,
+          "default": 10.0,
+          "x-applies-when": "head != 'None'"
+        },
+        "awn_cm": {
+          "type": "number",
+          "description": "Awn length (barley ~12, durum ~8, bread wheat 0-5) Applies when: head in ('Spike', 'Panicle', 'One-sided').",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 25.0,
+          "default": 0.0,
+          "x-applies-when": "head in ('Spike', 'Panicle', 'One-sided')"
+        },
+        "branches": {
+          "type": "integer",
+          "description": "Panicle whorls / one-sided spikes / tassel branches Applies when: head in ('Panicle', 'Plume', 'One-sided', 'Maize').",
+          "minimum": 0,
+          "maximum": 60,
+          "default": 6,
+          "x-applies-when": "head in ('Panicle', 'Plume', 'One-sided', 'Maize')"
+        },
+        "branch_angle_deg": {
+          "type": "number",
+          "x-unit": "deg",
+          "minimum": 5.0,
+          "maximum": 85.0,
+          "default": 40.0,
+          "x-applies-when": "head in ('Panicle', 'Plume', 'One-sided', 'Maize')",
+          "description": "Applies when: head in ('Panicle', 'Plume', 'One-sided', 'Maize')."
+        },
+        "nod": {
+          "type": "number",
+          "description": "Head nodding (oats, rice, ripe barley) Applies when: head != 'None'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.1,
+          "x-applies-when": "head != 'None'"
+        },
+        "head_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the spikelets (sRGB 0..1). Applies when: head != 'None'.",
+          "default": [
+            0.45,
+            0.58,
+            0.25
+          ],
+          "x-applies-when": "head != 'None'"
+        },
+        "awn_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the awns and plume hairs. Applies when: head != 'None' and (awn_cm > 0 or head == 'Plume').",
+          "default": [
+            0.7,
+            0.68,
+            0.45
+          ],
+          "x-applies-when": "head != 'None' and (awn_cm > 0 or head == 'Plume')"
+        },
+        "ears": {
+          "type": "integer",
+          "description": "Maize ears per plant (the upper one largest). Applies when: head == 'Maize'.",
+          "minimum": 0,
+          "maximum": 3,
+          "default": 1,
+          "x-applies-when": "head == 'Maize'"
+        },
+        "ear_node": {
+          "type": "number",
+          "description": "Position of the (upper) ear along the culm Applies when: head == 'Maize' and ears > 0.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.55,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "ear_length_cm": {
+          "type": "number",
+          "description": "Maize ear (cob) length, cm. Applies when: head == 'Maize' and ears > 0.",
+          "x-unit": "cm",
+          "minimum": 3.0,
+          "maximum": 40.0,
+          "default": 18.0,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "ear_diameter_cm": {
+          "type": "number",
+          "description": "Maize ear diameter, cm. Applies when: head == 'Maize' and ears > 0.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 10.0,
+          "default": 4.5,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "kernel_rows": {
+          "type": "integer",
+          "description": "Rows of kernels around the cob (even, 8-24). Applies when: head == 'Maize' and ears > 0.",
+          "minimum": 4,
+          "maximum": 30,
+          "default": 16,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "husk": {
+          "type": "number",
+          "description": "0 closed in husk leaves .. 1 husk peeled back Applies when: head == 'Maize' and ears > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "silk_cm": {
+          "type": "number",
+          "description": "Length of the silks out of the ear tip, cm. Applies when: head == 'Maize' and ears > 0.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 30.0,
+          "default": 10.0,
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "kernel_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Kernel colour (sRGB 0..1). Applies when: head == 'Maize' and ears > 0.",
+          "default": [
+            0.95,
+            0.75,
+            0.15
+          ],
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "silk_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Silk colour. Applies when: head == 'Maize' and ears > 0.",
+          "default": [
+            0.75,
+            0.55,
+            0.3
+          ],
+          "x-applies-when": "head == 'Maize' and ears > 0"
+        },
+        "crown_roots": {
+          "type": "integer",
+          "description": "Number of crown (nodal) roots.",
+          "minimum": 0,
+          "maximum": 60,
+          "default": 12
+        },
+        "root_length_cm": {
+          "type": "number",
+          "description": "Crown root length shown, cm.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 200.0,
+          "default": 25.0
+        },
+        "brace_roots": {
+          "type": "integer",
+          "description": "Prop roots from the lowest nodes (maize)",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 0
+        },
+        "ripeness": {
+          "type": "number",
+          "description": "0 green .. 1 golden, ripe",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        }
+      },
+      "description": "Habit of a grass. Lengths in cm unless noted (culm height in m)."
+    },
+    "GrassPreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scientific_name": {
+          "type": "string",
+          "description": "Binomial name, e.g. 'Zea mays'.",
+          "default": ""
+        },
+        "common_name": {
+          "type": "string",
+          "description": "Vernacular name(s).",
+          "default": ""
+        },
+        "family": {
+          "type": "string",
+          "description": "Botanical family ('Poaceae').",
+          "default": ""
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free text: distinctive features, sources of the values.",
+          "default": ""
+        },
+        "profile": {
+          "$ref": "#/$defs/GrassProfile"
+        }
+      },
+      "description": "Trait values of a Grass preset (all optional when 'base' is given)."
     }
   }
 }

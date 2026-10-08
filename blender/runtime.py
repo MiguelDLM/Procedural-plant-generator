@@ -433,6 +433,15 @@ def update_tree_geometry(context):
             traceback.print_exc()
             print(f"[PPG Error] Failed to update flower geometry: {e}")
         return
+    if getattr(props, "growth_form", 'Tree') == 'Grass':
+        try:
+            from .grasses import update_grass_geometry
+            update_grass_geometry(context, props, find)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PPG Error] Failed to update grass geometry: {e}")
+        return
     if getattr(props, "growth_form", 'Tree') == 'Vegetable':
         try:
             from .vegetables import update_vegetable_geometry
@@ -511,8 +520,10 @@ def update_tree_geometry(context):
         from .vines import hide_vine_parts
         from .fruits import update_fruits_on_plant, tree_fruit_positions, hide_fruits
         from .vegetables import hide_vegetable_parts
+        from .grasses import hide_grass_parts
         hide_vine_parts(built["root"])
         hide_vegetable_parts(built["root"])
+        hide_grass_parts(built["root"])
         if props.show_fruits:
             update_fruits_on_plant(context, built["root"], props, tree_fruit_positions(result, props))
         else:

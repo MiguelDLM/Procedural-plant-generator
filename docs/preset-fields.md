@@ -109,6 +109,18 @@ Trait values of a Vegetable preset (all optional when 'base' is given).
 | `leaf` | object | | | | see [LeafMorphologyProfile](#leafmorphologyprofile) |
 | `venation` | object | | | | see [VenationProfile](#venationprofile) |
 
+## GrassPreset
+
+Trait values of a Grass preset (all optional when 'base' is given).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `scientific_name` | string |  |  |  | Binomial name, e.g. 'Zea mays'. |
+| `common_name` | string |  |  |  | Vernacular name(s). |
+| `family` | string |  |  |  | Botanical family ('Poaceae'). |
+| `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
+| `profile` | object | | | | see [GrassProfile](#grassprofile) |
+
 ## AllometricProfile
 
 Empirical scaling parameters for a plant or tree taxon.
@@ -664,4 +676,59 @@ Habit and storage organ of a vegetable. Sizes in cm unless noted.
 | `bud_size_mm` | number | mm | 0.5 – 6.0 | 2.0 | Broccoli buds Applies when: organ == 'Head' and head_type == 'Buds'. |
 | `head_color` | colour (sRGB 0..1) |  |  | [0.95, 0.92, 0.8] | Colour of the curd, buds or cones (sRGB 0..1). Applies when: organ == 'Head'. |
 | `branch_color` | colour (sRGB 0..1) |  |  | [0.8, 0.85, 0.6] | Colour of the head branches and of its base (sRGB 0..1). Applies when: organ == 'Head'. |
+
+## GrassProfile
+
+Habit of a grass. Lengths in cm unless noted (culm height in m).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `tillers` | integer |  | 1 – 200 | 1 | Shoots of the clump: the main shoot plus its tillers (maize 1, wheat 3-6, rice 8-15, lawn tufts 20-40). |
+| `tiller_spread_deg` | number | deg | 0.0 – 80.0 | 15.0 | Lean of the outermost tillers |
+| `tiller_variation` | number |  | 0.0 – 0.9 | 0.2 | Tillers are shorter than the main shoot by up to this fraction |
+| `flowering_tillers` | number |  | 0.0 – 1.0 | 1.0 | Share of tillers that elongate a culm and flower (others stay leafy) |
+| `clump_radius_cm` | number | cm | 0.0 – 100.0 | 2.0 | Radius of the base of the clump, cm. |
+| `culm_height_m` | number | m | 0.0 – 6.0 | 1.0 | Base to the top of the culm (inflorescence excluded) |
+| `culm_radius_mm` | number | mm | 0.3 – 40.0 | 2.0 | Culm (stem) radius at the base, mm. |
+| `nodes` | integer |  | 1 – 30 | 6 | Elongated internodes / leaves on the culm |
+| `internode_gradient` | number |  | 0.2 – 4.0 | 1.5 | >1: lower internodes short, upper long |
+| `basal_leaves` | integer |  | 0 – 12 | 0 | Extra leaves crowded at the base (tufts, rosettes) |
+| `culm_color` | colour (sRGB 0..1) |  |  | [0.45, 0.55, 0.25] | Culm and sheath colour (sRGB 0..1). |
+| `leaf_length_cm` | number | cm | 1.0 – 250.0 | 30.0 | Length of the longest blade (from the ligule), cm. |
+| `leaf_width_cm` | number | cm | 0.05 – 15.0 | 1.2 | Width of the widest blade, cm. |
+| `leaf_peak` | number |  | 0.0 – 1.0 | 0.6 | Position along the culm of the longest leaf (0 base .. 1 flag leaf) |
+| `leaf_angle_deg` | number | deg | 2.0 – 85.0 | 30.0 | Insertion angle between blade and culm |
+| `leaf_droop` | number |  | 0.0 – 1.0 | 0.5 | Bending of the blade under its weight (0 stiff .. 1 hanging) |
+| `leaf_twist_deg` | number | deg | 0.0 – 400.0 | 60.0 | Twist along the blade |
+| `leaf_fold` | number |  | 0.0 – 1.0 | 0.3 | V-fold along the midrib |
+| `margin_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy margins (maize) |
+| `sheath_fraction` | number |  | 0.1 – 1.0 | 0.7 | Share of the internode wrapped by the sheath |
+| `leaf_color` | colour (sRGB 0..1) |  |  | [0.2, 0.42, 0.12] | Blade colour (sRGB 0..1). |
+| `midrib_color` | colour (sRGB 0..1) |  |  | [0.55, 0.65, 0.4] | Colour of the midrib (pale in maize and sorghum). |
+| `tip_dryness` | number |  | 0.0 – 1.0 | 0.15 | Dry, straw-coloured tips |
+| `head` | enum: `None`, `Spike`, `Panicle`, `Plume`, `One-sided`, `Maize` |  |  | Spike | Inflorescence: 'Spike' (wheat, barley), 'Panicle' (oats, rice, sorghum), 'Plume' (pampas and fountain grass), 'One-sided' (Bouteloua), 'Maize' (tassel and ears) or 'None' (leafy tufts, lawn). |
+| `head_length_cm` | number | cm | 0.5 – 80.0 | 9.0 | Length of the spike, panicle, plume, one-sided spikes or tassel, cm. Applies when: head != 'None'. |
+| `head_width_cm` | number | cm | 0.2 – 40.0 | 1.5 | Width of a panicle or plume, cm. Applies when: head in ('Panicle', 'Plume'). |
+| `peduncle_cm` | number | cm | 0.0 – 80.0 | 8.0 | Bare culm above the flag leaf Applies when: head != 'None'. |
+| `spikelets` | integer |  | 1 – 800 | 20 | Spikelets per head (spikes, panicles) or hairs of a plume. Applies when: head != 'None'. |
+| `spikelet_mm` | number | mm | 1.0 – 40.0 | 10.0 | Spikelet length, mm. Applies when: head != 'None'. |
+| `awn_cm` | number | cm | 0.0 – 25.0 | 0.0 | Awn length (barley ~12, durum ~8, bread wheat 0-5) Applies when: head in ('Spike', 'Panicle', 'One-sided'). |
+| `branches` | integer |  | 0 – 60 | 6 | Panicle whorls / one-sided spikes / tassel branches Applies when: head in ('Panicle', 'Plume', 'One-sided', 'Maize'). |
+| `branch_angle_deg` | number | deg | 5.0 – 85.0 | 40.0 | Applies when: head in ('Panicle', 'Plume', 'One-sided', 'Maize'). |
+| `nod` | number |  | 0.0 – 1.0 | 0.1 | Head nodding (oats, rice, ripe barley) Applies when: head != 'None'. |
+| `head_color` | colour (sRGB 0..1) |  |  | [0.45, 0.58, 0.25] | Colour of the spikelets (sRGB 0..1). Applies when: head != 'None'. |
+| `awn_color` | colour (sRGB 0..1) |  |  | [0.7, 0.68, 0.45] | Colour of the awns and plume hairs. Applies when: head != 'None' and (awn_cm > 0 or head == 'Plume'). |
+| `ears` | integer |  | 0 – 3 | 1 | Maize ears per plant (the upper one largest). Applies when: head == 'Maize'. |
+| `ear_node` | number |  | 0.1 – 0.9 | 0.55 | Position of the (upper) ear along the culm Applies when: head == 'Maize' and ears > 0. |
+| `ear_length_cm` | number | cm | 3.0 – 40.0 | 18.0 | Maize ear (cob) length, cm. Applies when: head == 'Maize' and ears > 0. |
+| `ear_diameter_cm` | number | cm | 1.0 – 10.0 | 4.5 | Maize ear diameter, cm. Applies when: head == 'Maize' and ears > 0. |
+| `kernel_rows` | integer |  | 4 – 30 | 16 | Rows of kernels around the cob (even, 8-24). Applies when: head == 'Maize' and ears > 0. |
+| `husk` | number |  | 0.0 – 1.0 | 0.0 | 0 closed in husk leaves .. 1 husk peeled back Applies when: head == 'Maize' and ears > 0. |
+| `silk_cm` | number | cm | 0.0 – 30.0 | 10.0 | Length of the silks out of the ear tip, cm. Applies when: head == 'Maize' and ears > 0. |
+| `kernel_color` | colour (sRGB 0..1) |  |  | [0.95, 0.75, 0.15] | Kernel colour (sRGB 0..1). Applies when: head == 'Maize' and ears > 0. |
+| `silk_color` | colour (sRGB 0..1) |  |  | [0.75, 0.55, 0.3] | Silk colour. Applies when: head == 'Maize' and ears > 0. |
+| `crown_roots` | integer |  | 0 – 60 | 12 | Number of crown (nodal) roots. |
+| `root_length_cm` | number | cm | 1.0 – 200.0 | 25.0 | Crown root length shown, cm. |
+| `brace_roots` | integer |  | 0 – 30 | 0 | Prop roots from the lowest nodes (maize) |
+| `ripeness` | number |  | 0.0 – 1.0 | 0.0 | 0 green .. 1 golden, ripe |
 

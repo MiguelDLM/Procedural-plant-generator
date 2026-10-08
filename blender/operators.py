@@ -95,6 +95,17 @@ class PPG_OT_ApplySpeciesPreset(Operator):
             schedule_update()
             self.report({'INFO'}, "Loaded flower preset")
             return {'FINISHED'}
+        if props.growth_form == 'Grass':
+            from .grasses import write_grass_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_grass_to_props(props, props.grass_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded grass preset")
+            return {'FINISHED'}
         if props.growth_form == 'Vegetable':
             from .vegetables import write_vegetable_to_props
             from .runtime import schedule_update
@@ -189,6 +200,15 @@ class PPG_OT_ExportTraits(Operator):
                     "family": sp.family, "floral_formula": sp.formula,
                     "flower": {x.name: plain(getattr(f, x.name)) for x in dc_fields(f)},
                     "inflorescence": {x.name: plain(getattr(ip, x.name)) for x in dc_fields(ip)}}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Grass':
+            from ..core import presets as P
+            from .grasses import current_grass_preset
+            data = {"growth_form": "Grass", **P.to_plain(current_grass_preset(props))}
             target = bpy.path.abspath(self.filepath)
             with open(target, "w") as fh:
                 json.dump(data, fh, indent=2)
