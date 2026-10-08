@@ -30,6 +30,7 @@ try:
     from ..core.flower_db import flower_items
     from ..core.vine_db import vine_items
     from ..core.fruit_db import fruit_items
+    from ..core.vegetable_db import vegetable_items
 except (ImportError, ValueError):
     from core import presets as P
     from core.species_db import get_preset_names
@@ -37,6 +38,7 @@ except (ImportError, ValueError):
     from core.flower_db import flower_items
     from core.vine_db import vine_items
     from core.fruit_db import fruit_items
+    from core.vegetable_db import vegetable_items
 
 USER_IDS: dict = {form: set() for form in P.FORMS}     # Presets loaded from the personal library
 _ITEMS: dict = {}                                       # Keeps enum item strings alive (Blender requirement)
@@ -59,6 +61,8 @@ def _base_items(form: str) -> list:
         return vine_items()
     if form == "Fruit":
         return fruit_items()
+    if form == "Vegetable":
+        return vegetable_items()
     return preset_items(GrowthForm(form))
 
 
@@ -116,7 +120,8 @@ def load_library(report=print) -> int:
 
 def _species_prop(form: str) -> str:
     return {"Tree": "species_enum", "Cactus": "cactus_species", "Rosette": "rosette_species",
-            "Flower": "flower_species", "Vine": "vine_species", "Fruit": "fruit_species"}[form]
+            "Flower": "flower_species", "Vine": "vine_species", "Fruit": "fruit_species",
+            "Vegetable": "vegetable_species"}[form]
 
 
 def current_preset(props):
@@ -136,6 +141,12 @@ def current_preset(props):
         obj = copy.deepcopy(CATALOGS[gf][key])
         obj.profile = profile_from_props(props, gf, key)
         return form, key, obj, (props.flower_species if props.show_flowers else None)
+    if form == "Vegetable":
+        from .vegetables import current_vegetable_preset
+        from ..core.vegetable_db import VEGETABLE_CATALOG
+        if props.vegetable_species not in VEGETABLE_CATALOG:
+            raise P.PresetError("No valid vegetable preset selected")
+        return form, props.vegetable_species, current_vegetable_preset(props), None
     if form == "Fruit":
         from .fruits import fruit_from_props
         from ..core.fruit_db import FRUIT_CATALOG

@@ -1096,5 +1096,53 @@ class TestFruits(unittest.TestCase):
         self.assertEqual(P.load_preset(env)[3], [])
 
 
+class TestVegetables(unittest.TestCase):
+    """Root crops, tubers and brassica heads (core.vegetable)."""
+
+    def _gen(self, key, **kw):
+        from core.vegetable import VegetableEngine
+        from core.vegetable_db import VEGETABLE_CATALOG
+        sp = VEGETABLE_CATALOG[key]
+        return sp, VegetableEngine(sp.profile, sp.leaf, sp.venation).generate(seed=2, detail=0.6, **kw)
+
+    def test_every_preset_generates_valid_meshes(self):
+        from core.vegetable_db import VEGETABLE_CATALOG
+        for key in VEGETABLE_CATALOG:
+            sp, r = self._gen(key)
+            self.assertGreater(len(r.foliage), 3, key)
+            for m in (r.root, r.stems, r.head, r.leaves):
+                self.assertTrue(np.isfinite(m.vertices).all(), key)
+                if len(m.loop_vertex):
+                    self.assertLess(int(m.loop_vertex.max()), len(m.vertices), key)
+
+    def test_storage_roots_sit_in_the_soil(self):
+        for key in ("daucus_carota", "beta_vulgaris"):
+            sp, r = self._gen(key)
+            p = sp.profile
+            body = r.root.vertices[r.root.point_attributes["veg_part"] < 0.5]
+            self.assertAlmostEqual(float(body[:, 2].max()), p.exposure * p.root_length_cm * 0.01, delta=0.006)
+            self.assertLess(float(body[:, 2].min()), -0.6 * p.root_length_cm * 0.01 * (1 - p.exposure))
+            self.assertAlmostEqual(float(np.ptp(body[:, 0])), p.root_diameter_cm * 0.01, delta=0.25 * p.root_diameter_cm * 0.01)
+
+    def test_tubers_underground_and_lift(self):
+        sp, r = self._gen("solanum_tuberosum")
+        self.assertLess(float(r.root.vertices[:, 2].max()), 0.0)
+        sp, r2 = self._gen("solanum_tuberosum", lift=0.3)
+        self.assertAlmostEqual(float(r2.root.vertices[:, 2].max() - r.root.vertices[:, 2].max()), 0.3, places=4)
+
+    def test_heads(self):
+        for key in ("brassica_oleracea_botrytis", "brassica_oleracea_italica", "brassica_oleracea_romanesco"):
+            sp, r = self._gen(key)
+            p = sp.profile
+            H = r.head.vertices[r.head.point_attributes["veg_branch"] < 0.5]
+            self.assertAlmostEqual(float(np.ptp(H[:, 0])), p.head_diameter_cm * 0.01, delta=0.35 * p.head_diameter_cm * 0.01)
+            self.assertGreater(float(np.ptp(r.head.point_attributes["veg_h"])), 0.5, key)   # Lobes and crevices
+
+    def test_inactive_vegetable_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for key in ("daucus_carota", "solanum_tuberosum"):
+            self.assertEqual(check("Vegetable", key, report=lambda m: None), [], key)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,7 +11,7 @@ the JSON Schema / field reference ("x-applies-when"), and a perturbation test th
 non-applicable field and checks that the generated geometry stays identical.
 
 Sections: Tree -> architecture, roots, bark, leaf_morphology; Cactus / Rosette -> profile;
-Flower -> flower, infl; Vine -> profile, leaf; Fruit -> fruit. Enum fields compare by value (e.g. habit == 'Cladode').
+Flower -> flower, infl; Vine and Vegetable -> profile, leaf; Fruit -> fruit. Enum fields compare by value (e.g. habit == 'Cladode').
 """
 
 from __future__ import annotations
@@ -167,6 +167,26 @@ RULES["Fruit"] = {
     },
 }
 
+
+_ROOT = ("organ == 'Taproot'", "Only for storage roots")
+_TUBER = ("organ == 'Tubers'", "Only for tubers")
+_HEADR = ("organ == 'Head'", "Only for inflorescence heads")
+RULES["Vegetable"] = {
+    "profile": {
+        **{f: _ROOT for f in ("root_length_cm", "root_diameter_cm", "widest_position", "shoulder", "taper",
+                              "exposure", "tail_cm", "rings", "rootlets", "rootlet_ranks", "root_color",
+                              "shoulder_color", "shoulder_tint", "tip_color", "tip_tint")},
+        **{f: _TUBER for f in ("tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm",
+                               "stolon_length_cm", "eyes", "eye_depth", "tuber_color", "tuber_dots")},
+        **{f: _HEADR for f in ("head_type", "head_diameter_cm", "head_height_ratio", "head_levels", "florets",
+                               "floret_scale", "head_color", "branch_color", "head_wrap")},
+        "bud_size_mm": ("organ == 'Head' and head_type == 'Buds'", "Only for broccoli-type heads"),
+        "stem_radius_mm": ("stem_height_cm > 0", "Only for a visible stem"),
+        "stem_color": ("stem_height_cm > 0", "Only for a visible stem"),
+        "rootlet_ranks": ("organ == 'Taproot' and rootlets > 0", "Only with rootlets"),
+    },
+    "leaf": dict(RULES["Tree"]["leaf_morphology"]),
+}
 
 def condition(form: str, section: str, field: str):
     """(expression, note) of a field, or None when it always applies."""

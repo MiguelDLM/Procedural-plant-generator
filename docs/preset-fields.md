@@ -95,6 +95,20 @@ Trait values of a Fruit preset (all optional when 'base' is given).
 | `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
 | `fruit` | object | | | | see [FruitProfile](#fruitprofile) |
 
+## VegetablePreset
+
+Trait values of a Vegetable preset (all optional when 'base' is given).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `scientific_name` | string |  |  |  | Binomial name, e.g. 'Daucus carota subsp. sativus'. |
+| `common_name` | string |  |  |  | Vernacular name(s). |
+| `family` | string |  |  |  | Botanical family, e.g. 'Apiaceae', 'Brassicaceae'. |
+| `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
+| `profile` | object | | | | see [VegetableProfile](#vegetableprofile) |
+| `leaf` | object | | | | see [LeafMorphologyProfile](#leafmorphologyprofile) |
+| `venation` | object | | | | see [VenationProfile](#venationprofile) |
+
 ## AllometricProfile
 
 Empirical scaling parameters for a plant or tree taxon.
@@ -600,4 +614,54 @@ Shape and surface of a fleshy fruit (sizes in cm, along the stalk-to-blossom axi
 | `russet` | number |  | 0.0 – 1.0 | 0.0 | Corky brown patches (pears, some apples) |
 | `bloom` | number |  | 0.0 – 1.0 | 0.0 | Waxy whitish bloom (grapes, plums, blueberries) |
 | `gloss` | number |  | 0.0 – 1.0 | 0.5 | Skin gloss, 0 matt .. 1 glossy (cherries, tomatoes). |
+
+## VegetableProfile
+
+Habit and storage organ of a vegetable. Sizes in cm unless noted.
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `organ` | enum: `Taproot`, `Tubers`, `Head`, `None` |  |  | Taproot | Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only). |
+| `stem_count` | integer |  | 1 – 12 | 1 | Erect stems (potato 3-6); 1 for rosettes |
+| `stem_height_cm` | number | cm | 0.0 – 300.0 | 0.0 | 0 = basal rosette |
+| `stem_radius_mm` | number | mm | 0.5 – 60.0 | 4.0 | Radius of the stems at the base, mm. Applies when: stem_height_cm > 0. |
+| `leaf_count` | integer |  | 0 – 60 | 10 | Per stem |
+| `leaf_size` | number |  | 0.1 – 3.0 | 1.0 | Scale of the leaves relative to the leaf blade length |
+| `elevation_outer_deg` | number | deg | -10.0 – 90.0 | 40.0 | Oldest (outer / lower) leaves |
+| `elevation_inner_deg` | number | deg | -10.0 – 90.0 | 75.0 | Youngest (inner / upper) leaves |
+| `head_wrap` | number |  | 0.0 – 1.0 | 0.0 | Brassicas: inner leaves curl up around the head Applies when: organ == 'Head'. |
+| `stem_color` | colour (sRGB 0..1) |  |  | [0.45, 0.55, 0.3] | Applies when: stem_height_cm > 0. |
+| `root_length_cm` | number | cm | 0.5 – 100.0 | 18.0 | Length of the swollen root from the crown to the start of the tail, cm. Applies when: organ == 'Taproot'. |
+| `root_diameter_cm` | number | cm | 0.3 – 40.0 | 3.2 | Largest diameter of the storage root, cm. Applies when: organ == 'Taproot'. |
+| `widest_position` | number |  | 0.02 – 0.9 | 0.08 | 0 crown .. 1 tip (carrot near the top, beet ~0.5) Applies when: organ == 'Taproot'. |
+| `shoulder` | number |  | 0.05 – 1.5 | 0.45 | Roundness of the top: 0.2 square .. 1 pointed Applies when: organ == 'Taproot'. |
+| `taper` | number |  | 0.1 – 3.0 | 1.0 | Below the widest point: 0.4 rounded (beet) .. 1 conical (carrot) .. 2 slender Applies when: organ == 'Taproot'. |
+| `exposure` | number |  | 0.0 – 0.9 | 0.05 | Fraction of the root standing above the soil Applies when: organ == 'Taproot'. |
+| `tail_cm` | number | cm | 0.0 – 40.0 | 4.0 | Length of the thin root below the swollen part, cm. Applies when: organ == 'Taproot'. |
+| `rings` | number |  | 0.0 – 1.0 | 0.3 | Horizontal growth rings / wrinkles Applies when: organ == 'Taproot'. |
+| `rootlets` | number |  | 0.0 – 1.0 | 0.3 | Density of lateral rootlets Applies when: organ == 'Taproot'. |
+| `rootlet_ranks` | integer |  | 1 – 8 | 4 | Vertical rows of rootlets Applies when: organ == 'Taproot' and rootlets > 0. |
+| `root_color` | colour (sRGB 0..1) |  |  | [0.95, 0.45, 0.08] | Skin colour of the root below the soil (sRGB 0..1). Applies when: organ == 'Taproot'. |
+| `shoulder_color` | colour (sRGB 0..1) |  |  | [0.4, 0.48, 0.15] | Above-ground part Applies when: organ == 'Taproot'. |
+| `shoulder_tint` | number |  | 0.0 – 1.0 | 0.4 | Applies when: organ == 'Taproot'. |
+| `tip_color` | colour (sRGB 0..1) |  |  | [0.95, 0.9, 0.8] | Lower part (white-tipped radish) Applies when: organ == 'Taproot'. |
+| `tip_tint` | number |  | 0.0 – 1.0 | 0.0 | Applies when: organ == 'Taproot'. |
+| `tuber_count` | integer |  | 0 – 40 | 8 | Number of tubers per plant. Applies when: organ == 'Tubers'. |
+| `tuber_length_cm` | number | cm | 0.5 – 30.0 | 8.0 | Tuber length from the heel (stolon end) to the rose end, cm. Applies when: organ == 'Tubers'. |
+| `tuber_diameter_cm` | number | cm | 0.5 – 20.0 | 6.0 | Largest tuber diameter, cm. Applies when: organ == 'Tubers'. |
+| `tuber_depth_cm` | number | cm | 1.0 – 50.0 | 12.0 | Depth of the tubers below the soil surface, cm. Applies when: organ == 'Tubers'. |
+| `stolon_length_cm` | number | cm | 0.0 – 80.0 | 15.0 | Length of the stolons that carry the tubers, cm. Applies when: organ == 'Tubers'. |
+| `eyes` | integer |  | 0 – 30 | 9 | Number of eyes (buds) per tuber, on a ~2/5 spiral crowded toward the rose end. Applies when: organ == 'Tubers'. |
+| `eye_depth` | number |  | 0.0 – 0.4 | 0.08 | Depth of the eye dimples relative to the radius. Applies when: organ == 'Tubers'. |
+| `tuber_color` | colour (sRGB 0..1) |  |  | [0.75, 0.6, 0.4] | Tuber skin colour (sRGB 0..1). Applies when: organ == 'Tubers'. |
+| `tuber_dots` | number |  | 0.0 – 1.0 | 0.3 | Density of the lenticel dots on the tuber skin. Applies when: organ == 'Tubers'. |
+| `head_type` | enum: `Curd`, `Buds`, `Cones` |  |  | Curd | 'Curd' (cauliflower: packed meristem domes), 'Buds' (broccoli: flower-bud clusters on branches) or 'Cones' (Romanesco: self-similar cones). Applies when: organ == 'Head'. |
+| `head_diameter_cm` | number | cm | 2.0 – 50.0 | 16.0 | Diameter of the head, cm. Applies when: organ == 'Head'. |
+| `head_height_ratio` | number |  | 0.1 – 1.5 | 0.45 | Dome height / diameter (Romanesco ~0.9: a cone) Applies when: organ == 'Head'. |
+| `head_levels` | integer |  | 1 – 4 | 3 | Orders of branching shown Applies when: organ == 'Head'. |
+| `florets` | integer |  | 3 – 89 | 21 | Branches of the first order (Fibonacci numbers suit the spirals) Applies when: organ == 'Head'. |
+| `floret_scale` | number |  | 0.1 – 0.7 | 0.33 | Size of a branch relative to its parent Applies when: organ == 'Head'. |
+| `bud_size_mm` | number | mm | 0.5 – 6.0 | 2.0 | Broccoli buds Applies when: organ == 'Head' and head_type == 'Buds'. |
+| `head_color` | colour (sRGB 0..1) |  |  | [0.95, 0.92, 0.8] | Colour of the curd, buds or cones (sRGB 0..1). Applies when: organ == 'Head'. |
+| `branch_color` | colour (sRGB 0..1) |  |  | [0.8, 0.85, 0.6] | Colour of the head branches and of its base (sRGB 0..1). Applies when: organ == 'Head'. |
 

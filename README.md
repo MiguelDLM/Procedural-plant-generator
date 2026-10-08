@@ -30,7 +30,7 @@
 
 ### Growth forms
 
-A selector at the top of the panel switches between five generators that share materials, caching, the
+A selector at the top of the panel switches between the generators that share materials, caching, the
 trait-space arithmetic (blend / variation) and the UI:
 
 | Form | Model | Key parameters |
@@ -87,6 +87,27 @@ The 11 vine presets: *Ipomoea purpurea*, *Phaseolus coccineus* (ayocote), *Humul
 sinensis*, *Pisum sativum*, *Cucumis sativus*, *Cucurbita pepo*, *Citrullus lanatus*, *Vitis vinifera*,
 *Hedera helix* and *Passiflora caerulea*. Alpha-mapped leaf cards overlap densely in vines; the add-on raises
 Cycles' transparent bounces to 32 when needed (dense foliage otherwise renders black).
+
+### Vegetables: root crops, tubers and heads
+
+The **Vegetable** growth form (`core/vegetable.py`) covers the harvested organs that are not fruits:
+
+- **Storage taproots** (carrot, radish, beetroot, turnip): a body of revolution from the crown down — rounded
+  shoulder, widest point, conical or rounded taper into a thin tail — partly above the soil with its own
+  colour there (green or purple shoulders), white-tipped radishes, growth rings, and lateral rootlets in
+  vertical ranks along the xylem poles.
+- **Tubers** (potato): leaning leafy stems; stolons from the underground nodes swell into tubers whose eyes sit
+  on a ~2/5 spiral crowded toward the rose end, as dimples measured on the surface.
+- **Inflorescence heads** (cauliflower, broccoli, Romanesco): the curd is an inflorescence whose meristems keep
+  branching in the same golden-angle spiral at every scale (Azpeitia et al. 2021; Kieffer et al. 1998). It is
+  built as one continuous dome or cone displaced by nested height fields — every order of meristems in a
+  spiral around those of the previous order, each bump grown along its meristem's axis: merged rounded caps
+  (cauliflower curd), lobes covered with bud granules over visible branches (broccoli), or cones on cones
+  (Romanesco). Crevices are shaded through a height attribute.
+- Leaves from the tree leaf engine in a basal rosette or along the stems; brassica inner leaves curl up around
+  the head. *Lift* raises the plant to show the underground organs, as when harvested.
+
+Presets: carrot, radish, beetroot, turnip, potato, cauliflower, broccoli, Romanesco.
 
 ### Fruits and bunches
 
@@ -251,6 +272,8 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Cannon, W. A. (1911). *The Root Habits of Desert Plants.* Carnegie Institution of Washington, Publ. 131.
 - Snyman, H. A. (2005). A case study on in situ rooting profiles and water-use efficiency of cactus pears, *Opuntia ficus-indica* and *O. robusta*. *Journal of the Professional Association for Cactus Development* 7: 1–21.
 - Franco, A. C. & Nobel, P. S. (1990). Influences of root distribution and growth on predicted water uptake and interspecific competition. *Oecologia* 82: 151–157. doi:10.1007/BF00323528
+- Azpeitia, E. et al. (2021). Cauliflower fractal forms arise from perturbations of floral gene networks. *Science* 373: 192–197. doi:10.1126/science.abg5999
+- Kieffer, M., Fuller, M. P. & Jellings, A. J. (1998). Explaining curd and spear geometry in broccoli, cauliflower and 'romanesco': quantitative variation in activity of primary meristems. *Planta* 206: 34–43.
 - Brewer, M. T. et al. (2006). Development of a controlled vocabulary and software application to analyze fruit shape variation in tomato and other plant species. *Plant Physiology* 141: 15–25. doi:10.1104/pp.106.077867
 - Spjut, R. W. (1994). A systematic treatment of fruit types. *Memoirs of the New York Botanical Garden* 70: 1–182.
 - Tello, J. & Ibáñez, J. (2018). What do we know about grapevine bunch compactness? A state-of-the-art review. *Australian Journal of Grape and Wine Research* 24: 6–23. doi:10.1111/ajgw.12310

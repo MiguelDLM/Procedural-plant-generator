@@ -655,7 +655,8 @@ def update_succulent_geometry(context, props, find_root):
     # Objects of other growth forms (if this root was a tree before) are hidden
     for c in root.children:
         if c.name.endswith(("_Wood", "_Foliage", "_Roots", "_VineStem", "_Tendrils", "_VineLeaves", "_VineFruits",
-                            "_VineRoots", "_Fruits", "_FruitProto", "_FruitBody")):
+                            "_VineRoots", "_Fruits", "_FruitProto", "_FruitBody", "_VegRoot", "_VegStems", "_VegHead",
+                            "_VegLeaves")):
             c.hide_viewport = c.hide_render = True
     mkey = _key(profile)
     if form == GrowthForm.CACTUS:

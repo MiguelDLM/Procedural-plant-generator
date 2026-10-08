@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
   "title": "Procedural Plant Generator preset",
-  "description": "One plant (tree, cactus, rosette succulent, flower, vine) or fruit described by measurable traits. See docs/PRESETS.md.",
+  "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable) or fruit described by measurable traits. See docs/PRESETS.md.",
   "type": "object",
   "required": [
     "format",
@@ -30,7 +30,8 @@
         "Rosette",
         "Flower",
         "Vine",
-        "Fruit"
+        "Fruit",
+        "Vegetable"
       ]
     },
     "id": {
@@ -179,6 +180,22 @@
         "properties": {
           "preset": {
             "$ref": "#/$defs/FruitPreset"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "growth_form": {
+            "const": "Vegetable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preset": {
+            "$ref": "#/$defs/VegetablePreset"
           }
         }
       }
@@ -4197,6 +4214,476 @@
         }
       },
       "description": "Trait values of a Fruit preset (all optional when 'base' is given)."
+    },
+    "VegetableProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "organ": {
+          "type": "string",
+          "enum": [
+            "Taproot",
+            "Tubers",
+            "Head",
+            "None"
+          ],
+          "description": "Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only).",
+          "default": "Taproot"
+        },
+        "stem_count": {
+          "type": "integer",
+          "description": "Erect stems (potato 3-6); 1 for rosettes",
+          "minimum": 1,
+          "maximum": 12,
+          "default": 1
+        },
+        "stem_height_cm": {
+          "type": "number",
+          "description": "0 = basal rosette",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 300.0,
+          "default": 0.0
+        },
+        "stem_radius_mm": {
+          "type": "number",
+          "description": "Radius of the stems at the base, mm. Applies when: stem_height_cm > 0.",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 60.0,
+          "default": 4.0,
+          "x-applies-when": "stem_height_cm > 0"
+        },
+        "leaf_count": {
+          "type": "integer",
+          "description": "Per stem",
+          "minimum": 0,
+          "maximum": 60,
+          "default": 10
+        },
+        "leaf_size": {
+          "type": "number",
+          "description": "Scale of the leaves relative to the leaf blade length",
+          "minimum": 0.1,
+          "maximum": 3.0,
+          "default": 1.0
+        },
+        "elevation_outer_deg": {
+          "type": "number",
+          "description": "Oldest (outer / lower) leaves",
+          "x-unit": "deg",
+          "minimum": -10.0,
+          "maximum": 90.0,
+          "default": 40.0
+        },
+        "elevation_inner_deg": {
+          "type": "number",
+          "description": "Youngest (inner / upper) leaves",
+          "x-unit": "deg",
+          "minimum": -10.0,
+          "maximum": 90.0,
+          "default": 75.0
+        },
+        "head_wrap": {
+          "type": "number",
+          "description": "Brassicas: inner leaves curl up around the head Applies when: organ == 'Head'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "stem_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "default": [
+            0.45,
+            0.55,
+            0.3
+          ],
+          "x-applies-when": "stem_height_cm > 0",
+          "description": "Applies when: stem_height_cm > 0."
+        },
+        "root_length_cm": {
+          "type": "number",
+          "description": "Length of the swollen root from the crown to the start of the tail, cm. Applies when: organ == 'Taproot'.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 100.0,
+          "default": 18.0,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "root_diameter_cm": {
+          "type": "number",
+          "description": "Largest diameter of the storage root, cm. Applies when: organ == 'Taproot'.",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 40.0,
+          "default": 3.2,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "widest_position": {
+          "type": "number",
+          "description": "0 crown .. 1 tip (carrot near the top, beet ~0.5) Applies when: organ == 'Taproot'.",
+          "minimum": 0.02,
+          "maximum": 0.9,
+          "default": 0.08,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "shoulder": {
+          "type": "number",
+          "description": "Roundness of the top: 0.2 square .. 1 pointed Applies when: organ == 'Taproot'.",
+          "minimum": 0.05,
+          "maximum": 1.5,
+          "default": 0.45,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "taper": {
+          "type": "number",
+          "description": "Below the widest point: 0.4 rounded (beet) .. 1 conical (carrot) .. 2 slender Applies when: organ == 'Taproot'.",
+          "minimum": 0.1,
+          "maximum": 3.0,
+          "default": 1.0,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "exposure": {
+          "type": "number",
+          "description": "Fraction of the root standing above the soil Applies when: organ == 'Taproot'.",
+          "minimum": 0.0,
+          "maximum": 0.9,
+          "default": 0.05,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "tail_cm": {
+          "type": "number",
+          "description": "Length of the thin root below the swollen part, cm. Applies when: organ == 'Taproot'.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 40.0,
+          "default": 4.0,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "rings": {
+          "type": "number",
+          "description": "Horizontal growth rings / wrinkles Applies when: organ == 'Taproot'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "rootlets": {
+          "type": "number",
+          "description": "Density of lateral rootlets Applies when: organ == 'Taproot'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "rootlet_ranks": {
+          "type": "integer",
+          "description": "Vertical rows of rootlets Applies when: organ == 'Taproot' and rootlets > 0.",
+          "minimum": 1,
+          "maximum": 8,
+          "default": 4,
+          "x-applies-when": "organ == 'Taproot' and rootlets > 0"
+        },
+        "root_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Skin colour of the root below the soil (sRGB 0..1). Applies when: organ == 'Taproot'.",
+          "default": [
+            0.95,
+            0.45,
+            0.08
+          ],
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "shoulder_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Above-ground part Applies when: organ == 'Taproot'.",
+          "default": [
+            0.4,
+            0.48,
+            0.15
+          ],
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "shoulder_tint": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.4,
+          "x-applies-when": "organ == 'Taproot'",
+          "description": "Applies when: organ == 'Taproot'."
+        },
+        "tip_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Lower part (white-tipped radish) Applies when: organ == 'Taproot'.",
+          "default": [
+            0.95,
+            0.9,
+            0.8
+          ],
+          "x-applies-when": "organ == 'Taproot'"
+        },
+        "tip_tint": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "organ == 'Taproot'",
+          "description": "Applies when: organ == 'Taproot'."
+        },
+        "tuber_count": {
+          "type": "integer",
+          "description": "Number of tubers per plant. Applies when: organ == 'Tubers'.",
+          "minimum": 0,
+          "maximum": 40,
+          "default": 8,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "tuber_length_cm": {
+          "type": "number",
+          "description": "Tuber length from the heel (stolon end) to the rose end, cm. Applies when: organ == 'Tubers'.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 30.0,
+          "default": 8.0,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "tuber_diameter_cm": {
+          "type": "number",
+          "description": "Largest tuber diameter, cm. Applies when: organ == 'Tubers'.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 20.0,
+          "default": 6.0,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "tuber_depth_cm": {
+          "type": "number",
+          "description": "Depth of the tubers below the soil surface, cm. Applies when: organ == 'Tubers'.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 50.0,
+          "default": 12.0,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "stolon_length_cm": {
+          "type": "number",
+          "description": "Length of the stolons that carry the tubers, cm. Applies when: organ == 'Tubers'.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 80.0,
+          "default": 15.0,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "eyes": {
+          "type": "integer",
+          "description": "Number of eyes (buds) per tuber, on a ~2/5 spiral crowded toward the rose end. Applies when: organ == 'Tubers'.",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 9,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "eye_depth": {
+          "type": "number",
+          "description": "Depth of the eye dimples relative to the radius. Applies when: organ == 'Tubers'.",
+          "minimum": 0.0,
+          "maximum": 0.4,
+          "default": 0.08,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "tuber_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Tuber skin colour (sRGB 0..1). Applies when: organ == 'Tubers'.",
+          "default": [
+            0.75,
+            0.6,
+            0.4
+          ],
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "tuber_dots": {
+          "type": "number",
+          "description": "Density of the lenticel dots on the tuber skin. Applies when: organ == 'Tubers'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "x-applies-when": "organ == 'Tubers'"
+        },
+        "head_type": {
+          "type": "string",
+          "enum": [
+            "Curd",
+            "Buds",
+            "Cones"
+          ],
+          "description": "'Curd' (cauliflower: packed meristem domes), 'Buds' (broccoli: flower-bud clusters on branches) or 'Cones' (Romanesco: self-similar cones). Applies when: organ == 'Head'.",
+          "default": "Curd",
+          "x-applies-when": "organ == 'Head'"
+        },
+        "head_diameter_cm": {
+          "type": "number",
+          "description": "Diameter of the head, cm. Applies when: organ == 'Head'.",
+          "x-unit": "cm",
+          "minimum": 2.0,
+          "maximum": 50.0,
+          "default": 16.0,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "head_height_ratio": {
+          "type": "number",
+          "description": "Dome height / diameter (Romanesco ~0.9: a cone) Applies when: organ == 'Head'.",
+          "minimum": 0.1,
+          "maximum": 1.5,
+          "default": 0.45,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "head_levels": {
+          "type": "integer",
+          "description": "Orders of branching shown Applies when: organ == 'Head'.",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 3,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "florets": {
+          "type": "integer",
+          "description": "Branches of the first order (Fibonacci numbers suit the spirals) Applies when: organ == 'Head'.",
+          "minimum": 3,
+          "maximum": 89,
+          "default": 21,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "floret_scale": {
+          "type": "number",
+          "description": "Size of a branch relative to its parent Applies when: organ == 'Head'.",
+          "minimum": 0.1,
+          "maximum": 0.7,
+          "default": 0.33,
+          "x-applies-when": "organ == 'Head'"
+        },
+        "bud_size_mm": {
+          "type": "number",
+          "description": "Broccoli buds Applies when: organ == 'Head' and head_type == 'Buds'.",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 6.0,
+          "default": 2.0,
+          "x-applies-when": "organ == 'Head' and head_type == 'Buds'"
+        },
+        "head_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the curd, buds or cones (sRGB 0..1). Applies when: organ == 'Head'.",
+          "default": [
+            0.95,
+            0.92,
+            0.8
+          ],
+          "x-applies-when": "organ == 'Head'"
+        },
+        "branch_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the head branches and of its base (sRGB 0..1). Applies when: organ == 'Head'.",
+          "default": [
+            0.8,
+            0.85,
+            0.6
+          ],
+          "x-applies-when": "organ == 'Head'"
+        }
+      },
+      "description": "Habit and storage organ of a vegetable. Sizes in cm unless noted."
+    },
+    "VegetablePreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scientific_name": {
+          "type": "string",
+          "description": "Binomial name, e.g. 'Daucus carota subsp. sativus'.",
+          "default": ""
+        },
+        "common_name": {
+          "type": "string",
+          "description": "Vernacular name(s).",
+          "default": ""
+        },
+        "family": {
+          "type": "string",
+          "description": "Botanical family, e.g. 'Apiaceae', 'Brassicaceae'.",
+          "default": ""
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free text: distinctive features, sources of the values.",
+          "default": ""
+        },
+        "profile": {
+          "$ref": "#/$defs/VegetableProfile"
+        },
+        "leaf": {
+          "$ref": "#/$defs/LeafMorphologyProfile"
+        },
+        "venation": {
+          "$ref": "#/$defs/VenationProfile"
+        }
+      },
+      "description": "Trait values of a Vegetable preset (all optional when 'base' is given)."
     }
   }
 }

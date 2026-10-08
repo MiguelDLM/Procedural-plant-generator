@@ -26,6 +26,7 @@ CASES = {
     "Tree": ["phoenix_canariensis", "pinus_sylvestris", "quercus_robur"],
     "Vine": ["ipomoea_purpurea", "hedera_helix", "vitis_vinifera", "cucurbita_pepo"],
     "Fruit": ["malus_domestica", "vitis_vinifera", "solanum_lycopersicum", "citrullus_lanatus"],
+    "Vegetable": ["daucus_carota", "solanum_tuberosum", "brassica_oleracea_italica"],
 }
 MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars")
 
@@ -41,6 +42,10 @@ def _signature(form: str, preset) -> list:
         r = RosetteEngine(preset.profile).generate(seed=3, detail=0.3, with_roots=True)
         return [r.leaves.vertices, r.armature.vertices, r.stem.vertices,
                 r.roots.vertices if r.roots is not None else np.zeros(0)]
+    if form == "Vegetable":
+        from core.vegetable import VegetableEngine
+        r = VegetableEngine(preset.profile, preset.leaf, preset.venation).generate(seed=3, detail=0.5)
+        return [r.root.vertices, r.stems.vertices, r.head.vertices, r.leaves.vertices]
     if form == "Fruit":
         from core.fruit import hanging_fruit
         return [hanging_fruit(preset.fruit, 0.5, 3).vertices]
