@@ -49,6 +49,9 @@ LAYOUT = {
                                 "pad_branching"]),
         ("Colour", ["stem_color", "groove_color", "spine_color", "spine_tip_color", "wool_color", "glaucous",
                     "flecks"]),
+        ("Weathering", ["browning_height_m", "equator_bias", "equator_azimuth_deg", "scaling_color",
+                        "barking_color", "scars", "scar_color", "areole_stain", "crest_light", "groove_dust",
+                        "streaks"]),
         ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "taproot_share",
                    "taproot_depth_m", "root_core_ratio", "tuber_length_cm", "tuber_radius_ratio"]),
     ],
@@ -175,55 +178,184 @@ def _glaucous(nt, colour_socket, amount, bsdf, loc):
     return out
 
 
+def _sep_r(nt, colour, loc):
+    sp = nt.nodes.new('ShaderNodeSeparateColor')
+    sp.location = loc
+    nt.links.new(colour, sp.inputs[0])
+    return sp.outputs[0]
+
+
+def _smooth_s(nt, x, lo, hi, loc):
+    m = nt.nodes.new('ShaderNodeMapRange')
+    m.interpolation_type = 'SMOOTHSTEP'
+    m.location = loc
+    for name, v in (("From Min", lo), ("From Max", hi)):
+        if isinstance(v, (int, float)):
+            m.inputs[name].default_value = v
+        else:
+            nt.links.new(v, m.inputs[name])
+    nt.links.new(x, m.inputs['Value'])
+    return m.outputs['Result']
+
+
+def _noise(nt, vec, scale, detail, loc, rough=0.55):
+    n = nt.nodes.new('ShaderNodeTexNoise')
+    n.location = loc
+    _set(n, scale, "Scale")
+    _set(n, detail, "Detail")
+    _set(n, rough, "Roughness")
+    nt.links.new(vec, n.inputs['Vector'])
+    return n
+
+
 def cactus_materials(name, p):
+    """
+    Cactus epidermis with weathering layers (Evans et al. 1994; Kiesling): rib crest/groove tones with
+    paler crests and dust in the grooves, vertical streaks, soil splash near the ground, dark halos and
+    drip streaks below the areoles, corky scars, and epidermal browning ("scaling" tan to red-orange,
+    "barking" dark brown) rising from the base, higher on the equator-facing side.
+    """
     skin, nt, bsdf = _new_mat(name + "_Skin")
-    rib = _attr(nt, "rib", (-900, 200))
-    tub = _attr(nt, "tubercle", (-900, -50))
-    pw = nt.nodes.new('ShaderNodeMath')
-    pw.operation = 'POWER'
-    pw.location = (-700, 200)
-    pw.inputs[1].default_value = 0.7
-    nt.links.new(rib.outputs['Fac'], pw.inputs[0])
-    col = _mix(nt, pw.outputs[0], _srgb_to_linear(p.groove_color), _srgb_to_linear(p.stem_color), (-450, 200))
-    # Tubercle tips slightly paler (younger epidermis, less chlorophyll at the podarium apex)
-    tub_f = nt.nodes.new('ShaderNodeMath')
-    tub_f.operation = 'MULTIPLY'
-    tub_f.location = (-450, -50)
-    tub_f.inputs[1].default_value = 0.25
-    nt.links.new(tub.outputs['Fac'], tub_f.inputs[0])
-    col = _mix(nt, tub_f.outputs[0], col, (0.5, 0.6, 0.45, 1.0), (-250, 100), 'SCREEN')
-    coord = nt.nodes.new('ShaderNodeTexCoord')
-    coord.location = (-900, -300)
-    noise = nt.nodes.new('ShaderNodeTexNoise')
-    noise.location = (-650, -300)
-    _set(noise, 30.0, "Scale")
-    nt.links.new(coord.outputs['Object'], noise.inputs['Vector'])
-    col = _mix(nt, 0.15, col, noise.outputs['Color'], (-250, 0), 'OVERLAY')
+    g = lambda k, d: getattr(p, k, d)  # noqa: E731
+    rib = _attr(nt, "rib", (-1500, 300))
+    tub = _attr(nt, "tubercle", (-1500, 100))
+    halo = _attr(nt, "areole_halo", (-1500, -100))
+    drip = _attr(nt, "areole_drip", (-1500, -250))
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    tc.location = (-1700, -500)
+    sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+    sep.location = (-1500, -500)
+    nt.links.new(tc.outputs['Object'], sep.inputs[0])
+    Z = sep.outputs['Z']                                         # Height above the ground (plant space)
+
+    # Base tones: groove -> crest, crests paler and yellower
+    crest = _math(nt, 'POWER', rib.outputs['Fac'], 0.7, (-1300, 300))
+    col = _mix(nt, crest, _srgb_to_linear(p.groove_color), _srgb_to_linear(p.stem_color), (-1100, 300))
+    cl = _math(nt, 'MULTIPLY', _math(nt, 'POWER', rib.outputs['Fac'], 4.0, (-1300, 450)), g("crest_light", 0.25),
+               (-1100, 450))
+    col = _mix(nt, cl, col, _srgb_to_linear((0.80, 0.82, 0.55)), (-900, 350))
+    tub_f = _math(nt, 'MULTIPLY', tub.outputs['Fac'], 0.25, (-1100, 150))
+    col = _mix(nt, tub_f, col, (0.5, 0.6, 0.45, 1.0), (-750, 250), 'SCREEN')
+
+    # Vertical streaks (axially stretched noise) and fine mottling
+    stretch = nt.nodes.new('ShaderNodeMapping')
+    stretch.location = (-1500, -750)
+    stretch.inputs['Scale'].default_value = (14.0, 14.0, 1.2)
+    nt.links.new(tc.outputs['Object'], stretch.inputs['Vector'])
+    st = _noise(nt, stretch.outputs['Vector'], 3.0, 4.0, (-1300, -750))
+    sv = _math(nt, 'MULTIPLY', _math(nt, 'SUBTRACT', st.outputs['Fac'], 0.5, (-1100, -750)),
+               2.0 * g("streaks", 0.3), (-950, -750))
+    hsv = nt.nodes.new('ShaderNodeHueSaturation')
+    hsv.location = (-600, 250)
+    nt.links.new(col, hsv.inputs['Color'])
+    nt.links.new(_math(nt, 'ADD', sv, 1.0, (-800, -700)), hsv.inputs['Value'])
+    col = hsv.outputs['Color']
+    fine = _noise(nt, tc.outputs['Object'], 30.0, 6.0, (-1300, -1000))
+    col = _mix(nt, 0.12, col, fine.outputs['Color'], (-450, 200), 'OVERLAY')
+    col = _glaucous(nt, col, p.glaucous, bsdf, (-350, 350))          # Wax only on living epidermis
+
+    # Dust in the grooves (more near the ground) and soil splash on the lowest 25 cm
+    groove = _math(nt, 'SUBTRACT', 1.0, crest, (-900, 0))
+    low = _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, Z, 0.0, 0.6, (-1100, -100)), (-900, -100))
+    dust_amt = _math(nt, 'MULTIPLY', _math(nt, 'MULTIPLY_ADD', low, 0.7, (-750, -50), 0.3), groove, (-600, -50))
+    dust_amt = _math(nt, 'MULTIPLY', dust_amt, g("groove_dust", 0.3), (-450, -50))
+    splash = _math(nt, 'MULTIPLY', _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, Z, 0.02, 0.25, (-750, -200)),
+                                         (-600, -200)), 0.8 * g("groove_dust", 0.3), (-450, -200))
+    dust_c = _srgb_to_linear((0.60, 0.52, 0.40))
+    col = _mix(nt, _math(nt, 'MAXIMUM', dust_amt, splash, (-300, -100)), col, dust_c, (-250, 150))
+
+    # Areole halos and drip streaks
+    stain = _math(nt, 'MAXIMUM', _math(nt, 'MULTIPLY', halo.outputs['Fac'], 0.55, (-900, -300)),
+                  drip.outputs['Fac'], (-750, -300))
+    stain = _math(nt, 'MULTIPLY', stain, g("areole_stain", 0.4), (-600, -300))
+    col = _mix(nt, stain, col, _srgb_to_linear((0.20, 0.20, 0.13)), (-100, 150))
+
+    # Corky scars: irregular, domain-warped blobs selected per Voronoi cell (density = scars)
+    warp_n = _noise(nt, tc.outputs['Object'], 9.0, 3.0, (-1300, -1250))
+    warp = nt.nodes.new('ShaderNodeMix')
+    warp.data_type = 'VECTOR'
+    warp.location = (-1100, -1250)
+    warp.inputs[0].default_value = 0.08
+    nt.links.new(tc.outputs['Object'], warp.inputs[4])
+    nt.links.new(warp_n.outputs['Color'], warp.inputs[5])
+    vor = nt.nodes.new('ShaderNodeTexVoronoi')
+    vor.location = (-900, -1250)
+    vor.voronoi_dimensions = '3D'
+    _set(vor, 12.0, "Scale")                                       # ~8 cm cells
+    nt.links.new(warp.outputs[1], vor.inputs['Vector'])
+    pick = _math(nt, 'LESS_THAN', _sep_r(nt, vor.outputs['Color'], (-700, -1350)), g("scars", 0.15), (-550, -1350))
+    blob = _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, vor.outputs['Distance'], 0.22, 0.30, (-700, -1200)),
+                 (-550, -1200))
+    scar = _math(nt, 'MULTIPLY', blob, pick, (-400, -1250))
+    rim = _math(nt, 'MULTIPLY', _smooth_s(nt, vor.outputs['Distance'], 0.16, 0.26, (-550, -1050)), scar,
+                (-400, -1050))
+    col = _mix(nt, scar, col, _srgb_to_linear(g("scar_color", (0.64, 0.55, 0.41))), (50, 100))
+
+    # Epidermal browning from the base: higher on the equator-facing side, patchy, starting on crests
+    nrm = nt.nodes.new('ShaderNodeVectorTransform')
+    nrm.location = (-1500, -1550)
+    nrm.vector_type = 'NORMAL'
+    nrm.convert_from = 'WORLD'
+    nrm.convert_to = 'OBJECT'
+    geo = nt.nodes.new('ShaderNodeNewGeometry')
+    geo.location = (-1700, -1550)
+    nt.links.new(geo.outputs['Normal'], nrm.inputs[0])
+    import math as _m
+    az = _m.radians(g("equator_azimuth_deg", 270.0))
+    eq = nt.nodes.new('ShaderNodeVectorMath')
+    eq.operation = 'DOT_PRODUCT'
+    eq.location = (-1300, -1550)
+    eq.inputs[1].default_value = (_m.cos(az), _m.sin(az), 0.0)
+    nt.links.new(nrm.outputs[0], eq.inputs[0])
+    facing = _math(nt, 'MULTIPLY_ADD', eq.outputs['Value'], 0.5, (-1100, -1550), 0.5)
+    H = g("browning_height_m", 0.0)
+    if H > 0:
+        front = _math(nt, 'MULTIPLY', _math(nt, 'MULTIPLY_ADD', facing, 2.0 * g("equator_bias", 0.6), (-950, -1550),
+                                            1.0 - g("equator_bias", 0.6)), H, (-800, -1550))
+        patch = _noise(nt, tc.outputs['Object'], 4.0, 8.0, (-1100, -1750), 0.65)
+        zj = _math(nt, 'ADD', Z, _math(nt, 'MULTIPLY', _math(nt, 'SUBTRACT', patch.outputs['Fac'], 0.5, (-950, -1750)),
+                                       1.2 * H, (-800, -1750)), (-650, -1650))
+        brown = _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, zj, _math(nt, 'MULTIPLY', front, 0.96, (-650, -1500)),
+                                                     front, (-500, -1550)), (-350, -1550))
+        # Isolated crusts ahead of the front (scaling starts in patches on exposed crests)
+        isl = _noise(nt, tc.outputs['Object'], 9.0, 6.0, (-1100, -1950), 0.6)
+        above = _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, Z, front, _math(nt, 'MULTIPLY', front, 1.8, (-650, -2050)),
+                                                     (-500, -2000)), (-350, -2000))
+        islands = _math(nt, 'MULTIPLY', _smooth_s(nt, isl.outputs['Fac'], 0.68, 0.71, (-500, -1900)), above,
+                        (-200, -1950))
+        brown = _math(nt, 'MAXIMUM', brown, islands, (-100, -1750))
+        brown = _math(nt, 'MULTIPLY', brown, _math(nt, 'MULTIPLY_ADD', crest, 0.4, (-350, -1700), 0.6), (-200, -1600))
+        deep = _smooth_s(nt, _math(nt, 'SUBTRACT', front, zj, (-350, -1850)), 0.0, 0.5 * H, (-200, -1850))
+        bcol = _mix(nt, deep, _srgb_to_linear(g("scaling_color", (0.62, 0.44, 0.30))),
+                    _srgb_to_linear(g("barking_color", (0.27, 0.22, 0.18))), (0, -1700))
+        col = _mix(nt, brown, col, bcol, (200, 50))
+    else:
+        brown = None
+
     if p.flecks > 0:
-        vor = nt.nodes.new('ShaderNodeTexVoronoi')
-        vor.location = (-650, -550)
-        _set(vor, 220.0, "Scale")
-        nt.links.new(coord.outputs['Object'], vor.inputs['Vector'])
-        ramp = nt.nodes.new('ShaderNodeValToRGB')
-        ramp.location = (-450, -550)
-        ramp.color_ramp.elements[0].position = 0.18
-        ramp.color_ramp.elements[0].color = (1, 1, 1, 1)
-        ramp.color_ramp.elements[1].position = 0.30
-        ramp.color_ramp.elements[1].color = (0, 0, 0, 1)
-        nt.links.new(vor.outputs['Distance'], ramp.inputs['Fac'])
-        mul = nt.nodes.new('ShaderNodeMath')
-        mul.operation = 'MULTIPLY'
-        mul.location = (-250, -550)
-        mul.inputs[1].default_value = p.flecks
-        nt.links.new(ramp.outputs['Color'], mul.inputs[0])
-        col = _mix(nt, mul.outputs[0], col, (0.92, 0.92, 0.88, 1.0), (-50, -200))
-    col = _glaucous(nt, col, p.glaucous, bsdf, (150, 0))
+        vf = nt.nodes.new('ShaderNodeTexVoronoi')
+        vf.location = (-650, -550)
+        _set(vf, 220.0, "Scale")
+        nt.links.new(tc.outputs['Object'], vf.inputs['Vector'])
+        fl = _math(nt, 'MULTIPLY', _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, vf.outputs['Distance'], 0.18, 0.30,
+                                                                        (-450, -550)), (-300, -550)),
+                   p.flecks, (-150, -550))
+        col = _mix(nt, fl, col, (0.92, 0.92, 0.88, 1.0), (300, -200))
     nt.links.new(col, bsdf.inputs['Base Color'])
     _set(bsdf, 0.08, "Subsurface Weight")
+    # Relief: fine cuticle noise, raised scar rims, rough bark crust
+    height = _math(nt, 'ADD', _math(nt, 'MULTIPLY', fine.outputs['Fac'], 0.3, (400, -400)),
+                   _math(nt, 'MULTIPLY', rim, 0.8, (400, -550)), (550, -450))
+    if brown is not None:
+        crust = _noise(nt, tc.outputs['Object'], 60.0, 8.0, (250, -700), 0.7)
+        height = _math(nt, 'ADD', height, _math(nt, 'MULTIPLY', brown, crust.outputs['Fac'], (550, -650)), (700, -500))
+        rough = _math(nt, 'MULTIPLY_ADD', brown, 0.35, (700, -250), 0.5)
+        nt.links.new(rough, bsdf.inputs['Roughness'])
     bump = nt.nodes.new('ShaderNodeBump')
-    bump.location = (350, -300)
-    _set(bump, 0.15, "Strength")
-    nt.links.new(noise.outputs['Fac'], bump.inputs['Height'])
+    bump.location = (850, -400)
+    _set(bump, 0.25, "Strength")
+    _set(bump, 0.002, "Distance")
+    nt.links.new(height, bump.inputs['Height'])
     nt.links.new(bump.outputs['Normal'], bsdf.inputs['Normal'])
 
     spines, nt2, b2 = _new_mat(name + "_Spines")

@@ -114,6 +114,21 @@ class CactusProfile:
     glaucous: float = 0.2           # Waxy bloom
     flecks: float = 0.0             # White trichome flecks (Astrophytum)
 
+    # Weathering (Evans et al. 1994; Kiesling): epidermal "scaling" (tan to red-orange) and "barking"
+    # (dark brown to black) rising from the base, more on the equator-facing side; corky scars from
+    # injuries; stains below areoles; paler rib crests, dust in the grooves.
+    browning_height_m: float = 0.0  # Height reached by epidermal browning (bark) on the equatorial side
+    equator_bias: float = 0.6       # How much higher it climbs on the equator-facing side
+    equator_azimuth_deg: float = 270.0   # Azimuth (from +X, counter-clockwise) of the equator-facing side
+    scaling_color: tuple = (0.62, 0.44, 0.30)
+    barking_color: tuple = (0.27, 0.22, 0.18)
+    scars: float = 0.15             # Density of corky scars
+    scar_color: tuple = (0.64, 0.55, 0.41)
+    areole_stain: float = 0.4       # Dark halos and drip streaks below the areoles
+    crest_light: float = 0.25       # Paler, yellower rib crests
+    groove_dust: float = 0.3        # Soil and dust in the grooves and near the ground
+    streaks: float = 0.3            # Vertical tone streaks
+
     # Roots (Cannon 1911; Snyman 2005): shallow laterals, optional taproot or napiform tuber
     root_system: RootSystemType = RootSystemType.PLATE
     root_count: int = 10
@@ -286,6 +301,7 @@ class CactusEngine:
                 stems.append(stem)
                 spines.append(areoles)
         stem = MeshData.concatenate(stems)
+        self._areole_stains(stem, spines)
         ar_pos = np.concatenate([a["pos"] for a in spines]) if spines else np.zeros((0, 3))
         ar_nrm = np.concatenate([a["normal"] for a in spines]) if spines else np.zeros((0, 3))
         ar_tan = np.concatenate([a["tangent"] for a in spines]) if spines else np.zeros((0, 3))
@@ -311,6 +327,27 @@ class CactusEngine:
         return CactusResult(stem, spine_mesh, len(ar_pos), n_sp, height, roots, fpos, fdir, fw)
 
     # ------------------------------------------------------------------
+    def _areole_stains(self, stem: MeshData, areole_sets):
+        """Per-vertex 'areole_halo' (dark ring round each areole) and 'areole_drip' (exudate and dust
+        streak running down from it), from the nearest areole of the whole plant."""
+        from .spatial import nearest_points
+        n = len(stem.vertices)
+        halo = np.zeros(n, np.float32)
+        drip = np.zeros(n, np.float32)
+        A = np.concatenate([a["pos"] for a in areole_sets]) if areole_sets else np.zeros((0, 3))
+        if len(A) and n:
+            s = max(0.3, self.p.areole_spacing_cm) * 0.01
+            V = stem.vertices.astype(np.float64)
+            d, idx = nearest_points(V, A, 1.5 * s)
+            ok = idx >= 0
+            halo[ok] = np.exp(-(d[ok] / (0.45 * s)) ** 2)
+            a = A[idx[ok]]
+            dz = a[:, 2] - V[ok, 2]                                    # > 0 below the areole
+            dh = np.hypot(*(V[ok, :2] - a[:, :2]).T)
+            drip[ok] = (np.exp(-(dh / (0.12 * s)) ** 2) * (dz > 0) * np.exp(-np.maximum(dz, 0) / (1.2 * s)))
+        stem.point_attributes["areole_halo"] = halo
+        stem.point_attributes["areole_drip"] = drip.astype(np.float32)
+
     def _arm_collides(self, ax1: StemAxis, r1: float, ax2: StemAxis, r2: float, start1: float = 0.10) -> bool:
         """Test whether two arm trajectories penetrate each other (ax1 sampled from `start1` of its length)."""
         s1 = np.linspace(start1 * ax1.length, ax1.length, 30)

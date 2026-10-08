@@ -450,6 +450,29 @@ class TestSucculents(unittest.TestCase):
         self.assertGreater(float(np.mean(r < 0.5 * onset)), 0.3)       # Much of the crown is young bark
         self.assertGreater(float(r.max()), 2.0 * onset)                 # The trunk is fully fissured
 
+    def test_areole_stain_attributes(self):
+        """Stem vertices carry a halo around each areole and a drip streak running down from it."""
+        from core.succulent_db import CACTUS_CATALOG
+        from core.cactus import CactusEngine
+        from core.spatial import nearest_points
+        r = CactusEngine(CACTUS_CATALOG["carnegiea_gigantea"].profile).generate(seed=1, detail=0.5,
+                                                                              spine_budget=100)
+        A = r.stem.point_attributes
+        self.assertEqual(len(A["areole_halo"]), len(r.stem.vertices))
+        self.assertGreater(float(A["areole_halo"].max()), 0.9)
+        self.assertGreater(float(A["areole_drip"].max()), 0.5)
+        # Drip only below its areole
+        V = r.stem.vertices.astype(float)
+        d, i = nearest_points(V, r.flower_pos, 0.04)
+        hi = A["areole_drip"] > 0.3
+        self.assertTrue(np.all(V[hi, 2] <= r.flower_pos[i[hi], 2] + 1e-6))
+        # Grid nearest neighbours match brute force
+        rng = np.random.default_rng(0)
+        P, Q = rng.uniform(0, 1, (800, 3)), rng.uniform(0, 1, (300, 3))
+        dd, _ = nearest_points(Q, P, 0.15)
+        bf = np.array([np.linalg.norm(P - q, axis=1).min() for q in Q])
+        self.assertTrue(np.allclose(dd, bf))
+
     def test_cladode_faces_wound_outward(self):
         """Every cladode face points away from the pad centre (consistent winding, no dark shading ring)."""
         from core.succulent_db import CACTUS_CATALOG

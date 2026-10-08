@@ -56,7 +56,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         central_length_cm=5.0, spine_thickness_mm=1.0, arm_count=4, arm_height_min=0.35, arm_height_max=0.6,
         arm_reach_m=0.6, arm_length_ratio=0.3, stem_color=(0.30, 0.45, 0.28), groove_color=(0.20, 0.32, 0.18),
         wool=0.25, **GREY_SPINE,
-        root_system=RootSystemType.TAPROOT, taproot_share=0.25, taproot_depth_m=0.8, root_count=12, root_spread_ratio=1.1, root_depth_m=0.3),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.25, taproot_depth_m=0.8, root_count=12, root_spread_ratio=1.1, root_depth_m=0.3,
+        browning_height_m=1.2, scars=0.25, areole_stain=0.35),
     "pachycereus_pringlei": cactus(
         "Pachycereus pringlei", "Cardón", "Cactaceae", "Sonoran Desert / Baja California",
         "Tallest cactus; massive trunk with many erect branches from low on the stem.",
@@ -64,7 +65,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         areole_spacing_cm=2.5, radial_spines=10, radial_length_cm=1.5, central_spines=2, central_length_cm=3.0,
         arm_count=8, arm_height_min=0.12, arm_height_max=0.35, arm_reach_m=0.5, arm_length_ratio=0.6,
         stem_color=(0.30, 0.43, 0.30), glaucous=0.4, wool=0.35, **GREY_SPINE,
-        root_system=RootSystemType.TAPROOT, taproot_share=0.25, taproot_depth_m=1.0, root_count=14, root_spread_ratio=1.0, root_depth_m=0.35),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.25, taproot_depth_m=1.0, root_count=14, root_spread_ratio=1.0, root_depth_m=0.35,
+        browning_height_m=1.0, scars=0.25),
     "pachycereus_weberi": cactus(
         "Pachycereus weberi", "Candelabro (giant Mexican candelabra)", "Cactaceae", "Puebla, Oaxaca & Guerrero, Mexico",
         "Short trunk (to ~2 m) crowned by numerous erect glaucous branches, up to ~11 m tall; black flattened "
@@ -76,7 +78,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         arm_length_ratio=1.9, arm_lean_deg=6.0, arm_branching=0.8, crown_fill=0.8, stem_color=(0.36, 0.50, 0.50),
         groove_color=(0.26, 0.40, 0.40), glaucous=0.7, spine_color=(0.55, 0.30, 0.22),
         spine_tip_color=(0.10, 0.08, 0.07),
-        root_system=RootSystemType.TAPROOT, taproot_share=0.2, taproot_depth_m=0.8, root_count=14, root_spread_ratio=0.8, root_depth_m=0.3),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.2, taproot_depth_m=0.8, root_count=14, root_spread_ratio=0.8, root_depth_m=0.3,
+        browning_height_m=1.8, barking_color=(0.36, 0.34, 0.31), scaling_color=(0.55, 0.50, 0.42), scars=0.2),
     "pachycereus_marginatus": cactus(
         "Pachycereus marginatus", "Órgano (Mexican fence post)", "Cactaceae", "Central Mexico",
         "Unbranched columns in clumps; 5 prominent ribs with felted, nearly confluent areoles.",
@@ -85,7 +88,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         central_length_cm=0.5, spine_thickness_mm=0.5, wool=0.9, wool_color=(0.75, 0.75, 0.72),
         offsets=7, offset_scale=0.95, stem_color=(0.22, 0.40, 0.22), groove_color=(0.14, 0.30, 0.14),
         spine_color=(0.85, 0.82, 0.75), spine_tip_color=(0.3, 0.25, 0.2),
-        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3),
+        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3,
+        browning_height_m=0.4, scars=0.15),
     "myrtillocactus_geometrizans": cactus(
         "Myrtillocactus geometrizans", "Garambullo (blue candle)", "Cactaceae", "Central & Northern Mexico",
         "Candelabra of glaucous blue-green branches from a short trunk.",
@@ -94,7 +98,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         central_length_cm=2.0, arm_count=12, arm_height_min=0.15, arm_height_max=0.4, arm_reach_m=0.25,
         arm_length_ratio=0.58, arm_radius_ratio=0.9, stem_color=(0.34, 0.50, 0.50), groove_color=(0.25, 0.40, 0.40),
         glaucous=0.75, spine_color=(0.25, 0.2, 0.18), spine_tip_color=(0.1, 0.08, 0.08), wool=0.2,
-        root_system=RootSystemType.PLATE, root_count=10, root_spread_ratio=0.9, root_depth_m=0.3),
+        root_system=RootSystemType.PLATE, root_count=10, root_spread_ratio=0.9, root_depth_m=0.3,
+        browning_height_m=0.4, scars=0.2),
     "echinopsis_pachanoi": cactus(
         "Echinopsis pachanoi", "San Pedro", "Cactaceae", "Andes",
         "Columnar, branching from the base; broad rounded ribs and short dark spines.",
@@ -102,7 +107,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         areole_spacing_cm=2.0, radial_spines=4, radial_length_cm=0.8, central_spines=1, central_length_cm=1.0,
         offsets=5, offset_scale=0.85, stem_color=(0.30, 0.50, 0.40), glaucous=0.5,
         spine_color=(0.45, 0.32, 0.22), spine_tip_color=(0.2, 0.14, 0.1),
-        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3),
+        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3,
+        browning_height_m=0.25, scars=0.15),
     "cephalocereus_senilis": cactus(
         "Cephalocereus senilis", "Viejito (old man cactus)", "Cactaceae", "Hidalgo, Mexico",
         "Column clothed in long white hair-like spines.",
@@ -110,7 +116,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         radial_spines=30, radial_length_cm=10.0, spine_thickness_mm=0.5, spine_curvature=1.1, radial_lift_deg=30,
         central_spines=2, central_length_cm=2.0, wool=0.5, stem_color=(0.32, 0.45, 0.30),
         spine_color=(0.96, 0.95, 0.92), spine_tip_color=(0.9, 0.88, 0.84),
-        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3),
+        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=0.8, root_depth_m=0.3,
+        browning_height_m=0.5, scars=0.1),
     "ferocactus_wislizeni": cactus(
         "Ferocactus wislizeni", "Fishhook barrel", "Cactaceae", "Chihuahuan & Sonoran Deserts",
         "Barrel with hooked red central spines.",
@@ -119,7 +126,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         radial_length_cm=4.0, spine_thickness_mm=0.5, central_spines=4, central_length_cm=6.0, central_hook=1.0,
         stem_color=(0.25, 0.40, 0.22), spine_color=(0.75, 0.35, 0.22), spine_tip_color=(0.45, 0.2, 0.12),
         wool=0.3,
-        root_system=RootSystemType.TAPROOT, taproot_share=0.35, taproot_depth_m=0.4, root_count=10, root_spread_ratio=2.0, root_depth_m=0.25),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.35, taproot_depth_m=0.4, root_count=10, root_spread_ratio=2.0, root_depth_m=0.25,
+        browning_height_m=0.15, scars=0.2),
     "echinocactus_grusonii": cactus(
         "Echinocactus grusonii", "Biznaga dorada (golden barrel)", "Cactaceae", "Querétaro & Hidalgo, Mexico",
         "Globose barrel with many sharp ribs, golden spines and a woolly apex.",
@@ -128,7 +136,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         central_spines=4, central_length_cm=4.0, spine_thickness_mm=1.0, apical_wool=1.8, wool=0.4,
         stem_color=(0.25, 0.42, 0.20), spine_color=(0.97, 0.82, 0.30), spine_tip_color=(0.85, 0.62, 0.2),
         wool_color=(0.97, 0.93, 0.80),
-        root_system=RootSystemType.PLATE, root_count=10, root_spread_ratio=2.0, root_depth_m=0.25),
+        root_system=RootSystemType.PLATE, root_count=10, root_spread_ratio=2.0, root_depth_m=0.25,
+        browning_height_m=0.08, scars=0.1),
     "mammillaria_hahniana": cactus(
         "Mammillaria hahniana", "Old lady cactus", "Cactaceae", "Guanajuato & Querétaro, Mexico",
         "Clustering globose stems; spiral tubercles with white hair-like radial spines.",
@@ -137,7 +146,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         spine_thickness_mm=0.05, spine_curvature=0.6, central_spines=1, central_length_cm=0.5, wool=0.6,
         apical_wool=0.8, offsets=4, offset_scale=0.85, stem_color=(0.28, 0.45, 0.28),
         spine_color=(0.97, 0.97, 0.95), spine_tip_color=(0.92, 0.9, 0.88),
-        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=1.5, root_depth_m=0.15),
+        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=1.5, root_depth_m=0.15,
+        scars=0.05),
     "lophophora_williamsii": cactus(
         "Lophophora williamsii", "Peyote", "Cactaceae", "Chihuahuan Desert, Mexico & Texas",
         "Spineless flat-topped button with tufts of hairs on the areoles and a large napiform taproot.",
@@ -146,7 +156,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         radial_spines=0, central_spines=0, wool=1.0, wool_color=(0.85, 0.83, 0.78),
         stem_color=(0.38, 0.52, 0.50), groove_color=(0.30, 0.44, 0.42), glaucous=0.7,
         root_system=RootSystemType.TUBEROUS, tuber_length_cm=12.0, tuber_radius_ratio=0.75, root_count=10,
-        root_spread_ratio=3.0, root_depth_m=0.15),
+        root_spread_ratio=3.0, root_depth_m=0.15,
+        scars=0.05, areole_stain=0.2),
     "astrophytum_myriostigma": cactus(
         "Astrophytum myriostigma", "Bonete de obispo (bishop's cap)", "Cactaceae", "Chihuahuan Desert, Mexico",
         "Spineless, five sharp ribs, flecked with white trichome scales.",
@@ -154,7 +165,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         apex_dome=0.8, areole_spacing_cm=1.2, radial_spines=0, central_spines=0, wool=0.7,
         stem_color=(0.40, 0.48, 0.38), groove_color=(0.30, 0.38, 0.28), flecks=0.9,
         wool_color=(0.70, 0.62, 0.50),
-        root_system=RootSystemType.TAPROOT, taproot_share=0.35, taproot_depth_m=0.25, root_count=6, root_spread_ratio=1.5, root_depth_m=0.15),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.35, taproot_depth_m=0.25, root_count=6, root_spread_ratio=1.5, root_depth_m=0.15,
+        scars=0.1),
     "opuntia_ficus_indica": cactus(
         "Opuntia ficus-indica", "Nopal", "Cactaceae", "Mexico (cultivated worldwide)",
         "Shrubby chains of large flattened cladodes; few spines and tufts of glochids.",
@@ -162,14 +174,16 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         pad_branching=1.8, areole_spacing_cm=3.5, radial_spines=1, radial_length_cm=1.0, central_spines=0,
         wool=0.25, wool_color=(0.75, 0.65, 0.35), stem_color=(0.32, 0.50, 0.28), glaucous=0.3,
         spine_color=(0.9, 0.88, 0.8), spine_tip_color=(0.6, 0.55, 0.45),
-        root_system=RootSystemType.PLATE, root_count=12, root_spread_ratio=1.2, root_depth_m=0.15),
+        root_system=RootSystemType.PLATE, root_count=12, root_spread_ratio=1.2, root_depth_m=0.15,
+        browning_height_m=0.3, scars=0.3, areole_stain=0.5, scaling_color=(0.55, 0.50, 0.40), barking_color=(0.40, 0.36, 0.30)),
     "opuntia_microdasys": cactus(
         "Opuntia microdasys", "Bunny ears", "Cactaceae", "Chihuahuan Desert, Mexico",
         "Small pads without spines, dotted with dense glochid tufts.",
         habit=H.CLADODE, pad_length_cm=12.0, pad_width_ratio=0.75, pad_thickness_ratio=0.1, pad_levels=3,
         pad_branching=1.7, areole_spacing_cm=1.0, radial_spines=0, central_spines=0, wool=0.7,
         wool_color=(0.95, 0.88, 0.55), stem_color=(0.30, 0.52, 0.25),
-        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=1.5, root_depth_m=0.12),
+        root_system=RootSystemType.PLATE, root_count=8, root_spread_ratio=1.5, root_depth_m=0.12,
+        browning_height_m=0.05, scars=0.1),
     "euphorbia_ingens": cactus(
         "Euphorbia ingens", "Candelabra tree (convergent, Euphorbiaceae)", "Euphorbiaceae", "Southern Africa",
         "Not a cactus: a stem succulent converging on the candelabra form; 4 winged ribs with paired spines.",
@@ -179,7 +193,8 @@ CACTUS_CATALOG: dict[str, SucculentPreset] = {
         arm_lean_deg=8.0, arm_branching=0.6,
         arm_radius_ratio=0.9, stem_color=(0.25, 0.42, 0.20), spine_color=(0.35, 0.25, 0.2),
         spine_tip_color=(0.2, 0.15, 0.1),
-        root_system=RootSystemType.TAPROOT, taproot_share=0.2, taproot_depth_m=1.0, root_count=12, root_spread_ratio=0.8, root_depth_m=0.4),
+        root_system=RootSystemType.TAPROOT, taproot_share=0.2, taproot_depth_m=1.0, root_count=12, root_spread_ratio=0.8, root_depth_m=0.4,
+        browning_height_m=1.2, barking_color=(0.40, 0.38, 0.33), scaling_color=(0.55, 0.50, 0.40), scars=0.2),
 }
 
 ROSETTE_CATALOG: dict[str, SucculentPreset] = {
@@ -307,7 +322,7 @@ CACTUS_RANGES = {
     "spine_curvature": (0.0, 1.5), "central_hook": (0.0, 2.0), "radial_lift_deg": (0.0, 80.0),
     "spine_jitter": (0.0, 0.8), "wool": (0.0, 2.0), "apical_wool": (0.0, 3.0), "arm_count": (0, 30),
     "arm_height_min": (0.05, 0.95), "arm_height_max": (0.05, 0.95), "arm_radius_ratio": (0.3, 1.0),
-    "arm_reach_m": (0.05, 2.0), "arm_length_ratio": (0.1, 5.0), "arm_lean_deg": (0.0, 30.0), "arm_branching": (0.0, 3.0), "crown_fill": (0.0, 1.0), "offsets": (0, 20), "offset_scale": (0.2, 1.0),
+    "arm_reach_m": (0.05, 2.0), "arm_length_ratio": (0.1, 5.0), "arm_lean_deg": (0.0, 30.0), "arm_branching": (0.0, 3.0), "browning_height_m": (0.0, 6.0), "equator_bias": (0.0, 1.0), "equator_azimuth_deg": (0.0, 360.0), "scars": (0.0, 1.0), "areole_stain": (0.0, 1.0), "crest_light": (0.0, 1.0), "groove_dust": (0.0, 1.0), "streaks": (0.0, 1.0), "crown_fill": (0.0, 1.0), "offsets": (0, 20), "offset_scale": (0.2, 1.0),
     "pad_length_cm": (3.0, 80.0), "pad_width_ratio": (0.2, 1.2), "pad_thickness_ratio": (0.02, 0.3),
     "pad_levels": (1, 8), "pad_branching": (0.0, 4.0), "root_count": (1, 40), "root_spread_ratio": (0.1, 5.0), "root_depth_m": (0.02, 2.0), "taproot_share": (0.0, 0.8), "taproot_depth_m": (0.05, 3.0), "root_core_ratio": (0.05, 0.6), "tuber_length_cm": (1.0, 60.0), "tuber_radius_ratio": (0.1, 1.5), "glaucous": (0.0, 1.0), "flecks": (0.0, 1.0),
 }
