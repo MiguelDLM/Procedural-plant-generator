@@ -1126,7 +1126,8 @@ class TestVegetables(unittest.TestCase):
 
     def test_tubers_underground_and_lift(self):
         sp, r = self._gen("solanum_tuberosum")
-        self.assertLess(float(r.root.vertices[:, 2].max()), 0.0)
+        self.assertLess(float(np.median(r.root.vertices[:, 2])), -0.05)      # Tubers, stolons, roots underground
+        self.assertLess(float(r.root.vertices[:, 2].max()), 0.01)        # Underground stems reach the soil
         sp, r2 = self._gen("solanum_tuberosum", lift=0.3)
         self.assertAlmostEqual(float(r2.root.vertices[:, 2].max() - r.root.vertices[:, 2].max()), 0.3, places=4)
 
@@ -1142,6 +1143,35 @@ class TestVegetables(unittest.TestCase):
         from tests.relevance_check import check
         for key in ("daucus_carota", "solanum_tuberosum"):
             self.assertEqual(check("Vegetable", key, report=lambda m: None), [], key)
+
+
+class TestConnectedParts(unittest.TestCase):
+    """No part floats apart: stalks reach their fruits, bunches hang from their rachis, aerial and
+    underground parts of vegetables meet, leaves start on a stem or crown."""
+
+    def test_fruits(self):
+        from tests.geometry_checks import floating_islands
+        from core.fruit import hanging_fruit
+        from core.fruit_db import FRUIT_CATALOG
+        for key, sp in FRUIT_CATALOG.items():
+            tol = 0.005 + 0.5 * sp.fruit.stalk_radius_mm * 0.001
+            self.assertEqual(floating_islands(hanging_fruit(sp.fruit, 0.5, 2), tol), [], key)
+
+    def test_vegetables(self):
+        from tests.geometry_checks import floating_islands
+        from core.mesh_engine import MeshData
+        from core.spatial import nearest_points
+        from core.vegetable import VegetableEngine
+        from core.vegetable_db import VEGETABLE_CATALOG
+        for key, sp in VEGETABLE_CATALOG.items():
+            r = VegetableEngine(sp.profile, sp.leaf, sp.venation).generate(seed=2, detail=0.5)
+            parts = [m for m in (r.root, r.stems, r.head) if len(m.vertices)]
+            for m in parts:
+                m.point_attributes = {}
+            whole = MeshData.concatenate(parts)
+            self.assertEqual(floating_islands(whole, 0.006), [], key)
+            d, _ = nearest_points(r.foliage.positions, whole.vertices.astype(float), 0.05)
+            self.assertLess(float(np.max(d)), 0.012, f"{key}: a leaf does not start on the plant")
 
 
 if __name__ == "__main__":

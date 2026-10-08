@@ -271,15 +271,43 @@ class VegetableEngine:
 
     # ----------------------------------------------------------------- tubers
     def tubers(self, rng, stem_bases, detail=1.0) -> MeshData:
+        """Seed (mother) tuber at planting depth; an underground stem rises from it to every aerial stem;
+        stolons and fibrous roots leave the underground nodes; tubers swell at the stolon tips."""
         p = self.p
         parts = []
+        depth0 = p.tuber_depth_cm * 0.01 * 0.8
+        seed_c = np.array([0.0, 0.0, -depth0])
+        sd = max(p.tuber_diameter_cm * 0.01 * 0.6, 0.02)
+        t0 = 0.5 - 0.5 * np.cos(np.pi * np.linspace(0, 1, 12)[1:-1])
+        mother = revolve(0.5 * sd * np.sin(np.pi * t0) ** 0.6, sd * 1.2 * t0 - sd * 0.6, 12,
+                         {"veg_t": t0, "veg_part": np.zeros(len(t0)), "veg_ring": np.full(len(t0), 0.3)},
+                         lambda th: 1.0 + 0.08 * np.cos(3 * th + 1.0)[None, :])
+        parts.append(_place(mother, _rotation_to(np.array([1.0, 0.2, 0.1])), seed_c))
+        nodes = []
+        r_st = p.stem_radius_mm * 0.001
+        for base in stem_bases:
+            under = np.linspace(seed_c + _unit(base - seed_c) * sd * 0.3, base + UP * 0.004, 6)
+            parts.append(tube(under, np.full(6, r_st * 0.9), 6, {"veg_part": np.zeros(6), "veg_t": np.zeros(6)}))
+            nodes.append(under[1:-1])
+            for q in under[1:-1]:                           # Fibrous roots from the underground nodes
+                for _ in range(2):
+                    d = _unit(rng.normal(0, 1, 3) * np.array([1, 1, 0.4]) - 0.6 * UP)
+                    pts = [q]
+                    for _ in range(6):
+                        d = _unit(d + rng.normal(0, 0.25, 3) - 0.1 * UP)
+                        d[2] = min(d[2], -0.15)                 # Roots grow down or sideways, never up
+                        d = _unit(d)
+                        pts.append(pts[-1] + d * 0.025)
+                    parts.append(tube(np.array(pts), np.linspace(0.0009, 0.0003, 7), 3,
+                                      {"veg_part": np.ones(7), "veg_t": np.ones(7)}))
+        nodes = np.concatenate(nodes)
         L = p.tuber_length_cm * 0.01
         D = p.tuber_diameter_cm * 0.01
         depth = p.tuber_depth_cm * 0.01
         n_t = max(12, int(22 * detail))
         nth = max(12, int(20 * detail))
         for k in range(p.tuber_count):
-            base = stem_bases[k % len(stem_bases)] + np.array([0, 0, -0.03 - 0.6 * depth * rng.random()])
+            base = nodes[rng.integers(len(nodes))]            # Stolons leave the underground stem nodes
             a = 2 * math.pi * k / max(p.tuber_count, 1) + rng.normal(0, 0.4)
             h = np.array([math.cos(a), math.sin(a), 0.0])
             sl = p.stolon_length_cm * 0.01 * rng.uniform(0.5, 1.2)
@@ -321,7 +349,7 @@ class VegetableEngine:
         return _merge(parts, ROOT_ATTRS)
 
     # ----------------------------------------------------------------- heads
-    def head(self, rng, center, detail=1.0) -> MeshData:
+    def head(self, rng, center, detail=1.0, stem_top=None, stem_radius=0.01) -> MeshData:
         """Self-similar inflorescence head. A base dome (curd, buds) or cone (Romanesco) is displaced by nested
         height fields: at every order the branch meristems sit in a golden-angle spiral, the first order over
         the whole head and each further order around every meristem of the previous one, each order smaller
@@ -435,13 +463,13 @@ class VegetableEngine:
         fan = np.stack([apex + np.arange(nb), np.arange(nb), np.arange(nb) + 1], axis=1)
         # Underside: from the rim back to a ring around the stem top (branch colour)
         rim = V[(rows - 1) * cols:(rows) * cols]
-        r_in = R * 0.45
-        base = c0 + np.array([0.0, 0.0, -H * (0.15 if not cones else 0.05)])
+        r_in = max(stem_radius, 0.003) * 0.95             # The underside closes onto the stem top
+        base = np.asarray(stem_top, float) if stem_top is not None else c0 - np.array([0.0, 0.0, H * 0.15])
         under = []
         for s in np.linspace(0.0, 1.0, 6)[1:]:
             ring = np.stack([base[0] + (rim[:, 0] - c0[0]) * (1 - s) + r_in * s * np.cos(b),
                              base[1] + (rim[:, 1] - c0[1]) * (1 - s) + r_in * s * np.sin(b),
-                             rim[:, 2] * (1 - s) + base[2] * s - 0.25 * H * math.sin(math.pi * s) * 0.3], -1)
+                             rim[:, 2] * (1 - s) + base[2] * s - 0.05 * H * math.sin(math.pi * s)], -1)
             under.append(ring)
         U2 = np.concatenate(under)
         off = len(V) + nb
@@ -518,7 +546,9 @@ class VegetableEngine:
         head = MeshData.empty()
         if p.organ == StorageOrgan.HEAD:
             Rh = 0.5 * p.head_diameter_cm * 0.01
-            head = self.head(np.random.default_rng(seed + 2), tops[0] + UP * Rh * 0.05, detail)
+            r_top = p.stem_radius_mm * 0.001 * 0.55
+            head = self.head(np.random.default_rng(seed + 2), tops[0] + UP * Rh * 0.15, detail,
+                             stem_top=tops[0] - UP * 0.005, stem_radius=r_top)
         # Tubers
         if p.organ == StorageOrgan.TUBERS and with_roots:
             root = self.tubers(np.random.default_rng(seed + 3), bases, detail)
@@ -552,7 +582,8 @@ class VegetableEngine:
                 size = p.leaf_size * (0.55 + 0.45 * (1 - f) ** 0.6 if H <= 0.005 else 0.7 + 0.3 * math.sin(np.pi * f))
                 if rng_l.random() > leaf_density:
                     continue
-                offset = h * (head_r * 0.6 * f * p.head_wrap if head_r > 0 else 0.004)
+                r_here = p.stem_radius_mm * 0.001 * (1.0 - 0.45 * si / max(s[-1], 1e-9)) if H > 0.005 else 0.002
+                offset = h * r_here * 0.8 - UP * (0.002 if H <= 0.005 else 0.0)
                 pos.append(x + offset)
                 ys.append(y)
                 zs.append(z)

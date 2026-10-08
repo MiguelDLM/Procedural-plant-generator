@@ -116,21 +116,29 @@ def body_mesh(p: FruitProfile, detail: float = 1.0, seed: int = 0, length_scale:
     L = p.length_cm * 0.01 * length_scale
     D = p.diameter_cm * 0.01 * length_scale
     rng = np.random.default_rng(seed)
-    nt = max(10, int(26 * detail))
+    nt = max(14, int(34 * detail))
     nth = max(12, int(max(24, p.ribs * 6) * detail))
-    v = np.linspace(0.0, 1.0, nt + 1)[1:-1]
-    t = 0.5 - 0.5 * np.cos(np.pi * v)                    # Rings concentrated toward the rounded ends
     w = float(np.clip(p.widest_position, 0.15, 0.85))
-    tw = np.where(t < w, 0.5 * t / w, 0.5 + 0.5 * (t - w) / (1 - w))
     e_prox = max(p.bluntness, 0.05)
     e_dist = e_prox + 1.6 * p.distal_point
-    rho = 0.5 * D * np.where(t < w, np.sin(np.pi * tw) ** e_prox, np.sin(np.pi * tw) ** e_dist)
-    rho *= 1.0 - p.neck * 0.75 * np.exp(-((t - 0.22) / 0.16) ** 2)
-    # Stalk cavity and calyx basin: dimples around the axis (a function of the distance to the axis, so the
-    # shoulders keep their shape); the profile curls back inward at each end
-    rn = rho / max(0.5 * D, 1e-9)
-    z = L * t + np.where(t < 0.5, p.stalk_cavity * L * np.exp(-(rn / 0.32) ** 2),
-                         -p.calyx_basin * L * np.exp(-(rn / 0.28) ** 2))
+
+    def outline(t):
+        tw = np.where(t < w, 0.5 * t / w, 0.5 + 0.5 * (t - w) / (1 - w))
+        rho = 0.5 * D * np.where(t < w, np.sin(np.pi * tw) ** e_prox, np.sin(np.pi * tw) ** e_dist)
+        rho = rho * (1.0 - p.neck * 0.75 * np.exp(-((t - 0.22) / 0.16) ** 2))
+        # Stalk cavity and calyx basin: dimples around the axis (a function of the distance to the axis, so
+        # the shoulders keep their shape); the profile curls back inward at each end
+        rn = rho / max(0.5 * D, 1e-9)
+        z = L * t + np.where(t < 0.5, p.stalk_cavity * L * np.exp(-(rn / 0.32) ** 2),
+                             -p.calyx_basin * L * np.exp(-(rn / 0.28) ** 2))
+        return rho, z
+    # Rings evenly spaced along the outline (not along the axis): blunt ends and cavities get as many rings
+    # as the flanks, so the poles close with small triangles
+    tf = np.linspace(0.0, 1.0, 4001)
+    rf, zf = outline(tf)
+    sl = np.concatenate([[0.0], np.cumsum(np.hypot(np.diff(rf), np.diff(zf)))])
+    t = np.interp(np.linspace(0.0, sl[-1], nt + 1)[1:-1], sl, tf)
+    rho, z = outline(t)
     th = np.linspace(0.0, 2 * math.pi, nth + 1)
     if p.ribs > 0:
         rib = np.abs(np.sin(p.ribs * th / 2.0))
@@ -269,12 +277,15 @@ def hanging_fruit(p: FruitProfile, detail: float = 1.0, seed: int = 0) -> MeshDa
     R = _frame_to(-UP + rng.normal(0, 0.05, 3), rng.uniform(0, 2 * math.pi))
     end = np.array([0.0, 0.0, -stalk])
     parts = [_transform(body, R, end - R[:, 2] * 0.0)]
-    # Stalk: gently curved from the origin to inside the stalk end
+    # Stalk: gently curved from the origin to the stalk end, then straight along the fruit axis to the bottom
+    # of the cavity, so even thick stalks (pumpkin) enter the fruit and do not end beside it
     tip = end + R[:, 2] * sink
     bend = rng.normal(0, 0.15, 3) * stalk
     bend[2] = 0
     s = np.linspace(0, 1, 10)[:, None]
-    P = (1 - s) ** 2 * np.zeros(3) + 2 * (1 - s) * s * (tip * 0.5 + bend) + s ** 2 * tip
+    ctrl = end - R[:, 2] * stalk * 0.45 + bend * 0.5      # Tangent along the fruit axis at the stalk end
+    P = (1 - s) ** 2 * np.zeros(3) + 2 * (1 - s) * s * ctrl + s ** 2 * end
+    P = np.concatenate([P, end + np.outer(np.linspace(0.25, 1.0, 4), tip - end)])
     r = p.stalk_radius_mm * 0.001
     parts.append(_tube(P, np.linspace(r * 0.9, r * 1.2, len(P)), 6, _stalk_attrs(len(P))))
     return _concat(parts)
@@ -322,7 +333,7 @@ def bunch(p: FruitProfile, detail: float = 1.0, seed: int = 0) -> MeshData:
             continue
         G = C[g]
         cen = G.mean(0)
-        zr = min(cen[2] + bd, z0)
+        zr = float(np.clip(cen[2] + bd, z0 - Lr * 0.95, z0))     # On the rachis
         j0 = np.array([0.0, 0.0, zr])
         j1 = j0 + (np.array([cen[0], cen[1], 0.0])) * 0.65 + np.array([0, 0, -bd * 0.3])
         lat = np.linspace(j0, j1, 4)

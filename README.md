@@ -287,3 +287,22 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Hädrich, T., Benes, B., Deussen, O. & Pirk, S. (2017). Interactive modeling and authoring of climbing plants. *Computer Graphics Forum* 36(2): 49–61. doi:10.1111/cgf.13106
 - Wang, W., Jüttler, B., Zheng, D. & Liu, Y. (2008). Computation of rotation minimizing frames. *ACM Transactions on Graphics* 27(1): 2.
 - Cooper, L. et al. (2018). The Planteome database. *Nucleic Acids Research* 46: D1168–D1180.
+
+---
+
+## License & Commercial Use
+
+This project is licensed under the **GNU General Public License v3.0 (or later)** — see the [LICENSE](LICENSE) file for the full text.
+
+- **Personal, Educational & Academic Use**: Completely free and open. You may study, run, and experiment with the software without restrictions.
+- **Modifications & Derivative Works (Copyleft)**: If you modify this software or build derivative tools upon it and distribute them, you must make your modifications open source under the **GNU GPLv3** terms with full attribution.
+- **Generated 3D Output**: 3D plant meshes, procedural textures, and renders produced by running the add-on are your own creative work and can be used freely in personal and commercial art, films, or games.
+- **Presets & Botanical Data**: Presets in `presets/` are released under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
+
+### Commercial / Proprietary Licensing (Dual License)
+
+If you or your organization wish to incorporate Procedural Plant Generator algorithms, code, or derivative tools into a proprietary, closed-source engine, pipeline, or commercial software product where the copyleft requirements of the GNU GPLv3 are not compatible, a separate **Commercial License** can be arranged.
+
+For commercial licensing and custom integration inquiries, contact:  
+**Miguel Diaz de Leon-Munoz** — [migueldlm1307@gmail.com](mailto:migueldlm1307@gmail.com)
+

@@ -798,7 +798,8 @@ class VineEngine:
         end = attach + axis * (fruit_pole_depth(fr) * sc + 0.004)       # Inside the stalk end
         lift = max(end[2] - x[2], 0.0)
         mid = x + (end - x) * 0.5 + UP * (0.25 * lift + 0.01) if on_soil else x + side * stalk * 0.45
-        pts = _bezier_q(np.array([x, mid, end]), 12)
+        pts = _bezier_q(np.array([x, mid, attach]), 12)
+        pts = np.concatenate([pts, attach + np.outer(np.linspace(0.34, 1.0, 3), end - attach)])  # Along the axis
         rs = float(np.clip(fr.stalk_radius_mm * 0.001, 0.0008, 0.03))
         stalk_mesh = tube(pts, np.linspace(rs, rs * 1.3, len(pts)), 6, {"age": np.full(len(pts), 0.3),
                                                                        "woody": np.full(len(pts), 0.5)})
