@@ -126,6 +126,12 @@ PROP_MAP: list[tuple[str, str]] = [
     ("bark_color_young", "bark.young_color"),
     ("bark_onset_cm", "bark.onset_radius_cm"),
     ("bark_weathering", "bark.weathering"),
+    ("bark_blockiness", "bark.blockiness"),
+    ("bark_segments", "bark.segments"),
+    ("bark_plate_tilt", "bark.plate_tilt"),
+    ("bark_warp", "bark.warp"),
+    ("bark_moss", "bark.moss"),
+    ("bark_lichen", "bark.lichen"),
     ("root_system", "roots.system"),
     ("root_laterals", "roots.lateral_count"),
     ("root_spread", "roots.spread_crown_ratio"),
@@ -354,13 +360,31 @@ def _ensure_leaf_material(root, preset, props, model, shoot_leaves):
     return mat
 
 
-def _ensure_bark_material(root, preset):
-    key = _key(preset.bark, "bark-3d-v4")
+def _bark_displacement_modifier(obj, enabled: bool):
+    """True bark displacement needs geometry: an adaptive subdivision modifier (Cycles dices by screen size)."""
+    if obj is None:
+        return
+    mod = obj.modifiers.get("PPG_BarkDisplace")
+    if enabled:
+        if mod is None:
+            mod = obj.modifiers.new("PPG_BarkDisplace", 'SUBSURF')
+        mod.levels = 0
+        mod.render_levels = 2
+        if hasattr(mod, "use_adaptive_subdivision"):
+            mod.use_adaptive_subdivision = True
+            if hasattr(mod, "adaptive_pixel_size"):
+                mod.adaptive_pixel_size = 2.0
+    elif mod is not None:
+        obj.modifiers.remove(mod)
+
+
+def _ensure_bark_material(root, preset, displacement=False):
+    key = _key(preset.bark, "bark-3d-v5", displacement)
     name = f"{root.name}_BarkMat"
     mat = bpy.data.materials.get(name)
     if mat is not None and mat.get("ppg_key") == key:
         return mat
-    mat = create_bark_material(name, preset.bark)
+    mat = create_bark_material(name, preset.bark, displacement=displacement)
     mat["ppg_key"] = key
     return mat
 
@@ -442,9 +466,12 @@ def update_tree_geometry(context):
 
         if props.assign_materials:
             root = built["root"]
-            bark = _ensure_bark_material(root, preset)
+            disp = bool(getattr(props, "bark_displacement", False))
+            bark = _ensure_bark_material(root, preset, disp)
             _assign(built["wood"], bark)
             _assign(built.get("roots"), bark)
+            for obj in (built["wood"], built.get("roots")):
+                _bark_displacement_modifier(obj, disp)
             if props.show_leaves:
                 _assign(built["foliage"], _ensure_leaf_material(root, preset, props, result.leaf_engine.shape_model,
                                                                 result.leaf_engine.shoot_leaves))

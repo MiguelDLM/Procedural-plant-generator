@@ -290,6 +290,15 @@ if BLENDER_AVAILABLE:
         bark_onset_cm: F("Fissuring Onset (cm)", 4.0, 0.1, 30.0,
                          "Axis radius at which the mature bark pattern appears; fissures widen beyond it")
         bark_weathering: F("Weathering", 0.35, 0.0, 1.0, "Grey, bleached ridge tops on old bark")
+        bark_blockiness: F("Blockiness", 0.4, 0.0, 1.0, "Irregular rounded cells .. rectangular blocks")
+        bark_segments: F("Transverse Splits", 0.3, 0.0, 1.0, "Ridges cut into segments along the axis")
+        bark_plate_tilt: F("Plate Tilt", 0.3, 0.0, 1.0, "Per-plate tilt and offset")
+        bark_warp: F("Interlacing", 0.4, 0.0, 1.0, "Organic distortion; high = anastomosing ridges")
+        bark_moss: F("Moss", 0.15, 0.0, 1.0, "Moss on upper, shaded and basal surfaces")
+        bark_lichen: F("Lichen", 0.15, 0.0, 1.0, "Crustose lichen patches")
+        bark_displacement: BoolProperty(name="Bark Displacement", default=False, update=U,
+                                        description="True displacement (Cycles) with adaptive subdivision: "
+                                                    "real relief on close-ups, slower renders")
 
         # Roots
         show_roots: BoolProperty(name="Show Roots", default=True, update=U)
@@ -618,7 +627,8 @@ class PPG_PT_Bark(_PPGSub, Panel):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
         for name in ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief", "bark_color_young",
-                     "bark_onset_cm", "bark_weathering"):
+                     "bark_onset_cm", "bark_weathering", "bark_blockiness", "bark_segments", "bark_plate_tilt",
+                     "bark_warp", "bark_moss", "bark_lichen", "bark_displacement"):
             col.prop(p, name)
 
 

@@ -103,6 +103,12 @@ TRAITS: list[TraitSpec] = [
     TraitSpec("bark.relief", 0.0, 1.0, cv=0.06),
     TraitSpec("bark.onset_radius_cm", 0.1, 30.0, log=True, cv=0.1),
     TraitSpec("bark.weathering", 0.0, 1.0, cv=0.08),
+    TraitSpec("bark.blockiness", 0.0, 1.0, cv=0.08),
+    TraitSpec("bark.segments", 0.0, 1.0, cv=0.08),
+    TraitSpec("bark.plate_tilt", 0.0, 1.0, cv=0.08),
+    TraitSpec("bark.warp", 0.0, 1.0, cv=0.08),
+    TraitSpec("bark.moss", 0.0, 1.0, cv=0.1),
+    TraitSpec("bark.lichen", 0.0, 1.0, cv=0.1),
     # Roots
     TraitSpec("roots.lateral_count", 1, 16, integer=True, cv=0.0),
     TraitSpec("roots.spread_crown_ratio", 0.3, 4.0, cv=0.08),
