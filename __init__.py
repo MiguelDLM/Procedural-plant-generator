@@ -23,10 +23,12 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 if BLENDER_AVAILABLE:
+    from .blender.forest import FOREST_CLASSES
     from .blender.panel import PPG_Properties, PANEL_CLASSES
     from .blender.operators import OPERATOR_CLASSES
 
-    classes = (PPG_Properties,) + OPERATOR_CLASSES + PANEL_CLASSES
+    # The forest species item type must be registered before the properties that hold a collection of it
+    classes = FOREST_CLASSES[:1] + (PPG_Properties,) + OPERATOR_CLASSES + FOREST_CLASSES[1:] + PANEL_CLASSES
 
     def register():
         for cls in classes:

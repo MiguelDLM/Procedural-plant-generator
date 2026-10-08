@@ -380,11 +380,11 @@ def _instancer_nodes(obj, proto):
 
 def _euler_xyz(R):
     """Blender XYZ Euler angles of rotation matrices R (N, 3, 3)."""
-    sy = np.clip(-R[:, 2, 0], -1.0, 1.0)
-    ry = np.arcsin(sy)
-    rx = np.arctan2(R[:, 2, 1], R[:, 2, 2])
-    rz = np.arctan2(R[:, 1, 0], R[:, 0, 0])
-    return np.stack([rx, ry, rz], 1)
+    try:
+        from .instancing import euler_xyz
+    except (ImportError, ValueError):
+        from blender.instancing import euler_xyz
+    return euler_xyz(R)
 
 
 def _site_rotations(D, rng):

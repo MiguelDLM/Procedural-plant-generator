@@ -121,7 +121,7 @@ class BlenderMeshBuilder:
                               leaf_scale: float = 1.0, show_leaves: bool = True, use_subsurf: bool = False,
                               show_roots: bool = True, junction_quality: str = 'FUSED',
                               fuse_detail: float = 10.0, fuse_smoothing: int = 6, hero_min_radius: float = 0.025,
-                              sleeve_detail: float = 4.0, max_sleeves: int = 400) -> dict:
+                              sleeve_detail: float = 4.0, max_sleeves: int = 400, foliage_instanced: bool = False) -> dict:
         if not BLENDER_AVAILABLE:
             raise RuntimeError("Blender (bpy) is not available.")
         root_name = f"PPG_{self.preset.scientific_name.split(' (')[0].replace(' ', '_').replace(chr(39), '')}"
@@ -178,12 +178,36 @@ class BlenderMeshBuilder:
 
         # Foliage
         foliage_obj = self._child(context, root_obj, "_Foliage", f"{root_obj.name}_Foliage")
-        if show_leaves and leaf_density > 0.0:
+        card_obj = self._child(context, root_obj, "_LeafCard", f"{root_obj.name}_LeafCard")
+        card_obj.hide_viewport = card_obj.hide_render = True
+        from .instancing import attach_instancer, remove_instancer, frames_to_euler
+        if show_leaves and leaf_density > 0.0 and foliage_instanced:
+            # One leaf (or leafy shoot) card instanced on every foliage point: a fraction of the memory
+            # and write time of realized cards, and the same render
+            from ..core.foliage import FoliageInstances
+            one = FoliageInstances(np.zeros((1, 3)), np.array([[0.0, 1.0, 0.0]]), np.array([[0.0, 0.0, 1.0]]),
+                                   np.ones(1), np.zeros(1))
+            populate_mesh(card_obj.data, self.mesh_engine.build_foliage_mesh(one, self.result.leaf_mesh_data, 1.0),
+                          smooth=True)
+            f = self.result.foliage
+            pts = MeshData(f.positions.astype(np.float32), np.zeros(0, np.int32), np.zeros(0, np.int32),
+                           np.zeros(0, np.int32), np.zeros((0, 2), np.float32),
+                           {"frot": frames_to_euler(f.axis_x, f.axis_y, f.axis_z).astype(np.float32),
+                            "fscale": (f.scales * leaf_scale).astype(np.float32),
+                            "leaf_random": f.randoms.astype(np.float32)})
+            populate_mesh(foliage_obj.data, pts)
+            attach_instancer(foliage_obj, card_obj)
+            foliage_obj.hide_viewport = False
+            foliage_obj.hide_render = False
+        elif show_leaves and leaf_density > 0.0:
+            remove_instancer(foliage_obj)
+            card_obj.data.clear_geometry()
             foliage = self.mesh_engine.build_foliage_mesh(self.result.foliage, self.result.leaf_mesh_data, leaf_scale)
             populate_mesh(foliage_obj.data, foliage, smooth=True)
             foliage_obj.hide_viewport = False
             foliage_obj.hide_render = False
         else:
+            remove_instancer(foliage_obj)
             foliage_obj.data.clear_geometry()
             foliage_obj.hide_viewport = True
             foliage_obj.hide_render = True
@@ -196,7 +220,7 @@ class BlenderMeshBuilder:
         root_obj["total_height_m"] = r.total_height_m
         root_obj["crown_radius_m"] = r.crown_radius_m
         root_obj["leaf_count"] = r.leaf_count
-        return {"root": root_obj, "wood": wood_obj, "foliage": foliage_obj, "roots": roots_obj}
+        return {"root": root_obj, "wood": wood_obj, "foliage": foliage_obj, "roots": roots_obj, "leaf_card": card_obj}
 
     @staticmethod
     def _assign_vertex_groups(obj, orders):

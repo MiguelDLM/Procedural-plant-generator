@@ -26,6 +26,7 @@ try:
     from ..core.flower_db import FLOWER_CATALOG, flower_items
     from .flowers import flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props, sync_flowers_to_plant
     from .runtime import set_updating
+    from .forest import forest_properties, draw_forest_panel
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -41,6 +42,7 @@ except (ImportError, ValueError):
     from blender.flowers import (flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props,
                                  sync_flowers_to_plant)
     from blender.runtime import set_updating
+    from blender.forest import forest_properties, draw_forest_panel
 
 
 def on_param_update(self, context):
@@ -279,6 +281,10 @@ if BLENDER_AVAILABLE:
         leaf_budget: IntProperty(name="Max Cards", default=60000, min=100, max=500000, update=U,
                                  description="Upper bound on leaf cards (performance)")
         leaf_scale: F("Leaf Scale", 1.0, 0.2, 4.0)
+        foliage_instancing: BoolProperty(name="Instanced Leaves", default=True, update=U,
+                                         description="Instance one leaf card on every foliage point (Geometry "
+                                                     "Nodes): far less memory and faster updates. Apply the "
+                                                     "modifier to get real geometry for export")
 
         # Bark
         bark_pattern: E("Bark", BarkPattern, "Fissured")
@@ -375,6 +381,7 @@ if BLENDER_AVAILABLE:
     for _form in (GrowthForm.CACTUS, GrowthForm.ROSETTE):
         PPG_Properties.__annotations__.update(profile_properties(_form, U))
     PPG_Properties.__annotations__.update(flower_properties(U))
+    PPG_Properties.__annotations__.update(forest_properties())
 else:
     PPG_Properties = None
 
@@ -595,6 +602,7 @@ class PPG_PT_Foliage(_PPGSub, Panel):
             col.prop(p, "leaf_angle")
             col.prop(p, "leaf_density")
             col.prop(p, "leaf_scale")
+            col.prop(p, "foliage_instancing")
             col.prop(p, "leaf_budget")
 
 
@@ -679,6 +687,16 @@ def _succulent_panel(form, index, title, names):
         "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw})
 
 
+class PPG_PT_Forest(_PPGSub, Panel):
+    bl_label = "Forest"
+    bl_idname = "PPG_PT_forest"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree',)
+
+    def draw(self, context):
+        draw_forest_panel(self.layout, context.scene.ppg_properties)
+
+
 class PPG_PT_Flowers(_PPGSub, Panel):
     bl_label = "Flowers"
     bl_idname = "PPG_PT_flowers"
@@ -730,4 +748,4 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
                  PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + \
-                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Topology,)
+                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Forest, PPG_PT_Topology)

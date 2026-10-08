@@ -81,6 +81,23 @@ The 50 flower presets each carry a floral formula. They include Mexican flowers 
 mirasol (*Cosmos*), nochebuena, cacaloxóchitl (*Plumeria*), manto de la virgen (*Ipomoea*), and the flowers
 of saguaro, nopal, cardón and other cacti, plus the maguey quiote.
 
+### Forests and performance
+
+- **Forest panel** (Tree form): list the species of the mix (each with a number of variants and,
+  optionally, the current sliders), then **Create Forest**. Each variant is a unique tree (own seed,
+  trait-space mutation, stem diameter drawn around the species value) stored as a collection in
+  *PPG Forest Library* (excluded from the view layer; optionally marked as assets). Variants of a
+  species share their materials and leaf textures.
+- **Scatter with Geometry Nodes**: the *PPG Forest* object carries the *PPG Forest Scatter* node group:
+  Poisson-disk points on the selected surface (or a generated ground plane) with density in trees/ha and a
+  minimum trunk spacing, a slope limit, random variant, rotation and scale, and a viewport display
+  fraction (all trees render). All inputs are editable in the modifier panel, and the library collection
+  can be used in any other node setup.
+- **Instanced leaves** (default): one leaf or shoot card instanced on every foliage point; renders the same
+  as real cards with a fraction of the memory and faster updates. Apply the modifier to export real geometry.
+- Example: three species × three variants, a 120 m plot at 200 trees/ha: library in ~5 s, about 0.6 M real
+  vertices in the file for hundreds of trees.
+
 ### Trait space
 
 `core/trait_space.py` maps ~70 continuous traits to [0, 1] (log scale where they span orders of magnitude) plus colours; categorical traits are carried alongside.

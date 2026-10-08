@@ -348,13 +348,13 @@ def _key(*parts) -> str:
 def _ensure_leaf_material(root, preset, props, model, shoot_leaves):
     res = int(props.texture_resolution)
     key = _key(preset.leaf_morphology, preset.venation, res, round(props.senescence, 3), shoot_leaves)
-    mat_name = f"{root.name}_LeafMat"
+    mat_name = f"PPG_Leaf_{key}"          # Shared by every plant with the same leaf parameters
     mat = bpy.data.materials.get(mat_name)
     if mat is not None and mat.get("ppg_key") == key:
         return mat
     tex = LeafTextureEngine(preset.leaf_morphology, preset.venation).render(
         resolution=res, senescence=props.senescence, model=model)
-    color_img, height_img = leaf_images_from_texture(f"{root.name}_Leaf", tex)
+    color_img, height_img = leaf_images_from_texture(mat_name, tex)
     mat = create_leaf_material(mat_name, color_img, height_img, preset.leaf_morphology)
     mat["ppg_key"] = key
     return mat
@@ -380,7 +380,7 @@ def _bark_displacement_modifier(obj, enabled: bool):
 
 def _ensure_bark_material(root, preset, displacement=False):
     key = _key(preset.bark, "bark-3d-v5", displacement)
-    name = f"{root.name}_BarkMat"
+    name = f"PPG_Bark_{key}"               # Shared by every plant with the same bark parameters
     mat = bpy.data.materials.get(name)
     if mat is not None and mat.get("ppg_key") == key:
         return mat
@@ -462,7 +462,8 @@ def update_tree_geometry(context):
             show_leaves=props.show_leaves, use_subsurf=props.use_subsurf, show_roots=props.show_roots,
             junction_quality=props.junction_quality, fuse_detail=props.fuse_detail,
             fuse_smoothing=props.fuse_smoothing, hero_min_radius=props.hero_min_radius_cm * 0.01,
-            sleeve_detail=props.sleeve_detail, max_sleeves=props.hero_max_junctions)
+            sleeve_detail=props.sleeve_detail, max_sleeves=props.hero_max_junctions,
+            foliage_instanced=getattr(props, "foliage_instancing", False))
 
         if props.assign_materials:
             root = built["root"]
@@ -473,8 +474,10 @@ def update_tree_geometry(context):
             for obj in (built["wood"], built.get("roots")):
                 _bark_displacement_modifier(obj, disp)
             if props.show_leaves:
-                _assign(built["foliage"], _ensure_leaf_material(root, preset, props, result.leaf_engine.shape_model,
-                                                                result.leaf_engine.shoot_leaves))
+                leaf_mat = _ensure_leaf_material(root, preset, props, result.leaf_engine.shape_model,
+                                                 result.leaf_engine.shoot_leaves)
+                _assign(built["foliage"], leaf_mat)
+                _assign(built.get("leaf_card"), leaf_mat)
         _tree_flowers(context, built["root"], props, result)
     except Exception as e:  # Keep the UI responsive; report in console
         import traceback
