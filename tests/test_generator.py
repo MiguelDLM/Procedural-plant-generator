@@ -827,5 +827,75 @@ class TestFlowers(unittest.TestCase):
         self.assertGreater(float(ts.positions[:, 2].mean()), 0.4 * res.total_height_m)
 
 
+class TestPresets(unittest.TestCase):
+    """JSON presets: exact round trip, partial (base + differences) presets, validation, ranges, schema."""
+
+    def test_builtin_values_within_declared_ranges(self):
+        from core import presets as P
+        for form in P.FORMS:
+            rng = P._ranges(form)
+            for key, obj in P._catalog(form).items():
+                plain = P.to_plain(obj)
+                for path, (lo, hi) in rng.items():
+                    v = plain
+                    for k in path.split("."):
+                        v = v.get(k) if isinstance(v, dict) else None
+                    if isinstance(v, (int, float)) and not isinstance(v, bool):
+                        self.assertTrue(lo <= v <= hi, f"{form}/{key}: {path}={v} outside [{lo}, {hi}]")
+
+    def test_round_trip_every_builtin(self):
+        import json
+        from core import presets as P
+        for form in P.FORMS:
+            for key, obj in P._catalog(form).items():
+                env = json.loads(json.dumps(P.export_preset(form, key, obj)))
+                f, pid, back, warn, _ = P.load_preset(env)
+                self.assertEqual((f, pid), (form, key))
+                self.assertEqual(P.to_plain(back), P.to_plain(obj), f"{form}/{key}")
+                self.assertEqual(warn, [], f"{form}/{key}")
+
+    def test_partial_preset_and_validation(self):
+        import copy
+        import json
+        from core import presets as P
+        from core.species_db import SPECIES_CATALOG
+        oak = copy.deepcopy(SPECIES_CATALOG["quercus_robur"])
+        oak.bark.moss = 0.8
+        env = P.export_preset("Tree", "mossy_oak", oak, base="quercus_robur", diff=True)
+        self.assertEqual(env["preset"], {"bark": {"moss": 0.8}})
+        _, _, back, warn, _ = P.load_preset(json.loads(json.dumps(env)))
+        self.assertEqual(P.to_plain(back), P.to_plain(oak))
+        bad = {"format": "ppg-preset", "format_version": 1, "growth_form": "Cactus", "id": "t_cactus",
+               "base": "carnegiea_gigantea",
+               "preset": {"profile": {"rib_count": 999, "habit": "barrel", "stem_color": [60, 120, 60],
+                                      "spine_lenght_cm": 3, "glaucous": "high"}}}
+        _, _, obj, warn, _ = P.load_preset(bad)
+        self.assertEqual(obj.profile.rib_count, 60)                       # Clamped
+        self.assertEqual(obj.profile.habit.value, "Barrel")              # Case-insensitive enum
+        self.assertAlmostEqual(obj.profile.stem_color[1], 120 / 255)     # 0..255 colour rescaled
+        self.assertTrue(any("unknown field" in w for w in warn))
+        self.assertTrue(any("expected a number" in w for w in warn))
+        for broken in ({"format": "x"}, dict(bad, id="Bad Id"), dict(bad, growth_form="Moss"), dict(bad, base="nope")):
+            with self.assertRaises(P.PresetError):
+                P.load_preset(broken)
+
+    def test_float_traits_keep_decimals(self):
+        """A float trait whose built-in value happens to be an int (5) still accepts 4.5."""
+        from core import presets as P
+        env = {"format": "ppg-preset", "format_version": 1, "growth_form": "Tree", "id": "t_ilex",
+               "base": "quercus_agrifolia", "preset": {"leaf_morphology": {"blade_length_cm": 4.5}}}
+        _, _, obj, warn, _ = P.load_preset(env)
+        self.assertEqual(obj.leaf_morphology.blade_length_cm, 4.5)
+
+    def test_schema_documents_every_field(self):
+        from core import presets as P
+        sch = P.json_schema()
+        self.assertEqual(sch["required"], ["format", "format_version", "growth_form", "id", "preset"])
+        for name, d in sch["$defs"].items():
+            for field, p in d["properties"].items():
+                if "$ref" not in p:
+                    self.assertTrue(p.get("description"), f"{name}.{field} has no description")
+
+
 if __name__ == "__main__":
     unittest.main()

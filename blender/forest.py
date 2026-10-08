@@ -47,9 +47,25 @@ SCATTER_VERSION = 2
 # -----------------------------------------------------------------------------
 # Properties
 # -----------------------------------------------------------------------------
+def _tree_items(self, context):
+    try:
+        from .preset_io import enum_items
+    except (ImportError, ValueError):
+        from blender.preset_io import enum_items
+    return enum_items("Tree")(self, context)
+
+
+def _quercus_number():
+    try:
+        from .preset_io import item_number
+    except (ImportError, ValueError):
+        from blender.preset_io import item_number
+    return item_number("quercus_robur")
+
+
 if BLENDER_AVAILABLE:
     class PPG_ForestSpecies(PropertyGroup):
-        species: EnumProperty(name="Species", items=get_preset_names())
+        species: EnumProperty(name="Species", items=_tree_items, default=_quercus_number())
         variants: IntProperty(name="Variants", default=4, min=1, max=32,
                               description="Unique trees generated for this species (also its share of the mix)")
         use_sliders: BoolProperty(name="Use Current Sliders", default=False,
@@ -72,7 +88,7 @@ def forest_properties() -> dict:
         "forest_quality": EnumProperty(name="Variant Quality", default='TUBES', items=[
             ('TUBES', "Fast", "Tube junctions: for large forests"),
             ('FUSED', "Fused", "Fused stem, limbs and roots: for mid-ground trees")]),
-        "forest_leaf_budget": IntProperty(name="Leaf Cards per Tree", default=60000, min=500, max=200000),
+        "forest_leaf_budget": IntProperty(name="Leaf Cards per Tree", default=150000, min=500, max=1000000),
         "forest_roots": BoolProperty(name="Root Flare", default=False,
                                      description="Include the visible root collar (slower, mostly buried)"),
         "forest_density": FloatProperty(name="Density (trees/ha)", default=250.0, min=1.0, max=5000.0),

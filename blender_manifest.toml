@@ -32,3 +32,4 @@ platforms = ["windows-x64", "macos-arm64", "macos-x64", "linux-x64"]
 
 [permissions]
 files = "Import/export botanical presets and trait data"
+network = "Download shared plant presets from a link the user provides"

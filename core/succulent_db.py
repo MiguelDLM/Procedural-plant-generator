@@ -320,9 +320,9 @@ CACTUS_RANGES = {
     "areole_spacing_cm": (0.3, 8.0), "radial_spines": (0, 40), "radial_length_cm": (0.0, 15.0),
     "central_spines": (0, 10), "central_length_cm": (0.0, 15.0), "spine_thickness_mm": (0.03, 4.0),
     "spine_curvature": (0.0, 1.5), "central_hook": (0.0, 2.0), "radial_lift_deg": (0.0, 80.0),
-    "spine_jitter": (0.0, 0.8), "wool": (0.0, 2.0), "apical_wool": (0.0, 3.0), "arm_count": (0, 30),
-    "arm_height_min": (0.05, 0.95), "arm_height_max": (0.05, 0.95), "arm_radius_ratio": (0.3, 1.0),
-    "arm_reach_m": (0.05, 2.0), "arm_length_ratio": (0.1, 5.0), "arm_lean_deg": (0.0, 30.0), "arm_branching": (0.0, 3.0), "browning_height_m": (0.0, 6.0), "equator_bias": (0.0, 1.0), "equator_azimuth_deg": (0.0, 360.0), "scars": (0.0, 1.0), "areole_stain": (0.0, 1.0), "crest_light": (0.0, 1.0), "groove_dust": (0.0, 1.0), "streaks": (0.0, 1.0), "crown_fill": (0.0, 1.0), "offsets": (0, 20), "offset_scale": (0.2, 1.0),
+    "spine_jitter": (0.0, 0.8), "wool": (0.0, 2.0), "apical_wool": (0.0, 3.0), "arm_count": (0, 60),
+    "arm_height_min": (0.05, 0.95), "arm_height_max": (0.05, 1.0), "arm_radius_ratio": (0.1, 1.0),
+    "arm_reach_m": (0.05, 4.0), "arm_length_ratio": (0.1, 5.0), "arm_lean_deg": (0.0, 30.0), "arm_branching": (0.0, 3.0), "browning_height_m": (0.0, 6.0), "equator_bias": (0.0, 1.0), "equator_azimuth_deg": (0.0, 360.0), "scars": (0.0, 1.0), "areole_stain": (0.0, 1.0), "crest_light": (0.0, 1.0), "groove_dust": (0.0, 1.0), "streaks": (0.0, 1.0), "crown_fill": (0.0, 1.0), "offsets": (0, 20), "offset_scale": (0.2, 1.0),
     "pad_length_cm": (3.0, 80.0), "pad_width_ratio": (0.2, 1.2), "pad_thickness_ratio": (0.02, 0.3),
     "pad_levels": (1, 8), "pad_branching": (0.0, 4.0), "root_count": (1, 40), "root_spread_ratio": (0.1, 5.0), "root_depth_m": (0.02, 2.0), "taproot_share": (0.0, 0.8), "taproot_depth_m": (0.05, 3.0), "root_core_ratio": (0.05, 0.6), "tuber_length_cm": (1.0, 60.0), "tuber_radius_ratio": (0.1, 1.5), "glaucous": (0.0, 1.0), "flecks": (0.0, 1.0),
 }

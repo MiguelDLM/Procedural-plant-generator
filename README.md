@@ -132,6 +132,16 @@ handful of unique variants:
 Rendering: EEVEE is several times faster for previews and many trees; Cycles is needed for true bark
 displacement and gives better translucency on leaves, petals and succulent tissue.
 
+### Presets: create, export, import, share
+
+Every plant can be saved as a JSON preset (*Presets* panel): **Save as New Preset** adds the current sliders
+to your personal library (it shows up in the species menu), **Export** writes a shareable file (optionally
+only the differences from its base species), **Import** and **Import from URL** validate and install other
+people's presets. The format, the [JSON Schema](schemas/ppg-preset.schema.json), a
+[field reference](docs/preset-fields.md) with units, ranges and meaning, and a guide to build presets for
+new species from botanical data (for people and AI agents) are in [docs/PRESETS.md](docs/PRESETS.md).
+Presets can be validated without Blender: `python -m core.presets validate my_plant.json`.
+
 ## Species catalogue (37)
 
 | Group | Species |

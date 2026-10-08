@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
+  "format": "ppg-preset",
+  "format_version": 1,
+  "growth_form": "Flower",
+  "id": "zinnia_elegans",
+  "base": "cosmos_bipinnatus",
+  "metadata": {
+    "license": "CC-BY-4.0",
+    "tags": [
+      "Mexico",
+      "Asteraceae",
+      "example"
+    ],
+    "author": "Procedural Plant Generator (example)",
+    "description": "Zinnia (mal de ojo): semi-double capitulum with two to three rows of broad rays around a dark disc; native to Mexico.",
+    "sources": [
+      "Torres A. M. (1963) Taxonomy of Zinnia, Brittonia 15: 1-25"
+    ]
+  },
+  "preset": {
+    "scientific_name": "Zinnia elegans",
+    "common_name": "Zinnia (mal de ojo)",
+    "family": "Asteraceae",
+    "formula": "head: ray florets 2-3 rows, disc florets",
+    "flower": {
+      "ray_count": 18,
+      "ray_fill": 0.3,
+      "petal_length_cm": 2.5,
+      "petal_aspect": 1.4,
+      "truncation": 0.5,
+      "fringe": 0.05,
+      "petal_color": [
+        0.85,
+        0.15,
+        0.3
+      ],
+      "tip_color": [
+        0.9,
+        0.25,
+        0.35
+      ],
+      "disc_florets": 120,
+      "disc_radius_cm": 0.9,
+      "disc_color": [
+        0.35,
+        0.15,
+        0.08
+      ],
+      "disc_center_color": [
+        0.9,
+        0.75,
+        0.15
+      ]
+    },
+    "infl": {
+      "peduncle_cm": 30.0
+    }
+  }
+}

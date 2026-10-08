@@ -26,14 +26,22 @@ if BLENDER_AVAILABLE:
     from .blender.forest import FOREST_CLASSES
     from .blender.panel import PPG_Properties, PANEL_CLASSES
     from .blender.operators import OPERATOR_CLASSES
+    from .blender.preset_io import PRESET_CLASSES, load_library
 
     # The forest species item type must be registered before the properties that hold a collection of it
-    classes = FOREST_CLASSES[:1] + (PPG_Properties,) + OPERATOR_CLASSES + FOREST_CLASSES[1:] + PANEL_CLASSES
+    classes = (FOREST_CLASSES[:1] + (PPG_Properties,) + OPERATOR_CLASSES + FOREST_CLASSES[1:] + PRESET_CLASSES
+               + PANEL_CLASSES)
 
     def register():
         for cls in classes:
             bpy.utils.register_class(cls)
         bpy.types.Scene.ppg_properties = PointerProperty(type=PPG_Properties)
+        try:
+            n = load_library()                    # User presets join the species menus
+            if n:
+                print(f"[PPG] {n} user presets loaded")
+        except Exception as e:                    # Never block registration on a bad preset folder
+            print(f"[PPG] preset library not loaded: {e}")
 
     def unregister():
         if hasattr(bpy.types.Scene, "ppg_properties"):

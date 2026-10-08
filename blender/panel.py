@@ -27,6 +27,7 @@ try:
     from .flowers import flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props, sync_flowers_to_plant
     from .runtime import set_updating
     from .forest import forest_properties, draw_forest_panel
+    from .preset_io import enum_items, item_number, draw_presets
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -43,6 +44,7 @@ except (ImportError, ValueError):
                                  sync_flowers_to_plant)
     from blender.runtime import set_updating
     from blender.forest import forest_properties, draw_forest_panel
+    from blender.preset_io import enum_items, item_number, draw_presets
 
 
 def on_param_update(self, context):
@@ -157,11 +159,12 @@ if BLENDER_AVAILABLE:
         """Interactive parameters for procedural plant generation."""
         auto_update: BoolProperty(name="Live Update", default=True,
                                   description="Regenerate the plant when any parameter changes")
-        species_enum: EnumProperty(name="Species", items=SPECIES_ITEMS, default="quercus_robur",
+        # Dynamic items: presets imported or saved by the user appear without restarting Blender
+        species_enum: EnumProperty(name="Species", items=enum_items("Tree"), default=item_number("quercus_robur"),
                                    update=on_species_change, description="Species preset")
 
         # Trait-space variation
-        blend_species: EnumProperty(name="Blend With", items=SPECIES_ITEMS, default="fagus_sylvatica",
+        blend_species: EnumProperty(name="Blend With", items=enum_items("Tree"), default=item_number("fagus_sylvatica"),
                                     description="Second species for morphological interpolation")
         blend_factor: FloatProperty(name="Blend", default=0.0, min=0.0, max=1.0,
                                     description="0 = current sliders, 1 = second species")
@@ -238,9 +241,9 @@ if BLENDER_AVAILABLE:
         tooth_height: F("Tooth Depth", 0.035, 0.0, 0.2)
         tooth_skew: F("Tooth Skew", 0.75, 0.3, 0.92, "0.5 symmetric .. 0.9 apically pointing")
         compound_type: E("Organisation", CompoundType, "Simple")
-        leaflet_count: I("Leaflets", 7, 1, 80)
+        leaflet_count: I("Leaflets", 7, 1, 150)
         leaflet_angle: F("Leaflet Angle", 60.0, 5.0, 90.0)
-        rachis_ratio: F("Rachis Length", 2.5, 0.2, 20.0)
+        rachis_ratio: F("Rachis Length", 2.5, 0.2, 30.0)
         terminal_leaflet: BoolProperty(name="Terminal Leaflet", default=True, update=U)
         leaflet_gradient: F("Leaflet Gradient", 0.3, 0.0, 0.8)
         petiole_ratio: F("Petiole Length", 0.35, 0.0, 1.5)
@@ -278,7 +281,7 @@ if BLENDER_AVAILABLE:
         leaf_area_index: F("Leaf Area Index", 4.5, 0.5, 12.0, "Leaf area per unit crown projection area")
         leaf_angle: F("Mean Leaf Angle", 40.0, 5.0, 85.0,
                       "Lamina inclination: planophile ~25, spherical ~57, erectophile ~70 degrees")
-        leaf_budget: IntProperty(name="Max Cards", default=60000, min=100, max=500000, update=U,
+        leaf_budget: IntProperty(name="Max Cards", default=150000, min=100, max=1000000, update=U,
                                  description="Upper bound on leaf cards (performance)")
         leaf_scale: F("Leaf Scale", 1.0, 0.2, 4.0)
         foliage_instancing: BoolProperty(name="Instanced Leaves", default=True, update=U,
@@ -350,11 +353,12 @@ if BLENDER_AVAILABLE:
              'MESH_CIRCLE', 2),
             ('Flower', "Flower / Inflorescence", "An isolated flower or inflorescence built from its floral diagram",
              'FREEZE', 3)]),
-        "flower_species": EnumProperty(name="Flower", items=flower_items(), default="rosa_canina",
+        "flower_species": EnumProperty(name="Flower", items=enum_items("Flower"), default=item_number("rosa_canina"),
                                        update=on_flower_species),
         "show_flowers": BoolProperty(name="Show Flowers", default=False, update=U,
                                      description="Place the selected inflorescence on the plant"),
-        "flower_blend": EnumProperty(name="Blend With", items=flower_items(), default="hibiscus_rosa_sinensis"),
+        "flower_blend": EnumProperty(name="Blend With", items=enum_items("Flower"),
+                                     default=item_number("hibiscus_rosa_sinensis")),
         "flower_single": BoolProperty(name="Single Flower", default=False, update=U,
                                       description="Show one flower instead of the whole inflorescence"),
         "flower_density": FloatProperty(name="Flowering Density", default=0.35, min=0.0, max=1.0, update=U,
@@ -365,14 +369,14 @@ if BLENDER_AVAILABLE:
         "flower_bloom": FloatProperty(name="Bloom Stage", default=0.5, min=0.0, max=1.0, update=U,
                                       description="0 buds .. 0.5 peak (acropetal gradient) .. 1 all open"),
         "flower_detail": FloatProperty(name="Flower Detail", default=1.0, min=0.3, max=3.0, update=U),
-        "cactus_species": EnumProperty(name="Cactus", items=preset_items(GrowthForm.CACTUS),
-                                       default="carnegiea_gigantea", update=on_succulent_species),
-        "rosette_species": EnumProperty(name="Rosette", items=preset_items(GrowthForm.ROSETTE),
-                                        default="echeveria_elegans", update=on_succulent_species),
-        "cactus_blend": EnumProperty(name="Blend With", items=preset_items(GrowthForm.CACTUS),
-                                     default="echinocactus_grusonii"),
-        "rosette_blend": EnumProperty(name="Blend With", items=preset_items(GrowthForm.ROSETTE),
-                                      default="agave_americana"),
+        "cactus_species": EnumProperty(name="Cactus", items=enum_items("Cactus"),
+                                       default=item_number("carnegiea_gigantea"), update=on_succulent_species),
+        "rosette_species": EnumProperty(name="Rosette", items=enum_items("Rosette"),
+                                        default=item_number("echeveria_elegans"), update=on_succulent_species),
+        "cactus_blend": EnumProperty(name="Blend With", items=enum_items("Cactus"),
+                                     default=item_number("echinocactus_grusonii")),
+        "rosette_blend": EnumProperty(name="Blend With", items=enum_items("Rosette"),
+                                      default=item_number("agave_americana")),
         "succ_detail": FloatProperty(name="Mesh Detail", default=1.0, min=0.3, max=3.0, update=U,
                                      description="Surface sampling density of stems and leaves"),
         "spine_budget": IntProperty(name="Max Spines", default=60000, min=0, max=1000000, update=U,
@@ -687,6 +691,16 @@ def _succulent_panel(form, index, title, names):
         "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw})
 
 
+class PPG_PT_Presets(_PPGSub, Panel):
+    bl_label = "Presets (Import / Export)"
+    bl_idname = "PPG_PT_presets"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower')
+
+    def draw(self, context):
+        draw_presets(self.layout, context.scene.ppg_properties)
+
+
 class PPG_PT_Forest(_PPGSub, Panel):
     bl_label = "Forest"
     bl_idname = "PPG_PT_forest"
@@ -748,4 +762,4 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
                  PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + \
-                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Forest, PPG_PT_Topology)
+                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)
