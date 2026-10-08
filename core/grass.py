@@ -34,7 +34,8 @@ from .vegetable import revolve
 
 UP = np.array([0.0, 0.0, 1.0])
 GOLDEN = math.radians(137.50776)
-ATTRS = ("grass_u", "grass_v", "grass_part")
+ATTRS = ("grass_u", "grass_v", "grass_part", "grass_node")
+FAR = 9.0          # grass_node of organs that are not the culm surface (no node colouring)
 # grass_part: 0 blade, 1 culm / sheath, 2 spikelet, 3 awn / hair, 4 kernel, 5 husk, 6 silk, 7 root
 
 
@@ -65,6 +66,16 @@ class GrassProfile:
     basal_leaves: int = 0               # Extra leaves crowded at the base (tufts, rosettes)
     culm_color: tuple = (0.45, 0.55, 0.25)
 
+    # Nodes and internodes (culm surface)
+    node_swell: float = 0.06            # Swelling of the culm at the nodes
+    growth_ring: float = 0.0            # Narrow ring just above the node, slightly constricted (sugarcane)
+    internode_barrel: float = 0.0       # Internodes bulging in the middle (sugarcane)
+    bud_groove: float = 0.0             # Groove up each internode on the side of its axillary bud (maize, cane)
+    bud_size_mm: float = 2.0            # Axillary bud ("eye") in the axil of each leaf
+    zigzag_deg: float = 2.0             # The culm turns slightly at each node, alternately
+    wax_band: float = 0.0               # Whitish waxy band just below each node (sugarcane, sorghum)
+    node_color: tuple = (0.62, 0.62, 0.40)   # Node ring / root band
+
     # Leaves
     leaf_length_cm: float = 30.0        # Longest blade
     leaf_width_cm: float = 1.2          # Widest blade
@@ -75,6 +86,7 @@ class GrassProfile:
     leaf_fold: float = 0.3              # V-fold along the midrib
     margin_wave: float = 0.0            # Wavy margins (maize)
     sheath_fraction: float = 0.7        # Share of the internode wrapped by the sheath
+    leaf_loss: float = 0.0              # Share of the nodes, from the base, whose leaves have died and fallen
     leaf_color: tuple = (0.20, 0.42, 0.12)
     midrib_color: tuple = (0.55, 0.65, 0.40)
     tip_dryness: float = 0.15           # Dry, straw-coloured tips
@@ -138,16 +150,17 @@ def _perp(d):
     return _unit(p)
 
 
-def _attrs(n, part, u=None, v=None):
+def _attrs(n, part, u=None, v=None, node=None):
     return {"grass_u": np.zeros(n) if u is None else u, "grass_v": np.zeros(n) if v is None else v,
-            "grass_part": np.full(n, float(part))}
+            "grass_part": np.full(n, float(part)), "grass_node": np.full(n, FAR) if node is None else node}
 
 
 def _merge(parts) -> MeshData:
     parts = [p for p in parts if len(p.vertices)]
     for p in parts:
         for k in ATTRS:
-            p.point_attributes[k] = np.asarray(p.point_attributes.get(k, np.zeros(len(p.vertices))), np.float32)
+            default = np.full(len(p.vertices), FAR if k == "grass_node" else 0.0)
+            p.point_attributes[k] = np.asarray(p.point_attributes.get(k, default), np.float32)
         for k in list(p.point_attributes):
             if k not in ATTRS:
                 del p.point_attributes[k]
@@ -158,7 +171,8 @@ def _ellipsoid(length, width, n=6, m=6, part=2) -> MeshData:
     """Spikelet / kernel primitive along +Z from the origin."""
     t = 0.5 - 0.5 * np.cos(np.pi * np.linspace(0, 1, n + 2)[1:-1])
     return revolve(0.5 * width * np.sin(np.pi * t) ** 0.7, length * t, m,
-                   {"grass_u": t, "grass_v": np.zeros(len(t)), "grass_part": np.full(len(t), float(part))})
+                   {"grass_u": t, "grass_v": np.zeros(len(t)), "grass_part": np.full(len(t), float(part)),
+                    "grass_node": np.full(len(t), FAR)})
 
 
 def _place(m: MeshData, z_axis, origin, roll=0.0) -> MeshData:
@@ -206,7 +220,15 @@ class GrassEngine:
 
     # ----------------------------------------------------------------- leaves
     def blade(self, start, d0, length, width, rng, detail=1.0, droop=None, part=0, twist=None) -> MeshData:
-        """Leaf blade from the ligule: midrib bending toward the ground, width bell, pointed tip."""
+        """Free leaf blade (husk leaves): midrib bending toward the ground, width bell, pointed tip."""
+        P, W, side, nrm = self._blade_rows(start, d0, length, width, rng, detail, droop, twist)
+        return _strip(P, W, side, nrm, self.p.leaf_fold, self.p.margin_wave, part,
+                      across=5 if detail >= 0.6 else 3)
+
+    def _blade_rows(self, start, d0, length, width, rng, detail=1.0, droop=None, twist=None, base_width=None,
+                    side0=None):
+        """Midrib points, widths, width directions and normals of a blade. With `base_width` the blade starts
+        as wide as the opening sheath (it clasps the culm) and widens to `width`."""
         p = self.p
         droop = p.leaf_droop if droop is None else droop
         twist = math.radians(p.leaf_twist_deg if twist is None else twist) * rng.uniform(0.6, 1.4)
@@ -226,10 +248,13 @@ class GrassEngine:
             D.append(d)
         P, D = np.array(P), np.array(D)
         u = np.linspace(0, 1, len(P))
-        # Width: narrow at the ligule, widest about 40 % up, tapering to a point
-        W = width * (0.45 + 0.55 * np.sin(0.5 * np.pi * np.clip(u / 0.4, 0, 1))) * (1 - u ** 2.5) ** 0.7
+        # Width: from the ligule (or the sheath opening) to the widest point about 40 % up, then to a point
+        w0 = 0.45 * width if base_width is None else base_width
+        g = np.sin(0.5 * np.pi * np.clip(u / 0.4, 0, 1))
+        W = (w0 * (1 - g) + width * g) * (1 - u ** 2.5) ** 0.7
         W[-1] = width * 0.02
-        side0 = _perp(D[0])
+        # Width direction: given (continuing the sheath that clasps the culm) or horizontal
+        side0 = _perp(D[0]) if side0 is None else _unit(side0 - (side0 @ D[0]) * D[0])
         side, nrm = [], []
         for j in range(len(P)):
             s = side0 - (side0 @ D[j]) * D[j]
@@ -237,8 +262,137 @@ class GrassEngine:
             s = _rotate(s, D[j], twist * u[j])
             side.append(s)
             nrm.append(_unit(np.cross(s, D[j])))
-        return _strip(P, W, np.array(side), np.array(nrm), p.leaf_fold, p.margin_wave, part,
-                      across=5 if detail >= 0.6 else 3)
+        return P, W, np.array(side), np.array(nrm)
+
+    def leaf(self, at, radius, z0, z1, radial, L, Wd, ang, rng, detail) -> MeshData:
+        """Sheath and blade as ONE surface. The sheath is the rolled leaf base: it wraps the culm from the node
+        (margins overlapping, a slight pulvinus at its base) and opens progressively toward the collar, where
+        it continues without a seam into the blade, which clasps the culm and then widens."""
+        p = self.p
+        A = 15 if detail >= 0.6 else 9                       # Enough to round the sheath around the culm
+        v = np.linspace(-1.0, 1.0, A)
+        rows, us, parts, vs = [], [], [], []
+        ns = max(3, int(8 * detail))
+        span0, span1 = 2 * math.pi * 1.08, math.pi * 1.05
+        last = None
+        if z1 - z0 > 0.002:
+            for q in np.linspace(0.0, 1.0, ns):
+                z = z0 + (z1 - z0) * q
+                c, t = at(z)
+                e1 = radial - (radial @ t) * t
+                e1 = _unit(e1) if np.linalg.norm(e1) > 1e-6 else _perp(t)
+                e2 = np.cross(t, e1)
+                # Base attached at the node (flush with the swollen node), then a slight pulvinus and a
+                # close-fitting sheath
+                rz = radius(z)
+                h = (z - z0) / max(rz, 1e-5)
+                r = rz * (1.0 + (p.node_swell + 0.01) * math.exp(-(h / 0.6) ** 2)
+                          + 0.05 * (1 - math.exp(-(h / 0.8) ** 2)) + 0.05 * math.exp(-((h - 1.5) / 1.0) ** 2))
+                span = span0 + (span1 - span0) * q ** 0.8
+                phi = v * span / 2
+                # Overlapping margins: the outer margin lies a little farther out
+                rr = r * (1.0 + 0.04 * np.clip(v, 0, 1))
+                row = c + rr[:, None] * (np.cos(phi)[:, None] * e1 + np.sin(phi)[:, None] * e2)
+                rows.append(row)
+                us.append(0.0)
+                parts.append(1.0)
+                vs.append(v)
+                last = (row, c, e1, r, span)
+        c1, t1 = at(z1)
+        e1 = radial - (radial @ t1) * t1
+        e1 = _unit(e1) if np.linalg.norm(e1) > 1e-6 else _perp(t1)
+        r1 = radius(z1) * 1.05
+        chord = 2 * r1 * math.sin(min(span1 / 2, math.pi / 2)) if last is not None else None
+        d0 = _unit(t1 * math.cos(ang) + e1 * math.sin(ang))
+        e2_1 = np.cross(t1, e1)                              # Same order across as the sheath's arc
+        P, W, side, nrm = self._blade_rows(c1 + e1 * r1, d0, L, Wd, rng, detail, base_width=chord, side0=e2_1)
+        across = (v[None, :, None] * 0.5 * W[:, None, None]) * side[:, None, :]
+        fold = (p.leaf_fold * 0.35 * np.abs(v)[None, :] * W[:, None])[..., None] * nrm[:, None, :]
+        s = arc_length(P)
+        u = s / max(s[-1], 1e-9)
+        if p.margin_wave > 0:
+            wav = p.margin_wave * 0.07 * W[:, None] * np.sin(s[:, None] / 0.06 * 2 * math.pi) * \
+                (np.abs(v)[None, :] ** 4) * np.clip(u[:, None] * 3, 0, 1)
+            fold = fold + wav[..., None] * nrm[:, None, :]
+        flat = P[:, None, :] + across + fold
+        if last is not None:
+            # Collar: the rolled sheath section unrolls into the flat blade over the first rows
+            arc_row = last[0]
+            nt = min(4, len(P) - 1)
+            for j in range(1, nt + 1):
+                w = (j / nt) ** 1.5
+                flat[j] = (1 - w) * (arc_row + (P[j] - P[0])) + w * flat[j]
+            flat = flat[1:]
+            u = u[1:]
+        for j in range(len(flat)):
+            rows.append(flat[j])
+            us.append(u[j])
+            parts.append(0.0)
+            vs.append(v)
+        V = np.array(rows)
+        n = len(V)
+        j, i = np.meshgrid(np.arange(n - 1), np.arange(A - 1), indexing="ij")
+        i0 = (j * A + i).ravel()
+        quads = np.stack([i0, i0 + 1, i0 + A + 1, i0 + A], axis=1)
+        lv = quads.reshape(-1).astype(np.int32)
+        uu = np.repeat(np.array(us)[:, None], A, 1).reshape(-1)
+        vv = np.array(vs).reshape(-1)
+        pp = np.repeat(np.array(parts)[:, None], A, 1).reshape(-1)
+        return MeshData(V.reshape(-1, 3).astype(np.float32), lv, np.arange(len(quads), dtype=np.int32) * 4,
+                        np.full(len(quads), 4, np.int32), np.stack([vv * 0.5 + 0.5, uu], 1)[lv].astype(np.float32),
+                        {"grass_u": uu.astype(np.float32), "grass_v": vv.astype(np.float32),
+                         "grass_part": pp.astype(np.float32), "grass_node": np.full(len(uu), FAR, np.float32)})
+
+    def culm_mesh(self, C, cs, z_nodes, lens, radii_fn, bud_dirs, detail) -> MeshData:
+        """Culm surface: radius varying along the culm (taper, node swelling, growth ring, barrel-shaped
+        internodes) and around it (groove up each internode on the side of its bud). Attribute grass_node:
+        signed distance to the nearest node in culm radii (for the node ring, wax band and root band)."""
+        p = self.p
+        sides = max(8, int(14 * detail))
+        # Rings: regular spacing plus extra rings around every node to resolve the node features
+        s_list = list(np.linspace(0.0, cs[-1], max(8, int(cs[-1] / 0.02 * detail) + 2)))
+        for zn in z_nodes:
+            r = radii_fn(zn)
+            s_list += [zn + k * r for k in (-2.0, -1.2, -0.6, -0.25, 0.0, 0.25, 0.6, 0.9, 1.2, 2.0)]
+        s = np.unique(np.clip(np.array(s_list), 0.0, cs[-1]))
+        P = np.stack([np.interp(s, cs, C[:, k]) for k in range(3)], 1)
+        T, N, B = frames(P)
+        th = np.linspace(0.0, 2 * math.pi, sides + 1)
+        zn_arr = np.asarray(z_nodes, float)
+        rows, nodes = [], []
+        for i, z in enumerate(s):
+            r = radii_fn(z)
+            k = int(np.argmin(np.abs(zn_arr - z)))
+            d = (z - zn_arr[k]) / max(r, 1e-5)                       # Signed distance to the nearest node
+            f = 1.0 + p.node_swell * math.exp(-(d / 0.6) ** 2) - p.growth_ring * 0.06 * math.exp(-((d - 0.9) / 0.25) ** 2)
+            # Internode containing z: barrel shape and bud groove (groove runs up from the bud below)
+            kb = int(np.searchsorted(zn_arr, z, side="right")) - 1
+            ring = np.full(len(th), f)
+            if 0 <= kb < len(lens) and lens[kb] > 1e-4:
+                q = np.clip((z - zn_arr[kb]) / lens[kb], 0, 1)
+                ring = ring + p.internode_barrel * math.sin(math.pi * q)
+                bd = bud_dirs[kb] - (bud_dirs[kb] @ T[i]) * T[i]
+                if np.linalg.norm(bd) > 1e-6 and p.bud_groove > 0:
+                    bd = _unit(bd)
+                    dirs = np.cos(th)[:, None] * N[i] + np.sin(th)[:, None] * B[i]
+                    ang = np.arccos(np.clip(dirs @ bd, -1, 1))
+                    ring = ring - p.bud_groove * np.exp(-(ang / 0.45) ** 2) * math.sin(math.pi * q) ** 0.4
+            R = r * ring
+            rows.append(P[i] + R[:, None] * (np.cos(th)[:, None] * N[i] + np.sin(th)[:, None] * B[i]))
+            nodes.append(np.clip(d, -FAR + 1, FAR - 1))
+        V = np.array(rows)
+        n, m = V.shape[0], V.shape[1]
+        j, i = np.meshgrid(np.arange(n - 1), np.arange(sides), indexing="ij")
+        i0 = (j * m + i).ravel()
+        quads = np.stack([i0, i0 + 1, i0 + m + 1, i0 + m], axis=1)
+        lv = quads.reshape(-1).astype(np.int32)
+        uu = np.repeat((s / max(s[-1], 1e-9))[:, None], m, 1).reshape(-1)
+        vv = np.repeat((th / (2 * math.pi))[None, :], n, 0).reshape(-1)
+        node = np.repeat(np.array(nodes)[:, None], m, 1).reshape(-1)
+        return MeshData(V.reshape(-1, 3).astype(np.float32), lv, np.arange(len(quads), dtype=np.int32) * 4,
+                        np.full(len(quads), 4, np.int32), np.stack([vv, uu * 10], 1)[lv].astype(np.float32),
+                        {"grass_u": uu.astype(np.float32), "grass_v": vv.astype(np.float32),
+                         "grass_part": np.ones(len(uu), np.float32), "grass_node": node.astype(np.float32)})
 
     # ----------------------------------------------------------------- shoot
     def shoot(self, base, axis, height, rng, detail, main=True, fertile=True):
@@ -251,15 +405,31 @@ class GrassEngine:
         w = (np.arange(N) + 1.0) ** p.internode_gradient
         lens = height * w / w.sum() if height > 0 else np.zeros(N)
         z_nodes = np.concatenate([[0.0], np.cumsum(lens)])
-        # Culm path: lean, recovering toward the vertical (negative gravitropism)
+        # Leaf azimuths: distichous, with a slow drift
+        az0 = rng.uniform(0, 2 * math.pi)
+        n_leaves = N + p.basal_leaves
+        azs = [az0 + k * math.pi + rng.normal(0, 0.25) for k in range(n_leaves)]
+        side_ref = _perp(_unit(np.asarray(axis, float)))
+        # Culm path: lean recovering toward the vertical (negative gravitropism), turning slightly at each
+        # node away from the leaf (and bud) of that node, alternately: the zigzag of grass culms
         m = max(8, int(24 * detail))
-        s = np.linspace(0, max(height, 1e-4) + (p.peduncle_cm * 0.01 if p.head != GrassHead.NONE and fertile
-                                                else 0.0), m)
+        total = max(height, 1e-4) + (p.peduncle_cm * 0.01 if p.head != GrassHead.NONE and fertile else 0.0)
+        s = np.linspace(0, total, m)
+        s = np.unique(np.concatenate([s, np.clip(z_nodes, 0, total)]))
         d = _unit(np.asarray(axis, float))
         pts = [np.asarray(base, float)]
-        for k in range(1, m):
-            d = _unit(d + 0.06 * UP * (1 - d @ UP) + rng.normal(0, 0.01, 3))
+        bud_dirs = []
+        node_i = 1
+        for k in range(1, len(s)):
+            d = _unit(d + 0.06 * UP * (1 - d @ UP) * (s[k] - s[k - 1]) / max(total / m, 1e-6)
+                      + rng.normal(0, 0.006, 3))
             pts.append(pts[-1] + d * (s[k] - s[k - 1]))
+            while node_i < len(z_nodes) - 1 and s[k] >= z_nodes[node_i] - 1e-9:
+                rad = _unit(_rotate(side_ref, d, azs[p.basal_leaves + node_i]))
+                axis_z = np.cross(d, rad)
+                if np.linalg.norm(axis_z) > 1e-6:
+                    d = _rotate(d, axis_z, math.radians(p.zigzag_deg) * rng.uniform(0.6, 1.2))
+                node_i += 1
         C = np.array(pts)
         cs = arc_length(C)
         T, _, _ = frames(C)
@@ -269,13 +439,16 @@ class GrassEngine:
             pos = np.array([np.interp(z, cs, C[:, k]) for k in range(3)])
             i = min(np.searchsorted(cs, z), len(cs) - 1)
             return pos, T[i]
-        R = r0 * (1.0 - 0.45 * cs / max(cs[-1], 1e-9))
+
+        def radius(z):
+            return r0 * (1.0 - 0.45 * min(max(z, 0.0), cs[-1]) / max(cs[-1], 1e-9))
+        for k in range(N):
+            _, tan = at(z_nodes[k])
+            bud_dirs.append(_unit(_rotate(side_ref, tan, azs[p.basal_leaves + k])))
         if cs[-1] > 0.01:
-            culm_parts.append(tube(C, R, 6 if detail >= 0.6 else 4, _attrs(len(C), 1)))
-        # Leaves: one per node, alternating sides; basal leaves crowded at the base
-        az0 = rng.uniform(0, 2 * math.pi)
-        side_ref = _perp(T[0])
-        n_leaves = N + p.basal_leaves
+            culm_parts.append(self.culm_mesh(C, cs, z_nodes[:N], lens, radius, bud_dirs, detail))
+        # Leaves: sheath + blade in one surface, one per node; basal leaves crowded at the base
+        bud = _ellipsoid(max(p.bud_size_mm, 0.1) * 0.001, max(p.bud_size_mm, 0.1) * 0.0007, 4, 6, part=1)
         for k in range(n_leaves):
             basal = k < p.basal_leaves
             if basal:
@@ -290,27 +463,28 @@ class GrassEngine:
             bell = math.exp(-((f - p.leaf_peak) / 0.38) ** 2)
             L = p.leaf_length_cm * 0.01 * (0.35 + 0.65 * bell) * rng.uniform(0.85, 1.1) * (1.0 if main else 0.85)
             Wd = p.leaf_width_cm * 0.01 * (0.55 + 0.45 * bell)
-            az = az0 + k * math.pi + rng.normal(0, 0.25)
-            radial = _unit(_rotate(side_ref, tan, az))
-            sheath_len = inter * p.sheath_fraction if not basal else 0.03 + 0.04 * rng.random()
-            lig, tan2 = at(zk + sheath_len)
-            r_here = float(np.interp(zk, cs, R)) if cs[-1] > 0 else r0
-            if sheath_len > 0.005:                                  # Sheath around the culm
-                Sp = np.array([at(zk + sheath_len * q)[0] for q in np.linspace(0, 1, 5)])
-                culm_parts.append(tube(Sp, np.full(5, r_here * 1.25 + 0.0004), 6 if detail >= 0.6 else 4,
-                                       _attrs(5, 1, np.linspace(0, 1, 5))))
+            radial = _unit(_rotate(side_ref, tan, azs[k]))
+            sheath_len = inter * min(p.sheath_fraction, 0.97) if not basal else 0.03 + 0.04 * rng.random()
             ang = math.radians(p.leaf_angle_deg + (25 if basal else 0)) * rng.uniform(0.8, 1.2)
-            d0 = _unit(tan * math.cos(ang) + radial * math.sin(ang))
-            leaves.append(self.blade(lig + radial * r_here, d0, L, Wd, rng, detail))
+            if basal or (k - p.basal_leaves) / N >= p.leaf_loss:    # Lower leaves may have fallen
+                leaves.append(self.leaf(at, radius, zk, zk + sheath_len, radial, L, Wd, ang, rng, detail))
+            if not basal and p.bud_size_mm > 0 and cs[-1] > 0.01:      # Axillary bud ("eye") in the leaf axil
+                rz = radius(zk) * (1 + p.node_swell)
+                # The bud sits on the node, half sunk in the culm, pointing up along it (pressed to the culm)
+                bpart = _place(bud, _unit(tan * 0.95 + radial * 0.12), node + radial * rz * 0.97 - tan * rz * 0.15,
+                               rng.uniform(0, 6.28))
+                bpart.point_attributes["grass_node"] = np.zeros(len(bpart.vertices), np.float32)
+                culm_parts.append(bpart)
         top, top_tan = at(cs[-1])
         # Inflorescence
         if p.head != GrassHead.NONE and fertile:
             if p.head == GrassHead.MAIZE:
                 heads.append(self.tassel(top, top_tan, rng, detail))
                 for e in range(p.ears if main else 0):
-                    ez = height * max(0.1, p.ear_node - 0.12 * e)
-                    node, tan = at(ez)
-                    radial = _unit(_rotate(side_ref, tan, az0 + (round(ez / max(height, 1e-6) * N) % 2) * math.pi))
+                    # The ear (a reduced branch) grows from a node, in the axil of that node's leaf
+                    ke = int(np.argmin(np.abs(z_nodes[:N] - height * max(0.1, p.ear_node - 0.12 * e))))
+                    node, tan = at(z_nodes[ke])
+                    radial = _unit(_rotate(side_ref, tan, azs[p.basal_leaves + ke]))
                     ears.append(self.ear(node, tan, radial, r0, rng, detail))
             else:
                 heads.append(self.inflorescence(top, top_tan, rng, detail))

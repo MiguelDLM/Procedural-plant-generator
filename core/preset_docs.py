@@ -92,6 +92,7 @@ FIELD_DOCS = {
     "GrassProfile.silk_cm": "Length of the silks out of the ear tip, cm.",
     "GrassProfile.kernel_color": "Kernel colour (sRGB 0..1).",
     "GrassProfile.silk_color": "Silk colour.",
+    "GrassProfile.node_color": "Colour of the node ring and root band (sRGB 0..1).",
     "GrassProfile.crown_roots": "Number of crown (nodal) roots.",
     "GrassProfile.root_length_cm": "Crown root length shown, cm.",
     # --- Vines ------------------------------------------------------------------------------------------

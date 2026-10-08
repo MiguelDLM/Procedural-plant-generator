@@ -694,6 +694,14 @@ Habit of a grass. Lengths in cm unless noted (culm height in m).
 | `internode_gradient` | number |  | 0.2 – 4.0 | 1.5 | >1: lower internodes short, upper long |
 | `basal_leaves` | integer |  | 0 – 12 | 0 | Extra leaves crowded at the base (tufts, rosettes) |
 | `culm_color` | colour (sRGB 0..1) |  |  | [0.45, 0.55, 0.25] | Culm and sheath colour (sRGB 0..1). |
+| `node_swell` | number |  | 0.0 – 0.5 | 0.06 | Swelling of the culm at the nodes |
+| `growth_ring` | number |  | 0.0 – 1.0 | 0.0 | Narrow ring just above the node, slightly constricted (sugarcane) |
+| `internode_barrel` | number |  | 0.0 – 0.3 | 0.0 | Internodes bulging in the middle (sugarcane) |
+| `bud_groove` | number |  | 0.0 – 0.3 | 0.0 | Groove up each internode on the side of its axillary bud (maize, cane) |
+| `bud_size_mm` | number | mm | 0.0 – 15.0 | 2.0 | Axillary bud ("eye") in the axil of each leaf |
+| `zigzag_deg` | number | deg | 0.0 – 15.0 | 2.0 | The culm turns slightly at each node, alternately |
+| `wax_band` | number |  | 0.0 – 1.0 | 0.0 | Whitish waxy band just below each node (sugarcane, sorghum) |
+| `node_color` | colour (sRGB 0..1) |  |  | [0.62, 0.62, 0.4] | Colour of the node ring and root band (sRGB 0..1). |
 | `leaf_length_cm` | number | cm | 1.0 – 250.0 | 30.0 | Length of the longest blade (from the ligule), cm. |
 | `leaf_width_cm` | number | cm | 0.05 – 15.0 | 1.2 | Width of the widest blade, cm. |
 | `leaf_peak` | number |  | 0.0 – 1.0 | 0.6 | Position along the culm of the longest leaf (0 base .. 1 flag leaf) |
@@ -703,6 +711,7 @@ Habit of a grass. Lengths in cm unless noted (culm height in m).
 | `leaf_fold` | number |  | 0.0 – 1.0 | 0.3 | V-fold along the midrib |
 | `margin_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy margins (maize) |
 | `sheath_fraction` | number |  | 0.1 – 1.0 | 0.7 | Share of the internode wrapped by the sheath |
+| `leaf_loss` | number |  | 0.0 – 0.9 | 0.0 | Share of the nodes, from the base, whose leaves have died and fallen |
 | `leaf_color` | colour (sRGB 0..1) |  |  | [0.2, 0.42, 0.12] | Blade colour (sRGB 0..1). |
 | `midrib_color` | colour (sRGB 0..1) |  |  | [0.55, 0.65, 0.4] | Colour of the midrib (pale in maize and sorghum). |
 | `tip_dryness` | number |  | 0.0 – 1.0 | 0.15 | Dry, straw-coloured tips |

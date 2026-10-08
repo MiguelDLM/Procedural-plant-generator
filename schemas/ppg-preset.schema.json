@@ -4797,6 +4797,74 @@
             0.25
           ]
         },
+        "node_swell": {
+          "type": "number",
+          "description": "Swelling of the culm at the nodes",
+          "minimum": 0.0,
+          "maximum": 0.5,
+          "default": 0.06
+        },
+        "growth_ring": {
+          "type": "number",
+          "description": "Narrow ring just above the node, slightly constricted (sugarcane)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "internode_barrel": {
+          "type": "number",
+          "description": "Internodes bulging in the middle (sugarcane)",
+          "minimum": 0.0,
+          "maximum": 0.3,
+          "default": 0.0
+        },
+        "bud_groove": {
+          "type": "number",
+          "description": "Groove up each internode on the side of its axillary bud (maize, cane)",
+          "minimum": 0.0,
+          "maximum": 0.3,
+          "default": 0.0
+        },
+        "bud_size_mm": {
+          "type": "number",
+          "description": "Axillary bud (\"eye\") in the axil of each leaf",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 15.0,
+          "default": 2.0
+        },
+        "zigzag_deg": {
+          "type": "number",
+          "description": "The culm turns slightly at each node, alternately",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 15.0,
+          "default": 2.0
+        },
+        "wax_band": {
+          "type": "number",
+          "description": "Whitish waxy band just below each node (sugarcane, sorghum)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "node_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the node ring and root band (sRGB 0..1).",
+          "default": [
+            0.62,
+            0.62,
+            0.4
+          ]
+        },
         "leaf_length_cm": {
           "type": "number",
           "description": "Length of the longest blade (from the ligule), cm.",
@@ -4863,6 +4931,13 @@
           "minimum": 0.1,
           "maximum": 1.0,
           "default": 0.7
+        },
+        "leaf_loss": {
+          "type": "number",
+          "description": "Share of the nodes, from the base, whose leaves have died and fallen",
+          "minimum": 0.0,
+          "maximum": 0.9,
+          "default": 0.0
         },
         "leaf_color": {
           "type": "array",

@@ -36,8 +36,11 @@ LAYOUT = [
     ("Tillers & Culm", ["tillers", "tiller_spread_deg", "tiller_variation", "flowering_tillers", "clump_radius_cm",
                         "culm_height_m", "culm_radius_mm", "nodes", "internode_gradient", "basal_leaves",
                         "culm_color"]),
+    ("Nodes & Internodes", ["node_swell", "growth_ring", "internode_barrel", "bud_groove", "bud_size_mm",
+                            "zigzag_deg", "wax_band", "node_color"]),
     ("Leaves", ["leaf_length_cm", "leaf_width_cm", "leaf_peak", "leaf_angle_deg", "leaf_droop", "leaf_twist_deg",
-                "leaf_fold", "margin_wave", "sheath_fraction", "leaf_color", "midrib_color", "tip_dryness"]),
+                "leaf_fold", "margin_wave", "sheath_fraction", "leaf_loss", "leaf_color", "midrib_color",
+                "tip_dryness"]),
     ("Inflorescence", ["head", "head_length_cm", "head_width_cm", "peduncle_cm", "spikelets", "spikelet_mm",
                        "awn_cm", "branches", "branch_angle_deg", "nod", "head_color", "awn_color"]),
     ("Maize Ears", ["ears", "ear_node", "ear_length_cm", "ear_diameter_cm", "kernel_rows", "husk", "silk_cm",
@@ -156,6 +159,24 @@ def grass_material(name, p: GrassProfile):
                       (4, p.kernel_color, -150), (5, mix_c((0.55, 0.68, 0.40)), 0), (6, p.silk_color, 150),
                       (7, (0.85, 0.80, 0.68), 300)):
         col = _mix(nt, is_part(k, (loc - 500, -700 - k * 40)), col, rgb(c, (loc, 650)), (loc, 400 - k * 20))
+    # Culm nodes (grass_node: signed distance to the nearest node in culm radii; far elsewhere)
+    nd = _attr(nt, "grass_node", (-1800, -1300)).outputs['Fac']
+
+    from .succulents import _smooth_s
+
+    def band(lo, hi, w, amount, loc):
+        """Soft band lo..hi of grass_node (edges `w` wide), times `amount`."""
+        rise = _smooth_s(nt, nd, lo - w, lo + w, loc)
+        fall = _math(nt, 'SUBTRACT', 1.0, _smooth_s(nt, nd, hi - w, hi + w, (loc[0], loc[1] - 80)),
+                     (loc[0] + 150, loc[1] - 80))
+        m = _math(nt, 'MULTIPLY', rise, fall, (loc[0] + 300, loc[1]))
+        return _math(nt, 'MULTIPLY', m, amount, (loc[0] + 450, loc[1]))
+    wax = band(-1.8, -0.2, 0.35, 0.45 * p.wax_band, (-1500, -1300))              # Waxy bloom below the node
+    col = _mix(nt, wax, col, rgb((0.74, 0.76, 0.70), (-1100, -1150)), (450, 250))
+    ring = band(-0.15, 1.2, 0.15, 0.45, (-1500, -1500))                           # Node ring and root band
+    col = _mix(nt, ring, col, rgb(mix_c(p.node_color), (-1100, -1350)), (500, 220))
+    gr = band(0.8, 1.0, 0.05, 0.55 * p.growth_ring, (-1500, -1700))               # Growth ring line
+    col = _mix(nt, gr, col, (0.22, 0.20, 0.10, 1.0), (550, 200))
     # Kernels: per-kernel brightness variation
     tc = nt.nodes.new('ShaderNodeTexCoord')
     tc.location = (-800, -1000)
