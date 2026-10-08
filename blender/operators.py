@@ -148,6 +148,9 @@ class PPG_OT_ExportTraits(Operator):
             from .flowers import flower_from_props
             from ..core.flower_db import FLOWER_CATALOG
             f, ip = flower_from_props(props)
+            if props.flower_species not in FLOWER_CATALOG:
+                self.report({'ERROR'}, "No valid flower preset selected")
+                return {'CANCELLED'}
             sp = FLOWER_CATALOG[props.flower_species]
             data = {"growth_form": "Flower", "species": sp.scientific_name, "common_name": sp.common_name,
                     "family": sp.family, "floral_formula": sp.formula,

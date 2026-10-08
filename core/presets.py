@@ -44,6 +44,27 @@ FORMS = ("Tree", "Cactus", "Rosette", "Flower")
 SCHEMA_URL = ("https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/"
               "schemas/ppg-preset.schema.json")
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
+ENUM_BITS = 23        # Menu numbers must be exact in a float32 (Blender stores enum values with 24-bit precision)
+
+
+def item_number(key: str) -> int:
+    """Stable menu number for a preset id (saved .blend files keep pointing at the same preset). Kept below
+    2**23: larger numbers lost their low bits when Blender stored the selection, so the menu no longer found
+    the chosen preset (e.g. Opuntia 779024583 came back as 779024576)."""
+    import zlib
+    return zlib.crc32(key.encode("utf-8")) & ((1 << ENUM_BITS) - 1)
+
+
+def enum_numbers(keys) -> dict:
+    """Unique numbers for a list of keys (collisions resolved deterministically in sorted key order)."""
+    used, out = set(), {}
+    for k in sorted(keys):
+        n = item_number(k)
+        while n in used:
+            n = (n + 1) & ((1 << ENUM_BITS) - 1)
+        used.add(n)
+        out[k] = n
+    return out
 
 
 # -----------------------------------------------------------------------------

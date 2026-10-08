@@ -110,7 +110,15 @@ def _write(props, obj, prefix):
             setattr(props, name, v.value if isinstance(v, Enum) else v)
 
 
+def flower_key(props):
+    """The selected flower preset id, or None if the selection is stale (removed preset, older file)."""
+    key = getattr(props, "flower_species", "")
+    return key if key in FLOWER_CATALOG else None
+
+
 def write_flower_to_props(props, key):
+    if key not in FLOWER_CATALOG:
+        return
     sp = FLOWER_CATALOG[key]
     _write(props, sp.flower, FLW)
     _write(props, sp.infl, INF)
@@ -138,7 +146,7 @@ def _read(props, base, prefix):
 
 
 def flower_from_props(props):
-    sp = FLOWER_CATALOG[props.flower_species]
+    sp = FLOWER_CATALOG[flower_key(props) or "rosa_canina"]
     return _read(props, copy.deepcopy(sp.flower), FLW), _read(props, copy.deepcopy(sp.infl), INF)
 
 
@@ -418,7 +426,7 @@ def build_inflorescence(props, f, ip, single=False):
 
 def update_flowers_on_plant(context, root, props, sites: FlowerSites):
     """Instances the current inflorescence at `sites` (plant-local coordinates)."""
-    if not props.show_flowers or sites is None or len(sites) == 0:
+    if not props.show_flowers or sites is None or len(sites) == 0 or flower_key(props) is None:
         hide_flowers(root)
         return
     f, ip = flower_from_props(props)
@@ -453,6 +461,9 @@ def flower_site_count(props, available: int) -> int:
 
 def update_flower_geometry(context, props, find_root):
     """Standalone flower / inflorescence (growth form 'Flower')."""
+    if flower_key(props) is None:
+        print("[PPG] No valid flower preset selected")
+        return None
     sp = FLOWER_CATALOG[props.flower_species]
     root = find_root(context, f"PPG_{sp.scientific_name.replace(' ', '_').replace(chr(39), '').replace('×', 'x')}")
     for c in root.children:

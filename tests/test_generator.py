@@ -887,6 +887,23 @@ class TestPresets(unittest.TestCase):
         _, _, obj, warn, _ = P.load_preset(env)
         self.assertEqual(obj.leaf_morphology.blade_length_cm, 4.5)
 
+    def test_menu_numbers_exact_and_unique(self):
+        """Enum numbers must survive Blender's float32 storage (< 2**24) and be unique per menu."""
+        from core import presets as P
+        _numbers, ENUM_BITS = P.enum_numbers, P.ENUM_BITS
+        import glob
+        import json
+        for form in P.FORMS:
+            keys = list(P._catalog(form))
+            keys += [json.load(open(f))["id"] for f in glob.glob("presets/examples/*.json")
+                     if json.load(open(f))["growth_form"] == form]
+            nums = _numbers(keys)
+            self.assertEqual(len(set(nums.values())), len(keys), form)
+            for k, n in nums.items():
+                self.assertLess(n, 2 ** 24, k)
+                self.assertEqual(int(np.float32(n)), n, k)      # Exact in float32
+            self.assertLessEqual(ENUM_BITS, 23)
+
     def test_schema_documents_every_field(self):
         from core import presets as P
         sch = P.json_schema()

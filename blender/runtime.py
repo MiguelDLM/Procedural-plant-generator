@@ -238,6 +238,8 @@ def apply_succulent_preset(props, context=None):
     """Loads the selected cactus / rosette preset into its sliders."""
     from .succulents import write_profile_to_props
     form, key = _succulent_key(props)
+    if key not in CATALOGS[form]:          # Stale selection (removed preset, older file): nothing to load
+        return
     global _IS_UPDATING
     was = _IS_UPDATING
     _IS_UPDATING = True

@@ -485,7 +485,10 @@ class PPG_PT_MainPanel(Panel):
         box = layout.box()
         if props.growth_form == 'Flower':
             box.prop(props, "flower_species", text="")
-            spec = FLOWER_CATALOG[props.flower_species]
+            spec = FLOWER_CATALOG.get(props.flower_species)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
             col = box.column(align=True)
             col.scale_y = 0.8
             col.label(text=f"{spec.family}", icon='FREEZE')
@@ -501,7 +504,10 @@ class PPG_PT_MainPanel(Panel):
             form = GrowthForm(props.growth_form)
             key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
             box.prop(props, "cactus_species" if form == GrowthForm.CACTUS else "rosette_species", text="")
-            spec = CATALOGS[form][key]
+            spec = CATALOGS[form].get(key)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
             family, habit, biome = spec.family, form.value, spec.biome
         col = box.column(align=True)
         col.scale_y = 0.8
@@ -792,8 +798,8 @@ class PPG_PT_Flowers(_PPGSub, Panel):
         col = self.layout.column(align=True)
         if p.growth_form != 'Flower':
             col.prop(p, "flower_species", text="")
-            spec = FLOWER_CATALOG[p.flower_species]
-            col.label(text=spec.formula)
+            spec = FLOWER_CATALOG.get(p.flower_species)
+            col.label(text=spec.formula if spec else "Preset not found: choose one from the list")
             col.separator()
             col.prop(p, "flower_density", slider=True)
             col.prop(p, "flower_max")

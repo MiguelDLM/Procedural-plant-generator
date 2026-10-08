@@ -646,7 +646,10 @@ def _succulent_flowers(context, root, props, form, res, profile):
 def update_succulent_geometry(context, props, find_root):
     form = GrowthForm(props.growth_form)
     key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
-    preset = CATALOGS[form][key]
+    preset = CATALOGS[form].get(key)
+    if preset is None:                     # Stale selection: keep the current geometry
+        print(f"[PPG] No valid {form.value} preset selected")
+        return None
     profile = profile_from_props(props, form, key)
     root = find_root(context, f"PPG_{preset.scientific_name.replace(' ', '_').replace(chr(39), '')}")
     # Objects of other growth forms (if this root was a tree before) are hidden

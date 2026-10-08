@@ -42,9 +42,8 @@ MAX_URL_BYTES = 2_000_000
 # -----------------------------------------------------------------------------
 # Dynamic menus
 # -----------------------------------------------------------------------------
-def item_number(key: str) -> int:
-    """Stable enum number for a preset id (saved .blend files keep pointing at the same preset)."""
-    return zlib.crc32(key.encode("utf-8")) & 0x7FFFFFFF
+item_number = P.item_number
+_numbers = P.enum_numbers
 
 
 def _base_items(form: str) -> list:
@@ -58,10 +57,11 @@ def _base_items(form: str) -> list:
 def enum_items(form: str):
     def items(self, context):
         out = []
-        for key, label, desc in _base_items(form):
+        base = _base_items(form)
+        nums = _numbers([k for k, _, _ in base])
+        for key, label, desc in base:
             user = key in USER_IDS[form]
-            out.append((key, label + ("  [user]" if user else ""), desc, 'USER' if user else 'NONE',
-                        item_number(key)))
+            out.append((key, label + ("  [user]" if user else ""), desc, 'USER' if user else 'NONE', nums[key]))
         _ITEMS[form] = out
         return out
     return items
@@ -72,7 +72,10 @@ def enum_items(form: str):
 # -----------------------------------------------------------------------------
 def library_dir() -> str:
     """Personal preset folder (extension user directory, or Blender's config folder for legacy installs)."""
-    path = None
+    path = os.environ.get("PPG_PRESET_DIR")      # Override (tests, studio-wide shared libraries)
+    if path:
+        os.makedirs(path, exist_ok=True)
+        return path
     pkg = (__package__ or "").rpartition(".")[0]
     try:
         if pkg:
@@ -120,11 +123,15 @@ def current_preset(props):
         from ..core.succulent_db import CATALOGS
         gf = GrowthForm(form)
         key = props.cactus_species if gf == GrowthForm.CACTUS else props.rosette_species
+        if key not in CATALOGS[gf]:
+            raise P.PresetError(f"No valid {form} preset selected")
         obj = copy.deepcopy(CATALOGS[gf][key])
         obj.profile = profile_from_props(props, gf, key)
         return form, key, obj, (props.flower_species if props.show_flowers else None)
     from .flowers import flower_from_props
     from ..core.flower_db import FLOWER_CATALOG
+    if props.flower_species not in FLOWER_CATALOG:
+        raise P.PresetError("No valid flower preset selected")
     obj = copy.deepcopy(FLOWER_CATALOG[props.flower_species])
     obj.flower, obj.infl = flower_from_props(props)
     return form, props.flower_species, obj, None
@@ -179,14 +186,22 @@ class PPG_OT_PresetExport(Operator, ExportHelper, _MetaProps):
                                            "(small file that needs the base to load)")
 
     def invoke(self, context, event):
-        form, base, obj, _ = current_preset(context.scene.ppg_properties)
+        try:
+            form, base, obj, _ = current_preset(context.scene.ppg_properties)
+        except P.PresetError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
         self.preset_id = f"{base}_custom"
         self.filepath = bpy.path.ensure_ext(os.path.join(os.path.dirname(self.filepath or ""), self.preset_id),
                                             ".json")
         return super().invoke(context, event)
 
     def execute(self, context):
-        form, base, obj, flower = current_preset(context.scene.ppg_properties)
+        try:
+            form, base, obj, flower = current_preset(context.scene.ppg_properties)
+        except P.PresetError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
         if not P.ID_RE.match(self.preset_id):
             self.report({'ERROR'}, "Preset id must be lower_snake_case (letters, digits, _)")
             return {'CANCELLED'}
@@ -208,7 +223,11 @@ class PPG_OT_PresetSave(Operator, _MetaProps):
     family: StringProperty(name="Family", default="")
 
     def invoke(self, context, event):
-        form, base, obj, _ = current_preset(context.scene.ppg_properties)
+        try:
+            form, base, obj, _ = current_preset(context.scene.ppg_properties)
+        except P.PresetError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
         self.preset_id = f"{base}_custom"
         self.scientific_name = obj.scientific_name
         self.common_name = obj.common_name
@@ -219,7 +238,11 @@ class PPG_OT_PresetSave(Operator, _MetaProps):
         if not P.ID_RE.match(self.preset_id):
             self.report({'ERROR'}, "Preset id must be lower_snake_case (letters, digits, _)")
             return {'CANCELLED'}
-        form, base, obj, flower = current_preset(context.scene.ppg_properties)
+        try:
+            form, base, obj, flower = current_preset(context.scene.ppg_properties)
+        except P.PresetError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
         _identity(obj, self.scientific_name, self.common_name, self.family)
         env = P.export_preset(form, self.preset_id, obj, base=base if base != self.preset_id else None,
                               diff=False, metadata=_metadata(self), default_flower=flower)
