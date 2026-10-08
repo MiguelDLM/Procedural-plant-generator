@@ -661,7 +661,9 @@ BARK_AGE = {
     "salix_babylonica": dict(onset_radius_cm=4.0, young_color=(0.52, 0.48, 0.30)),
     "prunus_avium": dict(onset_radius_cm=1.5, young_color=(0.42, 0.24, 0.19), weathering=0.15),
     "malus_domestica": dict(onset_radius_cm=5.0, young_color=(0.45, 0.35, 0.28)),
-    "pinus_sylvestris": dict(onset_radius_cm=12.0, young_color=(0.78, 0.45, 0.25), weathering=0.2),
+    "pinus_sylvestris": dict(onset_radius_cm=12.0, young_color=(0.78, 0.45, 0.25), weathering=0.25,
+                             base_color=(0.44, 0.34, 0.28), secondary_color=(0.24, 0.15, 0.11),
+                             inner_color=(0.58, 0.30, 0.16)),   # Grey-brown plates, orange-red furrows
     "pinus_pinea": dict(onset_radius_cm=8.0, young_color=(0.55, 0.38, 0.28)),
     "picea_abies": dict(onset_radius_cm=10.0, young_color=(0.50, 0.32, 0.22)),
     "sequoiadendron_giganteum": dict(onset_radius_cm=6.0, young_color=(0.50, 0.30, 0.22)),
@@ -680,6 +682,57 @@ BARK_AGE = {
     "phoenix_canariensis": dict(onset_radius_cm=0.1),
 }
 for _key, _kw in BARK_AGE.items():
+    _b = SPECIES_CATALOG[_key].bark
+    for _f, _v in _kw.items():
+        setattr(_b, _f, _v)
+# Macroscopic bark texture of mature trunks, in Junikka's (1994) terms, with values read from field
+# descriptions (Vaucher 2003): b = blockiness (rectangular blocks), s = transverse segments, t = plate
+# tilt, w = warp (interlacing ridges), m = moss, l = lichen (humid temperate barks carry more epiphytes).
+BARK_TEXTURE = {
+    # Fagaceae
+    "quercus_robur": dict(blockiness=0.7, segments=0.6, plate_tilt=0.35, warp=0.45, moss=0.35, lichen=0.25),  # deeply furrowed, blocky ridges
+    "quercus_rubra": dict(blockiness=0.5, segments=0.15, plate_tilt=0.2, warp=0.3, moss=0.25, lichen=0.2),   # flat-topped shiny ridge stripes
+    "quercus_agrifolia": dict(blockiness=0.5, segments=0.35, plate_tilt=0.25, warp=0.45, moss=0.1, lichen=0.3),
+    "fagus_sylvatica": dict(blockiness=0.2, segments=0.0, plate_tilt=0.0, warp=0.2, moss=0.3, lichen=0.45),    # smooth grey, lichen-rich
+    "castanea_sativa": dict(blockiness=0.45, segments=0.2, plate_tilt=0.2, warp=0.6, moss=0.25, lichen=0.2),  # long, often spiral furrows
+    # Sapindaceae
+    "acer_palmatum": dict(blockiness=0.2, segments=0.0, plate_tilt=0.0, warp=0.2, moss=0.15, lichen=0.2),
+    "acer_pseudoplatanus": dict(blockiness=0.75, segments=0.5, plate_tilt=0.6, warp=0.3, moss=0.3, lichen=0.3),  # flaking rectangular scales
+    "acer_saccharum": dict(blockiness=0.65, segments=0.45, plate_tilt=0.55, warp=0.35, moss=0.2, lichen=0.25),  # furrowed, curling plates
+    "aesculus_hippocastanum": dict(blockiness=0.6, segments=0.5, plate_tilt=0.55, warp=0.35, moss=0.25, lichen=0.2),  # scaly plates
+    # Betulaceae / Salicaceae
+    "betula_pendula": dict(blockiness=0.3, segments=0.1, plate_tilt=0.1, warp=0.3, moss=0.15, lichen=0.3),
+    "populus_tremula": dict(blockiness=0.3, segments=0.0, plate_tilt=0.0, warp=0.25, moss=0.15, lichen=0.35),
+    "populus_nigra_italica": dict(blockiness=0.35, segments=0.15, plate_tilt=0.15, warp=0.7, moss=0.2, lichen=0.2),  # deep interlacing furrows
+    "salix_babylonica": dict(blockiness=0.3, segments=0.1, plate_tilt=0.1, warp=0.75, moss=0.3, lichen=0.15),
+    # Others, broadleaved
+    "tilia_cordata": dict(blockiness=0.3, segments=0.1, plate_tilt=0.1, warp=0.7, moss=0.25, lichen=0.2),     # narrow interlacing ridges
+    "platanus_hispanica": dict(blockiness=0.3, segments=0.0, plate_tilt=0.2, warp=0.35, moss=0.05, lichen=0.1),
+    "liriodendron_tulipifera": dict(blockiness=0.35, segments=0.1, plate_tilt=0.1, warp=0.65, moss=0.2, lichen=0.2),  # diamond-patterned furrows
+    "liquidambar_styraciflua": dict(blockiness=0.55, segments=0.45, plate_tilt=0.3, warp=0.45, moss=0.2, lichen=0.15),
+    "ulmus_minor": dict(blockiness=0.6, segments=0.55, plate_tilt=0.3, warp=0.5, moss=0.25, lichen=0.2),
+    "prunus_avium": dict(blockiness=0.25, segments=0.0, plate_tilt=0.15, warp=0.2, moss=0.1, lichen=0.25),
+    "malus_domestica": dict(blockiness=0.6, segments=0.45, plate_tilt=0.6, warp=0.35, moss=0.25, lichen=0.4),  # scaly, flaking, lichen-covered
+    "magnolia_grandiflora": dict(blockiness=0.35, segments=0.2, plate_tilt=0.25, warp=0.3, moss=0.1, lichen=0.25),
+    "ficus_elastica": dict(blockiness=0.2, segments=0.0, plate_tilt=0.0, warp=0.2, moss=0.05, lichen=0.1),
+    "olea_europaea": dict(blockiness=0.6, segments=0.55, plate_tilt=0.35, warp=0.75, moss=0.05, lichen=0.35),  # twisted, cracked into small blocks
+    "cercis_canadensis": dict(blockiness=0.5, segments=0.35, plate_tilt=0.4, warp=0.35, moss=0.1, lichen=0.2),
+    "eucalyptus_globulus": dict(blockiness=0.2, segments=0.0, plate_tilt=0.3, warp=0.3, moss=0.0, lichen=0.05),
+    "ceiba_pentandra": dict(blockiness=0.2, segments=0.0, plate_tilt=0.0, warp=0.2, moss=0.15, lichen=0.25),
+    "fraxinus_excelsior": dict(blockiness=0.35, segments=0.15, plate_tilt=0.1, warp=0.75, moss=0.3, lichen=0.25),  # diamond (anastomosing) ridges
+    "juglans_regia": dict(blockiness=0.45, segments=0.2, plate_tilt=0.15, warp=0.6, moss=0.2, lichen=0.2),
+    "robinia_pseudoacacia": dict(blockiness=0.3, segments=0.15, plate_tilt=0.1, warp=0.8, moss=0.15, lichen=0.15),  # ropy interlacing ridges
+    "ginkgo_biloba": dict(blockiness=0.5, segments=0.35, plate_tilt=0.2, warp=0.55, moss=0.15, lichen=0.15),
+    # Conifers and palm
+    "pinus_sylvestris": dict(blockiness=0.6, segments=0.4, plate_tilt=0.55, warp=0.35, moss=0.15, lichen=0.15),
+    "pinus_pinea": dict(blockiness=0.65, segments=0.45, plate_tilt=0.5, warp=0.3, moss=0.05, lichen=0.1),     # large flat reddish plates
+    "picea_abies": dict(blockiness=0.4, segments=0.5, plate_tilt=0.7, warp=0.3, moss=0.3, lichen=0.35),       # thin, small rounded scales
+    "sequoiadendron_giganteum": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.55, moss=0.05, lichen=0.05),
+    "taxodium_mucronatum": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.5, moss=0.3, lichen=0.1),
+    "cupressus_sempervirens": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.45, moss=0.1, lichen=0.15),
+    "phoenix_canariensis": dict(blockiness=0.5, segments=0.0, plate_tilt=0.3, warp=0.2, moss=0.05, lichen=0.05),
+}
+for _key, _kw in BARK_TEXTURE.items():
     _b = SPECIES_CATALOG[_key].bark
     for _f, _v in _kw.items():
         setattr(_b, _f, _v)

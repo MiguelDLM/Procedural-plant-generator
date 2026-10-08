@@ -34,6 +34,13 @@ class BarkProfile:
     onset_radius_cm: float = 4.0
     inner_color: tuple = None                    # Exposed inner bark at the bottom of fissures
     weathering: float = 0.35                     # Grey, bleached ridge tops
+    # Macroscopic texture descriptors (Junikka 1994 terminology; species values from Vaucher 2003)
+    blockiness: float = 0.4      # 0 irregular, rounded cells .. 1 rectangular blocks (Minkowski exponent)
+    segments: float = 0.3        # Transverse splits cutting ridges into segments (blocky oak, Ulmus)
+    plate_tilt: float = 0.3      # Per-plate tilt / offset (scales and plates catching light differently)
+    warp: float = 0.4            # Organic distortion; high = interlacing, anastomosing ridges (Fraxinus, Tilia)
+    moss: float = 0.15           # Moss cover (upper sides, base, shaded side)
+    lichen: float = 0.15         # Crustose lichen patches (favoured on smooth bark)
 
     def __post_init__(self):
         mix = lambda a, b, t: tuple(round((1 - t) * x + t * y, 3) for x, y in zip(a, b))  # noqa: E731
