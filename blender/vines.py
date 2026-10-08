@@ -141,6 +141,10 @@ def _read(props, obj, prefix):
     return obj
 
 
+DEFAULT_SHAPE = {"Twining": ("Pole", 2.0, 1.5), "Tendril": ("Arch", 2.0, 1.5), "Clinging": ("Wall", 2.2, 1.5),
+                 "Trailing": ("Ground", 0.3, 3.0)}
+
+
 def write_vine_to_props(props, key):
     sp = VINE_CATALOG.get(key)
     if sp is None:
@@ -148,6 +152,14 @@ def write_vine_to_props(props, key):
     _write(props, sp.profile, VIN)
     _write(props, sp.leaf, VLF)
     _write(props, sp.venation, VVN)
+    # With a base shape, switch to the one that suits the climbing mode (a runner on the soil, a twiner on a
+    # pole...); a curve chosen by the user is never replaced
+    if getattr(props, "vine_guide_source", 'SHAPE') == 'SHAPE':
+        shape, h, w = DEFAULT_SHAPE[sp.profile.mode.value]
+        if props.vine_guide_shape != shape:
+            props.vine_guide_shape = shape
+            props.vine_guide_height = h
+            props.vine_guide_width = w
 
 
 def vine_from_props(props):

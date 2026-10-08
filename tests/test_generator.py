@@ -999,6 +999,35 @@ class TestVines(unittest.TestCase):
         self.assertGreater(r.fruit_count, 0)
         self.assertGreater(float(r.fruits.vertices[:, 2].min()), -0.05)
 
+    def test_fruits_connected_and_resting(self):
+        """Every fruit hangs from, or rests at the end of, a stalk that reaches into it; fruits on the soil
+        touch it; stalks stay short even when a runner climbs a vertical guide."""
+        from core.vine import VineEngine, guide_shape
+        from core.vine_db import VINE_CATALOG
+        for key, shape in (("citrullus_lanatus", "Pole"), ("citrullus_lanatus", "Ground"),
+                           ("cucurbita_pepo", "Ground"), ("cucumis_sativus", "Arch")):
+            sp = VINE_CATALOG[key]
+            eng = VineEngine(sp.profile, sp.leaf, sp.venation)
+            seen = []
+            orig = eng._fruit
+
+            def spy(sh, s0, proto, rng, orig=orig, seen=seen):
+                parts = orig(sh, s0, proto, rng)
+                seen.append((sh.soil, parts))
+                return parts
+            eng._fruit = spy
+            eng.generate(guide_shape(shape, 2.0, 3.0), seed=1)
+            self.assertTrue(seen, key)
+            size = max(sp.profile.fruit_length_cm, sp.profile.fruit_diameter_cm) * 0.01
+            for soil, (stalk, body) in seen:
+                tip = stalk.vertices[-1].astype(float)
+                gap = np.linalg.norm(body.vertices - tip, axis=1).min()
+                self.assertLess(gap, 0.02, f"{key}/{shape}: stalk does not reach the fruit")
+                length = np.linalg.norm(np.diff(stalk.vertices[::7].astype(float), axis=0), axis=1).sum()
+                self.assertLess(length, sp.profile.fruit_stalk_cm * 0.01 + size, f"{key}/{shape}: stalk too long")
+                zmin = float(body.vertices[:, 2].min())
+                self.assertGreater(zmin, soil - 0.01, f"{key}/{shape}: fruit below the soil")
+
     def test_inactive_vine_fields_do_not_change_geometry(self):
         from tests.relevance_check import check
         for key in ("ipomoea_purpurea", "cucurbita_pepo"):

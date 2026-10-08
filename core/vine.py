@@ -303,14 +303,20 @@ def _merge(parts, names) -> MeshData:
     return MeshData.concatenate(parts)
 
 
+def fruit_pole_depth(prof: VineProfile) -> float:
+    """How far the stalk-end pole is sunk into the fruit (m); the stalk must reach it."""
+    return prof.fruit_end_depression * prof.fruit_length_cm * 0.01 * 0.45
+
+
 def fruit_mesh(prof: VineProfile, detail: float = 1.0, rng=None) -> MeshData:
     """A fruit around +Z from the stalk end (origin) to the blossom end (z = length). Gourd / pumpkin /
     melon / cucumber / pod shapes from length, diameter, widest position, neck, ribs and end depressions."""
     L = prof.fruit_length_cm * 0.01
     D = prof.fruit_diameter_cm * 0.01
-    nt = max(8, int(22 * detail))
+    nt = max(10, int(26 * detail))
     nth = max(12, int(max(28, prof.fruit_ribs * 6) * detail))
-    t = np.linspace(0.0, 1.0, nt + 1)[1:-1]                       # Poles closed by fans
+    v = np.linspace(0.0, 1.0, nt + 1)[1:-1]
+    t = 0.5 - 0.5 * np.cos(np.pi * v)                    # Rings concentrated toward the rounded ends
     w = float(np.clip(prof.fruit_widest_position, 0.15, 0.85))
     tw = np.where(t < w, 0.5 * t / w, 0.5 + 0.5 * (t - w) / (1 - w))
     rho = 0.5 * D * np.sin(np.pi * tw) ** 0.55
@@ -334,17 +340,21 @@ def fruit_mesh(prof: VineProfile, detail: float = 1.0, rng=None) -> MeshData:
     j, i = np.meshgrid(np.arange(rows - 1), np.arange(nth), indexing="ij")
     i0 = (j * m + i).ravel()
     quads = np.stack([i0, i0 + m, i0 + m + 1, i0 + 1], axis=1)
-    top = len(V)                                               # Stalk end pole (sunken by the depression)
-    bot = top + 1
-    poles = np.array([[0, 0, dep * L * 0.45], [0, 0, L - dep * L * 0.45]])
+    # Poles (stalk end sunk by the depression): one vertex per fan triangle, carrying the mid angle of its
+    # sector, so stripes and UVs converge cleanly instead of smearing from a single shared vertex
+    top = len(V)
+    bot = top + nth
+    pz = fruit_pole_depth(prof)
+    um = (th[:-1] + th[1:]) / (4 * math.pi)
+    poles = np.concatenate([np.repeat([[0.0, 0.0, pz]], nth, 0), np.repeat([[0.0, 0.0, L - pz]], nth, 0)])
     ring0 = np.arange(nth)
     ringN = (rows - 1) * m + np.arange(nth)
-    fan0 = np.stack([np.full(nth, top), ring0 + 1, ring0], axis=1)
-    fanN = np.stack([ringN, ringN + 1, np.full(nth, bot)], axis=1)
+    fan0 = np.stack([top + ring0, ring0 + 1, ring0], axis=1)
+    fanN = np.stack([ringN, ringN + 1, bot + ring0], axis=1)
     verts = np.concatenate([V, poles])
-    tt = np.concatenate([np.repeat(t[:, None], m, 1).reshape(-1), [0.0, 1.0]])
-    uu = np.concatenate([np.repeat((th / (2 * math.pi))[None, :], rows, 0).reshape(-1), [0.0, 0.0]])
-    rr = np.concatenate([np.repeat(rib[None, :], rows, 0).reshape(-1), [1.0, 1.0]])
+    tt = np.concatenate([np.repeat(t[:, None], m, 1).reshape(-1), np.zeros(nth), np.ones(nth)])
+    uu = np.concatenate([np.repeat((th / (2 * math.pi))[None, :], rows, 0).reshape(-1), um, um])
+    rr = np.concatenate([np.repeat(rib[None, :], rows, 0).reshape(-1), np.ones(2 * nth)])
     lv = np.concatenate([quads.reshape(-1), fan0.reshape(-1), fanN.reshape(-1)]).astype(np.int32)
     lt = np.concatenate([np.full(len(quads), 4), np.full(nth, 3), np.full(nth, 3)]).astype(np.int32)
     ls = np.concatenate([[0], np.cumsum(lt)[:-1]]).astype(np.int32)
@@ -411,6 +421,11 @@ class _Shoot:
     out: np.ndarray      # Unit "away from the support" vector per point
     main: bool
     ground: float | None # Ground height for trailing shoots
+    soil: float = 0.0    # Soil level (height of the guide's first point), any mode
+
+    def grounded(self, z, tol=0.15) -> bool:
+        """A trailing shoot lies on the soil here (it may also climb, e.g. a squash on a trellis)."""
+        return self.ground is not None and z - self.ground < tol
 
 
 class VineEngine:
@@ -509,7 +524,7 @@ class VineEngine:
         R = R * (0.35 + 0.65 * _smoothstep(0.0, max(tip, 0.05), dist_tip) ** 0.5)
         R = np.maximum(R, 0.00025)
         ground = float(G[0, 2]) if mode == ClimbingMode.TRAILING else None
-        return _Shoot(C, s, R, out, True, ground)
+        return _Shoot(C, s, R, out, True, ground, float(G[0, 2]))
 
     def _lateral(self, parent: _Shoot, s0: float, direction, length, rng) -> _Shoot | None:
         p = self.p
@@ -519,7 +534,7 @@ class VineEngine:
         x = sample_at(parent.P, parent.s, s0)
         d = _unit(np.asarray(direction, float))
         pts = [x]
-        trailing = parent.ground is not None
+        trailing = parent.grounded(x[2])
         wall = parent.out[min(np.searchsorted(parent.s, s0), len(parent.s) - 1)] \
             if p.mode == ClimbingMode.CLINGING else None
         for k in range(n):
@@ -543,7 +558,7 @@ class VineEngine:
         out = np.repeat(parent.out[min(np.searchsorted(parent.s, s0), len(parent.s) - 1)][None, :], len(P), 0)
         if trailing:
             out[:] = UP
-        return _Shoot(P, s, R, out, False, parent.ground)
+        return _Shoot(P, s, R, out, False, parent.ground if trailing else None, parent.soil)
 
     # ----------------------------------------------------------------- nodes
     def _nodes(self, sh: _Shoot):
@@ -640,7 +655,8 @@ class VineEngine:
                     roll = rng_leaf.normal(0, 0.25)
                     if lost or not keep:
                         continue
-                    y, z = self._leaf_frame(T, rdir, o, sh.ground is not None, roll)
+                    y, z = self._leaf_frame(T, rdir, o if not sh.grounded(x[2]) or sh.ground is None else UP,
+                                            sh.grounded(x[2]), roll)
                     leaves_pos.append(x + rdir * r_here)
                     leaves_y.append(y)
                     leaves_z.append(z)
@@ -672,7 +688,8 @@ class VineEngine:
                 # Nodal roots
                 if with_roots and p.aerial_roots > 0 and dist > zone * 0.5:
                     if rng_root.random() < p.aerial_roots:
-                        roots.extend(self._rootlets(x, T, o, sh.ground is not None, rng_root))
+                        if sh.ground is None or sh.grounded(x[2]):
+                            roots.extend(self._rootlets(x, T, o, sh.ground is not None, rng_root))
                 # Flower sites (axils)
                 if dist > 0.03:
                     fd = _unit(o * 0.6 + UP * 0.8 + 0.3 * (math.cos(theta0) * N + math.sin(theta0) * B))
@@ -812,43 +829,49 @@ class VineEngine:
         return parts
 
     def _fruit(self, sh: _Shoot, s0: float, proto: MeshData, rng) -> list[MeshData]:
-        """Stalk and fruit at a node: hanging from climbers, resting on the soil for trailing plants."""
+        """Stalk and fruit at a node. Fruits hang from climbing stems; on the soil (trailing runners, or a
+        hanging fruit that would reach the ground) they rest on it, elongated ones on their side and round
+        ones with the stalk end turned up toward the runner. The stalk always ends inside the fruit's stalk
+        end (also when it is sunk, as in pumpkins)."""
         p = self.p
         x = sample_at(sh.P, sh.s, s0)
         T = _tangent_at(sh, s0)
-        L = p.fruit_length_cm * 0.01
-        Dm = p.fruit_diameter_cm * 0.01
+        sc = rng.uniform(0.85, 1.12)
+        L = p.fruit_length_cm * 0.01 * sc
+        Dm = p.fruit_diameter_cm * 0.01 * sc
         stalk = max(p.fruit_stalk_cm * 0.01, 0.005)
         side = _unit(np.cross(T, UP) if abs(T @ UP) < 0.95 else np.cross(T, [1.0, 0, 0]))
         side = side if rng.random() < 0.5 else -side
-        if sh.ground is not None:
-            g = sh.ground
-            if L / max(Dm, 1e-6) > 1.3:               # Elongated fruits lie on their side
-                axis = _unit(side + rng.normal(0, 0.3, 3) * np.array([1, 1, 0]))
-                axis[2] = 0.0
-                axis = _unit(axis)
-                attach = x + side * stalk + np.array([0, 0, g + Dm * 0.45 - x[2]])
-            else:                                     # Round fruits sit upright, stalk end up
-                axis = -UP
-                attach = x + side * (stalk + Dm * 0.5) + np.array([0, 0, g + L * 0.95 - x[2]])
-            ctrl = [x, (x + attach) * 0.5 + UP * 0.03, attach]
+        hang_axis = _unit(-UP + rng.normal(0, 0.12, 3))
+        hang_attach = x + side * stalk * 0.4 - UP * stalk * 0.8
+        lowest = hang_attach[2] - L * 0.98
+        on_soil = sh.grounded(x[2]) or lowest < sh.soil
+        if on_soil:
+            # Elongated fruits lie on their side; round / oblate ones tilt the stalk end up toward the runner
+            tilt = 0.0 if L / max(Dm, 1e-6) > 1.15 else math.radians(rng.uniform(35, 60))
+            h = _unit(side - (side @ UP) * UP) if np.linalg.norm(side - (side @ UP) * UP) > 1e-6 else side
+            axis = _unit(h * math.cos(tilt) - UP * math.sin(tilt))
+            attach = x + h * stalk * 0.6       # Provisional; the fruit is then dropped onto the soil
         else:
-            axis = _unit(-UP + rng.normal(0, 0.12, 3))
-            attach = x + side * stalk * 0.4 - UP * stalk * 0.8
-            ctrl = [x, x + side * stalk * 0.45, attach]
-        pts = _bezier_q(np.array(ctrl), 10)
-        rs = float(np.clip(0.035 * Dm, 0.0012, 0.025))
-        stalk_mesh = tube(pts, np.linspace(rs, rs * 1.3, len(pts)), 6, {"age": np.full(len(pts), 0.3),
-                                                                       "woody": np.full(len(pts), 0.5)})
-        # Rotate the prototype (+Z from the stalk end) onto `axis`, random roll
+            axis, attach = hang_axis, hang_attach
         z = axis
         e1 = _unit(np.cross(z, UP) if abs(z @ UP) < 0.95 else np.cross(z, [1.0, 0, 0]))
         e2 = np.cross(z, e1)
         a = rng.uniform(0, 2 * math.pi)
         e1, e2 = math.cos(a) * e1 + math.sin(a) * e2, -math.sin(a) * e1 + math.cos(a) * e2
         Rm = np.stack([e1, e2, z], axis=1)
-        sc = rng.uniform(0.85, 1.12)
         V = (proto.vertices.astype(float) * sc) @ Rm.T + attach[None, :]
+        if on_soil:                            # Rest exactly on the soil (slightly settled into it)
+            dz = sh.soil - 0.004 * sc - V[:, 2].min()
+            V[:, 2] += dz
+            attach = attach + np.array([0.0, 0.0, dz])
+        end = attach + axis * (fruit_pole_depth(p) * sc + 0.004)       # Inside the stalk end
+        lift = max(end[2] - x[2], 0.0)
+        mid = x + (end - x) * 0.5 + UP * (0.25 * lift + 0.01) if on_soil else x + side * stalk * 0.45
+        pts = _bezier_q(np.array([x, mid, end]), 12)
+        rs = float(np.clip(0.035 * Dm, 0.0012, 0.025))
+        stalk_mesh = tube(pts, np.linspace(rs, rs * 1.3, len(pts)), 6, {"age": np.full(len(pts), 0.3),
+                                                                       "woody": np.full(len(pts), 0.5)})
         body = MeshData(V.astype(np.float32), proto.loop_vertex.copy(), proto.loop_start.copy(),
                         proto.loop_total.copy(), proto.loop_uv.copy(),
                         {**{k: v.copy() for k, v in proto.point_attributes.items()},
