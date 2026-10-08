@@ -943,8 +943,10 @@ class TestVines(unittest.TestCase):
         from core.vine_db import VINE_CATALOG
         sp = VINE_CATALOG[key]
         shape = {"Twining": "Pole", "Tendril": "Arch", "Clinging": "Wall", "Trailing": "Ground"}
+        from core.fruit_db import FRUIT_CATALOG, VINE_FRUITS
         g = guides if guides is not None else guide_shape(shape[sp.profile.mode.value], 2.0, 2.0)
-        return VineEngine(sp.profile, sp.leaf, sp.venation).generate(g, seed=4, detail=0.6, **kw)
+        fr = FRUIT_CATALOG[VINE_FRUITS[key]].fruit if key in VINE_FRUITS else None
+        return VineEngine(sp.profile, sp.leaf, sp.venation).generate(g, seed=4, detail=0.6, fruit=fr, **kw)
 
     def test_every_preset_generates_valid_meshes(self):
         from core.vine_db import VINE_CATALOG
@@ -958,7 +960,8 @@ class TestVines(unittest.TestCase):
             sp = VINE_CATALOG[key].profile
             if sp.tendril_mode.value != "None":
                 self.assertGreater(r.tendril_count, 0, key)
-            if sp.fruit_count:
+            from core.fruit_db import VINE_FRUITS
+            if sp.fruit_count and key in VINE_FRUITS:
                 self.assertGreater(r.fruit_count, 0, key)
 
     def test_twining_handedness(self):
@@ -1004,27 +1007,29 @@ class TestVines(unittest.TestCase):
         touch it; stalks stay short even when a runner climbs a vertical guide."""
         from core.vine import VineEngine, guide_shape
         from core.vine_db import VINE_CATALOG
+        from core.fruit_db import FRUIT_CATALOG
         for key, shape in (("citrullus_lanatus", "Pole"), ("citrullus_lanatus", "Ground"),
                            ("cucurbita_pepo", "Ground"), ("cucumis_sativus", "Arch")):
             sp = VINE_CATALOG[key]
+            fr = FRUIT_CATALOG[key].fruit
             eng = VineEngine(sp.profile, sp.leaf, sp.venation)
             seen = []
             orig = eng._fruit
 
-            def spy(sh, s0, proto, rng, orig=orig, seen=seen):
-                parts = orig(sh, s0, proto, rng)
+            def spy(sh, s0, proto, rng, f, orig=orig, seen=seen):
+                parts = orig(sh, s0, proto, rng, f)
                 seen.append((sh.soil, parts))
                 return parts
             eng._fruit = spy
-            eng.generate(guide_shape(shape, 2.0, 3.0), seed=1)
+            eng.generate(guide_shape(shape, 2.0, 3.0), seed=1, fruit=fr)
             self.assertTrue(seen, key)
-            size = max(sp.profile.fruit_length_cm, sp.profile.fruit_diameter_cm) * 0.01
+            size = max(fr.length_cm, fr.diameter_cm) * 0.01
             for soil, (stalk, body) in seen:
                 tip = stalk.vertices[-1].astype(float)
                 gap = np.linalg.norm(body.vertices - tip, axis=1).min()
                 self.assertLess(gap, 0.02, f"{key}/{shape}: stalk does not reach the fruit")
                 length = np.linalg.norm(np.diff(stalk.vertices[::7].astype(float), axis=0), axis=1).sum()
-                self.assertLess(length, sp.profile.fruit_stalk_cm * 0.01 + size, f"{key}/{shape}: stalk too long")
+                self.assertLess(length, fr.stalk_length_cm * 0.01 + size, f"{key}/{shape}: stalk too long")
                 zmin = float(body.vertices[:, 2].min())
                 self.assertGreater(zmin, soil - 0.01, f"{key}/{shape}: fruit below the soil")
 
@@ -1040,6 +1045,55 @@ class TestVines(unittest.TestCase):
         form, pid, obj, warn, _ = P.load_preset(env)
         self.assertEqual((form, pid, warn), ("Vine", "my_bean", []))
         self.assertEqual(obj.profile.coil_pitch_cm, VINE_CATALOG["phaseolus_coccineus"].profile.coil_pitch_cm)
+
+
+class TestFruits(unittest.TestCase):
+    """Fleshy fruits and bunches (core.fruit)."""
+
+    def test_every_fruit_hangs_from_its_stalk(self):
+        from core.fruit import hanging_fruit
+        from core.fruit_db import FRUIT_CATALOG
+        for key, sp in FRUIT_CATALOG.items():
+            m = hanging_fruit(sp.fruit, 0.6, 2)
+            V = m.vertices.astype(float)
+            self.assertTrue(np.isfinite(V).all(), key)
+            self.assertLess(int(m.loop_vertex.max()), len(V), key)
+            self.assertLess(V[:, 2].max(), 0.012, key)             # Nothing above the stalk top
+            body = V[(m.point_attributes["fruit_stalk"] < 0.5) & (m.point_attributes["fruit_crown"] < 0.5)]
+            stalk = V[m.point_attributes["fruit_stalk"] > 0.5]
+            gap = min(np.linalg.norm(body - q, axis=1).min() for q in stalk[::5])
+            self.assertLess(gap, 0.006 + sp.fruit.stalk_radius_mm * 0.001, f"{key}: stalk not connected to the fruit")
+
+    def test_sizes_and_dimples(self):
+        from core.fruit import body_mesh
+        from core.fruit_db import FRUIT_CATALOG
+        apple = FRUIT_CATALOG["malus_domestica"].fruit
+        m = body_mesh(apple, 1.0, 0)
+        V = m.vertices[m.point_attributes["fruit_crown"] < 0.5].astype(float)
+        self.assertAlmostEqual(np.ptp(V[:, 0]), apple.diameter_cm * 0.01, delta=0.008)
+        axis = np.linalg.norm(V[:, :2], axis=1) < 0.004
+        rim = V[np.linalg.norm(V[:, :2], axis=1) > 0.02]
+        self.assertGreater(V[axis][:, 2].min(), rim[:, 2].min() + 0.007)     # Stalk cavity below the shoulders
+
+    def test_bunch(self):
+        from core.fruit import bunch
+        from core.fruit_db import FRUIT_CATALOG
+        g = FRUIT_CATALOG["vitis_vinifera"].fruit
+        m = bunch(g, 0.5, 1)
+        R = m.point_attributes["fruit_random"]
+        berries = len(np.unique(R[R > 0]))
+        self.assertGreater(berries, 0.8 * g.cluster_berries)
+        V = m.vertices.astype(float)
+        self.assertLess(V[:, 2].min(), -(g.peduncle_cm + 0.6 * g.cluster_length_cm) * 0.01)
+
+    def test_default_fruit_roundtrip(self):
+        from core import presets as P
+        from core.species_db import SPECIES_CATALOG
+        env = P.export_preset("Tree", "my_pear", SPECIES_CATALOG["pyrus_communis"], default_fruit="pyrus_communis")
+        form, pid, obj, warn, extras = P.load_preset(env)
+        self.assertEqual((warn, extras["default_fruit"]), ([], "pyrus_communis"))
+        env = P.export_preset("Fruit", "my_apple", P._catalog("Fruit")["malus_domestica"], base="malus_domestica")
+        self.assertEqual(P.load_preset(env)[3], [])
 
 
 if __name__ == "__main__":

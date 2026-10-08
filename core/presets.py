@@ -7,10 +7,11 @@ A preset file ("PPG preset", format version 1) is a small envelope around the tr
       "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
       "format": "ppg-preset",
       "format_version": 1,
-      "growth_form": "Tree" | "Cactus" | "Rosette" | "Flower" | "Vine",
+      "growth_form": "Tree" | "Cactus" | "Rosette" | "Flower" | "Vine" | "Fruit",
       "id": "quercus_robur_old_growth",          # lower_snake_case, unique in the library
       "base": "quercus_robur",                   # optional: built-in or library preset to start from
-      "default_flower": "rosa_canina",           # optional (Tree / Cactus / Rosette)
+      "default_flower": "rosa_canina",           # optional (Tree / Cactus / Rosette / Vine)
+      "default_fruit": "malus_domestica",        # optional (Tree / Vine)
       "metadata": {"author": "", "license": "CC-BY-4.0", "description": "", "sources": [], "tags": []},
       "preset": { ... trait values, nested like the dataclasses ... }
     }
@@ -40,7 +41,7 @@ from typing import Any
 
 FORMAT = "ppg-preset"
 FORMAT_VERSION = 1
-FORMS = ("Tree", "Cactus", "Rosette", "Flower", "Vine")
+FORMS = ("Tree", "Cactus", "Rosette", "Flower", "Vine", "Fruit")
 SCHEMA_URL = ("https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/"
               "schemas/ppg-preset.schema.json")
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
@@ -83,6 +84,9 @@ def _catalog(form: str) -> dict:
     if form == "Vine":
         from .vine_db import VINE_CATALOG
         return VINE_CATALOG
+    if form == "Fruit":
+        from .fruit_db import FRUIT_CATALOG
+        return FRUIT_CATALOG
     raise ValueError(f"Unknown growth form {form!r}; expected one of {FORMS}")
 
 
@@ -90,6 +94,11 @@ def _flower_map(form: str) -> dict | None:
     from .flower_db import TREE_FLOWERS, CACTUS_FLOWERS, ROSETTE_FLOWERS, VINE_FLOWERS
     return {"Tree": TREE_FLOWERS, "Cactus": CACTUS_FLOWERS, "Rosette": ROSETTE_FLOWERS,
             "Vine": VINE_FLOWERS}.get(form)
+
+
+def _fruit_map(form: str) -> dict | None:
+    from .fruit_db import TREE_FRUITS, VINE_FRUITS
+    return {"Tree": TREE_FRUITS, "Vine": VINE_FRUITS}.get(form)
 
 
 def _template(form: str):
@@ -116,6 +125,10 @@ def _template(form: str):
         from .vine_db import VinePreset
         from .vine import VineProfile
         return VinePreset("", "", "", "", "", VineProfile())
+    if form == "Fruit":
+        from .fruit_db import FruitPreset
+        from .fruit import FruitProfile
+        return FruitPreset("", "", "", "", FruitProfile())
     raise ValueError(form)
 
 
@@ -137,6 +150,9 @@ def _ranges(form: str) -> dict:
         from .vine_db import VINE_RANGES, leaf_ranges
         out = {f"profile.{k}": v for k, v in VINE_RANGES.items()}
         out.update({f"{sec}.{k}": v for (sec, k), v in leaf_ranges().items()})
+    elif form == "Fruit":
+        from .fruit_db import FRUIT_RANGES
+        out = {f"fruit.{k}": v for k, v in FRUIT_RANGES.items()}
     return out
 
 
@@ -180,7 +196,8 @@ def _diff(a: Any, b: Any) -> Any:
 
 
 def export_preset(form: str, preset_id: str, obj, base: str | None = None, diff: bool = False,
-                  metadata: dict | None = None, default_flower: str | None = None) -> dict:
+                  metadata: dict | None = None, default_flower: str | None = None,
+                  default_fruit: str | None = None) -> dict:
     """Envelope for `obj` (a preset object of `form`). With diff=True and a base, only differences are kept."""
     body = to_plain(obj)
     if diff and base:
@@ -197,6 +214,8 @@ def export_preset(form: str, preset_id: str, obj, base: str | None = None, diff:
         env["base"] = base
     if default_flower:
         env["default_flower"] = default_flower
+    if default_fruit:
+        env["default_fruit"] = default_fruit
     env["metadata"] = meta
     env["preset"] = body
     return env
@@ -309,8 +328,8 @@ def load_preset(data: dict) -> tuple[str, str, Any, list[str], dict]:
     body = data.get("preset", {})
     if not isinstance(body, dict):
         raise PresetError("'preset' must be an object")
-    known = {"$schema", "format", "format_version", "growth_form", "id", "base", "default_flower", "metadata",
-             "preset"}
+    known = {"$schema", "format", "format_version", "growth_form", "id", "base", "default_flower",
+             "default_fruit", "metadata", "preset"}
     for k in data:
         if k not in known:
             warn.append(f"{k}: unknown top-level key ignored")
@@ -330,7 +349,17 @@ def load_preset(data: dict) -> tuple[str, str, Any, list[str], dict]:
         elif flower not in FLOWER_CATALOG:
             warn.append(f"default_flower {flower!r} not found; ignored")
             flower = None
-    extras = {"metadata": data.get("metadata", {}), "default_flower": flower, "base": base}
+    fruit = data.get("default_fruit")
+    if fruit is not None:
+        from .fruit_db import FRUIT_CATALOG
+        if _fruit_map(form) is None:
+            warn.append(f"default_fruit is ignored for {form} presets")
+            fruit = None
+        elif fruit not in FRUIT_CATALOG:
+            warn.append(f"default_fruit {fruit!r} not found; ignored")
+            fruit = None
+    extras = {"metadata": data.get("metadata", {}), "default_flower": flower, "default_fruit": fruit,
+              "base": base}
     return form, pid, obj, warn, extras
 
 
@@ -351,7 +380,8 @@ def _leaf_count(v) -> int:
     return sum(_leaf_count(getattr(v, f.name)) for f in dataclasses.fields(v)) if dataclasses.is_dataclass(v) else 1
 
 
-def register_preset(form: str, pid: str, obj, default_flower: str | None = None) -> bool:
+def register_preset(form: str, pid: str, obj, default_flower: str | None = None,
+                    default_fruit: str | None = None) -> bool:
     """Adds (or replaces) a preset in the running catalogue. Returns True if it replaced one."""
     cat = _catalog(form)
     replaced = pid in cat
@@ -359,6 +389,9 @@ def register_preset(form: str, pid: str, obj, default_flower: str | None = None)
     fm = _flower_map(form)
     if fm is not None and default_flower:
         fm[pid] = default_flower
+    fr = _fruit_map(form)
+    if fr is not None and default_fruit:
+        fr[pid] = default_fruit
     return replaced
 
 
@@ -370,7 +403,7 @@ def load_file(path: str, register: bool = True) -> tuple[str, str, list[str]]:
             raise PresetError(f"Invalid JSON: {e}") from e
     form, pid, obj, warn, extras = load_preset(data)
     if register:
-        register_preset(form, pid, obj, extras.get("default_flower"))
+        register_preset(form, pid, obj, extras.get("default_flower"), extras.get("default_fruit"))
     return form, pid, warn
 
 
@@ -481,7 +514,7 @@ def json_schema() -> dict:
     for form in FORMS:
         t = _template(form)
         name = {"Tree": "TreePreset", "Cactus": "CactusPreset", "Rosette": "RosettePreset",
-                "Flower": "FlowerPreset", "Vine": "VinePreset"}[form]
+                "Flower": "FlowerPreset", "Vine": "VinePreset", "Fruit": "FruitPreset"}[form]
         sch = _class_schema(type(t), t, "", _ranges(form), defs, form, "")
         sch["description"] = f"Trait values of a {form} preset (all optional when 'base' is given)."
         defs[name] = sch
@@ -491,7 +524,7 @@ def json_schema() -> dict:
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": SCHEMA_URL,
         "title": "Procedural Plant Generator preset",
-        "description": "One plant (tree, cactus, rosette succulent, flower or vine) described by measurable traits. "
+        "description": "One plant (tree, cactus, rosette succulent, flower, vine) or fruit described by measurable traits. "
                        "See docs/PRESETS.md.",
         "type": "object",
         "required": ["format", "format_version", "growth_form", "id", "preset"],
@@ -505,6 +538,7 @@ def json_schema() -> dict:
             "base": {"type": "string", "description": "Built-in or library preset of the same growth form to "
                                                       "start from; 'preset' then lists only the differences."},
             "default_flower": {"type": "string", "description": "Flower preset id shown on this plant."},
+            "default_fruit": {"type": "string", "description": "Fruit preset id borne by this plant (Tree, Vine)."},
             "metadata": {"type": "object", "properties": {
                 "author": {"type": "string"}, "license": {"type": "string"},
                 "description": {"type": "string"}, "sources": {"type": "array", "items": {"type": "string"}},
@@ -526,7 +560,7 @@ def fields_reference_md() -> str:
            "Generated by `python -m core.presets docs` from the code; do not edit by hand.", "",
            "Units: suffix `_m` metres, `_cm` centimetres, `_mm` millimetres, `_deg` degrees. Colours are sRGB "
            "triplets in 0..1. Ranges are the limits enforced on import (values outside are clamped).", ""]
-    order = ["TreePreset", "CactusPreset", "RosettePreset", "FlowerPreset", "VinePreset"]
+    order = ["TreePreset", "CactusPreset", "RosettePreset", "FlowerPreset", "VinePreset", "FruitPreset"]
     order += [k for k in defs if k not in order]
     for name in order:
         d = defs[name]
@@ -581,8 +615,9 @@ def _main(argv: list[str]) -> int:
         for form in FORMS:
             os.makedirs(os.path.join(out, form.lower()), exist_ok=True)
             fm = _flower_map(form) or {}
+            fr = _fruit_map(form) or {}
             for key, obj in _catalog(form).items():
-                env = export_preset(form, key, obj, default_flower=fm.get(key),
+                env = export_preset(form, key, obj, default_flower=fm.get(key), default_fruit=fr.get(key),
                                     metadata={"author": "Procedural Plant Generator (built-in)",
                                               "description": getattr(obj, "notes", "")})
                 save_file(os.path.join(out, form.lower(), f"{key}.json"), env)

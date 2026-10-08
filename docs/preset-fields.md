@@ -83,6 +83,18 @@ Trait values of a Vine preset (all optional when 'base' is given).
 | `leaf` | object | | | | see [LeafMorphologyProfile](#leafmorphologyprofile) |
 | `venation` | object | | | | see [VenationProfile](#venationprofile) |
 
+## FruitPreset
+
+Trait values of a Fruit preset (all optional when 'base' is given).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `scientific_name` | string |  |  |  | Binomial name of the plant bearing the fruit, e.g. 'Malus domestica'. |
+| `common_name` | string |  |  |  | Vernacular name(s) of the fruit. |
+| `family` | string |  |  |  | Botanical family, e.g. 'Rosaceae'. |
+| `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
+| `fruit` | object | | | | see [FruitProfile](#fruitprofile) |
+
 ## AllometricProfile
 
 Empirical scaling parameters for a plant or tree taxon.
@@ -542,17 +554,50 @@ Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the 
 | `woodiness` | number |  | 0.0 – 1.0 | 0.0 | Fraction of the stem, from the base, that is lignified |
 | `hairiness` | number |  | 0.0 – 1.0 | 0.2 | Pubescence (soft sheen) |
 | `fruit_count` | integer |  | 0 – 100 | 0 | Per stem |
-| `fruit_length_cm` | number | cm | 0.5 – 120.0 | 10.0 | Along the fruit axis (stalk end to blossom end) Applies when: fruit_count > 0. |
-| `fruit_diameter_cm` | number | cm | 0.3 – 100.0 | 8.0 | Largest fruit diameter, cm (pumpkin 25-40, cucumber 3-5, pea pod ~1). Applies when: fruit_count > 0. |
-| `fruit_widest_position` | number |  | 0.15 – 0.85 | 0.5 | 0 stalk end .. 1 blossom end (pear-shaped < 0.5 < club-shaped) Applies when: fruit_count > 0. |
-| `fruit_neck` | number |  | 0.0 – 1.0 | 0.0 | Constriction near the stalk (bottle gourd) Applies when: fruit_count > 0. |
-| `fruit_ribs` | integer |  | 0 – 30 | 0 | Number of longitudinal ribs (pumpkins 8-12; 0 = smooth). Applies when: fruit_count > 0. |
-| `fruit_rib_depth` | number |  | 0.0 – 0.4 | 0.1 | Depth of the grooves between ribs relative to the radius, 0..0.4. Applies when: fruit_count > 0 and fruit_ribs > 0. |
-| `fruit_end_depression` | number |  | 0.0 – 0.6 | 0.0 | Sunken stalk and blossom ends (pumpkin) Applies when: fruit_count > 0. |
-| `fruit_stalk_cm` | number | cm | 0.0 – 40.0 | 5.0 | Fruit stalk (peduncle) length, cm. Applies when: fruit_count > 0. |
-| `fruit_color` | colour (sRGB 0..1) |  |  | [0.85, 0.45, 0.08] | Main fruit colour (sRGB 0..1). Applies when: fruit_count > 0. |
-| `fruit_stripe_color` | colour (sRGB 0..1) |  |  | [0.95, 0.75, 0.4] | Colour of the longitudinal stripes and mottling (watermelon, squash). Applies when: fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0). |
-| `fruit_stripes` | number |  | 0.0 – 1.0 | 0.0 | Contrast of longitudinal stripes Applies when: fruit_count > 0. |
-| `fruit_mottle` | number |  | 0.0 – 1.0 | 0.2 | Blotchy / netted colour variation Applies when: fruit_count > 0. |
-| `fruit_gloss` | number |  | 0.0 – 1.0 | 0.4 | Fruit surface gloss, 0 matt (pumpkin) .. 1 glossy (aubergine-like). Applies when: fruit_count > 0. |
+
+## FruitProfile
+
+Shape and surface of a fleshy fruit (sizes in cm, along the stalk-to-blossom axis).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `kind` | enum: `Berry`, `Drupe`, `Pome`, `Hesperidium`, `Balausta`, `Pepo`, `Pod` |  |  | Pome | Fruit type (Spjut 1994): Berry, Drupe, Pome, Hesperidium (citrus), Balausta (pomegranate), Pepo (cucurbits), Pod. Informative; the shape comes from the other fields. |
+| `length_cm` | number | cm | 0.3 – 120.0 | 7.0 | Stalk end to blossom end |
+| `diameter_cm` | number | cm | 0.3 – 100.0 | 7.5 | Largest width |
+| `widest_position` | number |  | 0.15 – 0.85 | 0.45 | 0 stalk end .. 1 blossom end (pear-shaped > 0.5) |
+| `bluntness` | number |  | 0.2 – 1.5 | 0.55 | End shape exponent: 0.3 boxy .. 1 pointed |
+| `distal_point` | number |  | 0.0 – 1.0 | 0.0 | Extra point at the blossom end (lemon, chilli) |
+| `neck` | number |  | 0.0 – 1.0 | 0.0 | Constriction toward the stalk (pear, bottle gourd) |
+| `stalk_cavity` | number |  | 0.0 – 0.4 | 0.0 | Depth of the stalk cavity relative to the length (apple ~0.15) |
+| `calyx_basin` | number |  | 0.0 – 0.3 | 0.0 | Depth of the distal basin relative to the length (apple ~0.08) |
+| `ribs` | integer |  | 0 – 30 | 0 | Lobes / ribs (pumpkin 10, tomato 6, apple 5 faint) |
+| `rib_depth` | number |  | 0.0 – 0.4 | 0.0 | Groove depth relative to the radius Applies when: ribs > 0. |
+| `lopsided` | number |  | 0.0 – 0.3 | 0.0 | One side larger than the other (apples) |
+| `crown_lobes` | integer |  | 0 – 12 | 0 | Persistent calyx |
+| `crown_length_cm` | number | cm | 0.0 – 5.0 | 0.5 | Applies when: crown_lobes > 0. |
+| `crown_flare_deg` | number | deg | 0.0 – 90.0 | 30.0 | 0 = along the axis (closed) .. 90 = spread flat over the fruit Applies when: crown_lobes > 0. |
+| `crown_position` | enum: `Distal`, `Proximal` |  |  | Distal | Where the persistent calyx sits: 'Distal' (blossom end: apple, pomegranate) or 'Proximal' (a star on the stalk end: tomato, aubergine). Applies when: crown_lobes > 0. |
+| `crown_color` | colour (sRGB 0..1) |  |  | [0.35, 0.28, 0.16] | Colour of the calyx lobes (sRGB 0..1). Applies when: crown_lobes > 0. |
+| `stalk_length_cm` | number | cm | 0.0 – 40.0 | 2.5 | Stalk Applies when: cluster_berries <= 1. |
+| `stalk_radius_mm` | number | mm | 0.2 – 30.0 | 1.2 | Stalk radius, mm; for bunches, the radius of the peduncle and rachis. |
+| `stalk_color` | colour (sRGB 0..1) |  |  | [0.38, 0.3, 0.18] | Colour of the stalk, peduncle and pedicels. |
+| `cluster_berries` | integer |  | 1 – 400 | 1 | Bunch (infructescence); 1 = a single fruit |
+| `cluster_length_cm` | number | cm | 0.5 – 60.0 | 15.0 | Rachis length Applies when: cluster_berries > 1. |
+| `cluster_width_cm` | number | cm | 0.5 – 40.0 | 10.0 | Width at the shoulders Applies when: cluster_berries > 1. |
+| `shoulders` | number |  | 0.0 – 1.0 | 0.3 | Enlarged basal laterals (wings) Applies when: cluster_berries > 1. |
+| `compactness` | number |  | 0.0 – 1.0 | 0.6 | 0 loose, straggly .. 1 tightly packed Applies when: cluster_berries > 1. |
+| `pedicel_cm` | number | cm | 0.0 – 10.0 | 0.6 | Applies when: cluster_berries > 1. |
+| `peduncle_cm` | number | cm | 0.0 – 30.0 | 4.0 | Applies when: cluster_berries > 1. |
+| `color` | colour (sRGB 0..1) |  |  | [0.75, 0.7, 0.2] | Ground colour of the skin (sRGB 0..1). |
+| `blush_color` | colour (sRGB 0..1) |  |  | [0.7, 0.08, 0.06] | Over-colour on the sun side (sRGB 0..1). Applies when: blush > 0. |
+| `blush` | number |  | 0.0 – 1.0 | 0.0 | Sun-side over-colour (apples, peaches) |
+| `stripes` | number |  | 0.0 – 1.0 | 0.0 | Streaks / stripes along the fruit |
+| `stripe_count` | integer |  | 1 – 80 | 14 | Around the fruit (apple streaks ~30, watermelon ~16) Applies when: stripes > 0. |
+| `stripe_width` | number |  | 0.05 – 0.95 | 0.5 | Share of each period covered: 0.15 fine streaks .. 0.5 broad bands Applies when: stripes > 0. |
+| `stripe_color` | colour (sRGB 0..1) |  |  | [0.55, 0.05, 0.05] | Colour of the streaks / stripes. Applies when: stripes > 0. |
+| `dots` | number |  | 0.0 – 1.0 | 0.0 | Lenticels, oil glands, speckles |
+| `dot_color` | colour (sRGB 0..1) |  |  | [0.9, 0.85, 0.6] | Colour of the lenticels, oil glands or speckles. Applies when: dots > 0. |
+| `russet` | number |  | 0.0 – 1.0 | 0.0 | Corky brown patches (pears, some apples) |
+| `bloom` | number |  | 0.0 – 1.0 | 0.0 | Waxy whitish bloom (grapes, plums, blueberries) |
+| `gloss` | number |  | 0.0 – 1.0 | 0.5 | Skin gloss, 0 matt .. 1 glossy (cherries, tomatoes). |
 

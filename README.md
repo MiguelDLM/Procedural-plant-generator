@@ -88,6 +88,24 @@ sinensis*, *Pisum sativum*, *Cucumis sativus*, *Cucurbita pepo*, *Citrullus lana
 *Hedera helix* and *Passiflora caerulea*. Alpha-mapped leaf cards overlap densely in vines; the add-on raises
 Cycles' transparent bounces to 32 when needed (dense foliage otherwise renders black).
 
+### Fruits and bunches
+
+One parametric fruit (`core/fruit.py`) covers pomes, drupes, berries, citrus, pomegranates, pepos and pods. Its
+outline uses the shape descriptors of Tomato Analyzer (Brewer et al. 2006): length and width, widest point,
+blunt or pointed ends, a neck, stalk cavity and calyx basin (dimples around the axis), ribs or lobes and
+lopsidedness; the persistent calyx forms a crown at the blossom end (pomegranate, apple, quince) or a star on
+the stalk end (tomato). Skin: sun-side blush, streaks or stripes, lenticels / oil glands, russet, waxy bloom,
+gloss. Bunches are panicles of berries packed in a cone with shoulders and an adjustable compactness (Tello &
+Ibáñez 2018), e.g. grapes; cherries hang in twos and threes on long pedicels.
+
+- **Fruits panel** (Tree and Vine forms): the fruit borne by the plant (each fruit tree and fruiting vine
+  preset has a default), fruiting density, scale. On trees, fruits hang from the flowering sites of the
+  current inflorescence (terminal or axillary); on vines they hang from the nodes or rest on the soil.
+- **Fruit / Bunch** growth form shows one fruit or bunch on its own. 19 fruit presets: apple, pear, quince,
+  sweet cherry, peach, olive, grapes (red and white), tomato, pomegranate, orange, lemon, pumpkin,
+  watermelon, cucumber, passion fruit and three legume pods. Fruit presets are shared as JSON like the
+  others (`growth_form: "Fruit"`), and tree / vine presets may name a `default_fruit`.
+
 ### Forests and performance
 
 - **Forest panel** (Tree form): list the species of the mix (each with a number of variants and,
@@ -154,7 +172,7 @@ depth for cladodes, the corolla tube for a capitulum, branching for palms), and 
 applicable are hidden. The rules live in `core/relevance.py`; a perturbation test changes every field
 they mark inactive and checks that the generated geometry stays identical.
 
-## Species catalogue (37)
+## Species catalogue (40)
 
 | Group | Species |
 | :--- | :--- |
@@ -162,6 +180,7 @@ they mark inactive and checks that the generated geometry stays identical.
 | Sapindaceae | *Acer palmatum*, *A. pseudoplatanus*, *A. saccharum*, *Aesculus hippocastanum* |
 | Betulaceae / Salicaceae | *Betula pendula*, *Populus tremula*, *P. nigra* 'Italica', *Salix babylonica* |
 | Other broadleaves | *Tilia cordata*, *Platanus × hispanica*, *Liriodendron tulipifera*, *Liquidambar styraciflua*, *Ulmus minor*, *Prunus avium*, *Malus domestica*, *Magnolia grandiflora*, *Ficus elastica*, *Olea europaea*, *Cercis canadensis*, *Eucalyptus globulus*, *Ceiba pentandra* |
+| Fruit trees | *Pyrus communis*, *Punica granatum*, *Citrus × sinensis* (plus *Malus*, *Prunus avium*, *Olea* above) |
 | Compound leaves | *Fraxinus excelsior*, *Juglans regia*, *Robinia pseudoacacia* |
 | Gymnosperms | *Ginkgo biloba*, *Pinus sylvestris*, *P. pinea*, *Picea abies*, *Sequoiadendron giganteum*, *Taxodium mucronatum* (ahuehuete), *Cupressus sempervirens* |
 | Monocots | *Phoenix canariensis* |
@@ -232,6 +251,9 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Cannon, W. A. (1911). *The Root Habits of Desert Plants.* Carnegie Institution of Washington, Publ. 131.
 - Snyman, H. A. (2005). A case study on in situ rooting profiles and water-use efficiency of cactus pears, *Opuntia ficus-indica* and *O. robusta*. *Journal of the Professional Association for Cactus Development* 7: 1–21.
 - Franco, A. C. & Nobel, P. S. (1990). Influences of root distribution and growth on predicted water uptake and interspecific competition. *Oecologia* 82: 151–157. doi:10.1007/BF00323528
+- Brewer, M. T. et al. (2006). Development of a controlled vocabulary and software application to analyze fruit shape variation in tomato and other plant species. *Plant Physiology* 141: 15–25. doi:10.1104/pp.106.077867
+- Spjut, R. W. (1994). A systematic treatment of fruit types. *Memoirs of the New York Botanical Garden* 70: 1–182.
+- Tello, J. & Ibáñez, J. (2018). What do we know about grapevine bunch compactness? A state-of-the-art review. *Australian Journal of Grape and Wine Research* 24: 6–23. doi:10.1111/ajgw.12310
 - Darwin, C. (1875). *The Movements and Habits of Climbing Plants.* John Murray.
 - Gianoli, E. (2015). The behavioural ecology of climbing plants. *AoB Plants* 7: plv013. doi:10.1093/aobpla/plv013
 - Isnard, S. & Silk, W. K. (2009). Moving with climbing plants from Charles Darwin's time into the 21st century. *American Journal of Botany* 96: 1205–1221.

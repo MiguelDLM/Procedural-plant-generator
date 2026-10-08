@@ -29,12 +29,14 @@ try:
     from ..core.succulent_db import GrowthForm, preset_items
     from ..core.flower_db import flower_items
     from ..core.vine_db import vine_items
+    from ..core.fruit_db import fruit_items
 except (ImportError, ValueError):
     from core import presets as P
     from core.species_db import get_preset_names
     from core.succulent_db import GrowthForm, preset_items
     from core.flower_db import flower_items
     from core.vine_db import vine_items
+    from core.fruit_db import fruit_items
 
 USER_IDS: dict = {form: set() for form in P.FORMS}     # Presets loaded from the personal library
 _ITEMS: dict = {}                                       # Keeps enum item strings alive (Blender requirement)
@@ -55,6 +57,8 @@ def _base_items(form: str) -> list:
         return flower_items()
     if form == "Vine":
         return vine_items()
+    if form == "Fruit":
+        return fruit_items()
     return preset_items(GrowthForm(form))
 
 
@@ -112,7 +116,7 @@ def load_library(report=print) -> int:
 
 def _species_prop(form: str) -> str:
     return {"Tree": "species_enum", "Cactus": "cactus_species", "Rosette": "rosette_species",
-            "Flower": "flower_species", "Vine": "vine_species"}[form]
+            "Flower": "flower_species", "Vine": "vine_species", "Fruit": "fruit_species"}[form]
 
 
 def current_preset(props):
@@ -132,6 +136,14 @@ def current_preset(props):
         obj = copy.deepcopy(CATALOGS[gf][key])
         obj.profile = profile_from_props(props, gf, key)
         return form, key, obj, (props.flower_species if props.show_flowers else None)
+    if form == "Fruit":
+        from .fruits import fruit_from_props
+        from ..core.fruit_db import FRUIT_CATALOG
+        if props.fruit_species not in FRUIT_CATALOG:
+            raise P.PresetError("No valid fruit preset selected")
+        obj = copy.deepcopy(FRUIT_CATALOG[props.fruit_species])
+        obj.fruit = fruit_from_props(props)
+        return form, props.fruit_species, obj, None
     if form == "Vine":
         from .vines import current_vine_preset
         from ..core.vine_db import VINE_CATALOG
@@ -146,6 +158,13 @@ def current_preset(props):
     obj = copy.deepcopy(FLOWER_CATALOG[props.flower_species])
     obj.flower, obj.infl = flower_from_props(props)
     return form, props.flower_species, obj, None
+
+
+def current_fruit(props):
+    """Fruit preset shown on the current tree / vine (None when fruits are off or the form bears none)."""
+    if props.growth_form in ("Tree", "Vine") and getattr(props, "show_fruits", False):
+        return props.fruit_species
+    return None
 
 
 def select_preset(context, form: str, pid: str):
@@ -217,7 +236,8 @@ class PPG_OT_PresetExport(Operator, ExportHelper, _MetaProps):
             self.report({'ERROR'}, "Preset id must be lower_snake_case (letters, digits, _)")
             return {'CANCELLED'}
         env = P.export_preset(form, self.preset_id, obj, base=base, diff=self.only_changes,
-                              metadata=_metadata(self), default_flower=flower)
+                              metadata=_metadata(self), default_flower=flower,
+                              default_fruit=current_fruit(context.scene.ppg_properties))
         P.save_file(self.filepath, env)
         self.report({'INFO'}, f"Preset saved to {self.filepath}")
         return {'FINISHED'}
@@ -255,11 +275,12 @@ class PPG_OT_PresetSave(Operator, _MetaProps):
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
         _identity(obj, self.scientific_name, self.common_name, self.family)
+        fruit = current_fruit(context.scene.ppg_properties)
         env = P.export_preset(form, self.preset_id, obj, base=base if base != self.preset_id else None,
-                              diff=False, metadata=_metadata(self), default_flower=flower)
+                              diff=False, metadata=_metadata(self), default_flower=flower, default_fruit=fruit)
         path = os.path.join(library_dir(), f"{self.preset_id}.json")
         P.save_file(path, env)
-        P.register_preset(form, self.preset_id, obj, flower)
+        P.register_preset(form, self.preset_id, obj, flower, fruit)
         USER_IDS[form].add(self.preset_id)
         select_preset(context, form, self.preset_id)
         self.report({'INFO'}, f"Saved '{self.preset_id}' to your preset library")
@@ -270,7 +291,7 @@ def _install(context, data: dict, source: str, op) -> str | None:
     """Validates, copies into the library and registers one preset envelope; returns its id."""
     form, pid, obj, warn, extras = P.load_preset(data)
     P.save_file(os.path.join(library_dir(), f"{pid}.json"), data)
-    P.register_preset(form, pid, obj, extras.get("default_flower"))
+    P.register_preset(form, pid, obj, extras.get("default_flower"), extras.get("default_fruit"))
     USER_IDS[form].add(pid)
     for w in warn:
         print(f"[PPG preset {source}] {w}")

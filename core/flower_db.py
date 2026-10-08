@@ -640,6 +640,7 @@ TREE_FLOWERS = {
     "aesculus_hippocastanum": "aesculus_hippocastanum", "tilia_cordata": "tilia_cordata",
     "liriodendron_tulipifera": "liriodendron_tulipifera", "prunus_avium": "prunus_avium",
     "malus_domestica": "malus_domestica", "magnolia_grandiflora": "magnolia_grandiflora",
+    "pyrus_communis": "malus_domestica",
     "olea_europaea": "olea_europaea", "cercis_canadensis": "cercis_canadensis",
     "eucalyptus_globulus": "eucalyptus_globulus", "ceiba_pentandra": "ceiba_pentandra",
     "robinia_pseudoacacia": "robinia_pseudoacacia", "platanus_hispanica": "catkin_amentum",

@@ -11,7 +11,7 @@ the JSON Schema / field reference ("x-applies-when"), and a perturbation test th
 non-applicable field and checks that the generated geometry stays identical.
 
 Sections: Tree -> architecture, roots, bark, leaf_morphology; Cactus / Rosette -> profile;
-Flower -> flower, infl; Vine -> profile, leaf. Enum fields compare by value (e.g. habit == 'Cladode').
+Flower -> flower, infl; Vine -> profile, leaf; Fruit -> fruit. Enum fields compare by value (e.g. habit == 'Cladode').
 """
 
 from __future__ import annotations
@@ -136,7 +136,6 @@ RULES: dict = {
 }
 
 _TENDRILS = ("tendril_mode != 'None'", "Only when the plant has tendrils")
-_FRUITS = ("fruit_count > 0", "Only when the plant bears fruits")
 RULES["Vine"] = {
     "profile": {
         **{f: ("mode == 'Twining'", "Only for twining stems") for f in (
@@ -149,14 +148,23 @@ RULES["Vine"] = {
         "tendril_coils": ("tendril_mode != 'None' and tendril_reach < 1", "Only for free (uncaught) tendrils"),
         "rootlet_length_cm": ("aerial_roots > 0", "Only with nodal / adventitious roots"),
         "stem_color_old": ("woodiness > 0", "Only for a lignified stem base"),
-        **{f: _FRUITS for f in ("fruit_length_cm", "fruit_diameter_cm", "fruit_widest_position", "fruit_neck",
-                                "fruit_ribs", "fruit_end_depression", "fruit_stalk_cm", "fruit_color",
-                                "fruit_stripes", "fruit_mottle", "fruit_gloss")},
-        "fruit_rib_depth": ("fruit_count > 0 and fruit_ribs > 0", "Only for ribbed fruits"),
-        "fruit_stripe_color": ("fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0)",
-                               "Only for striped or mottled fruits"),
     },
     "leaf": dict(RULES["Tree"]["leaf_morphology"]),
+}
+
+_BUNCH = ("cluster_berries > 1", "Only for bunches (grapes, cherries)")
+_CROWN = ("crown_lobes > 0", "Only with a persistent calyx")
+RULES["Fruit"] = {
+    "fruit": {
+        **{f: _BUNCH for f in ("cluster_length_cm", "cluster_width_cm", "shoulders", "compactness", "pedicel_cm",
+                               "peduncle_cm")},
+        **{f: _CROWN for f in ("crown_length_cm", "crown_flare_deg", "crown_position", "crown_color")},
+        "rib_depth": ("ribs > 0", "Only for ribbed or lobed fruits"),
+        "blush_color": ("blush > 0", "Only with a blush"),
+        **{f: ("stripes > 0", "Only with stripes") for f in ("stripe_color", "stripe_count", "stripe_width")},
+        "dot_color": ("dots > 0", "Only with lenticels / dots"),
+        "stalk_length_cm": ("cluster_berries <= 1", "Bunches use the peduncle and pedicels"),
+    },
 }
 
 

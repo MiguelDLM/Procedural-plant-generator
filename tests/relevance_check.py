@@ -25,9 +25,9 @@ CASES = {
     "Flower": ["helianthus_annuus", "rosa_canina", "magnolia_grandiflora", "tulipa_gesneriana"],
     "Tree": ["phoenix_canariensis", "pinus_sylvestris", "quercus_robur"],
     "Vine": ["ipomoea_purpurea", "hedera_helix", "vitis_vinifera", "cucurbita_pepo"],
+    "Fruit": ["malus_domestica", "vitis_vinifera", "solanum_lycopersicum", "citrullus_lanatus"],
 }
-MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars", "fruit_stripes",
-                 "fruit_mottle", "fruit_gloss")
+MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars")
 
 
 def _signature(form: str, preset) -> list:
@@ -41,11 +41,16 @@ def _signature(form: str, preset) -> list:
         r = RosetteEngine(preset.profile).generate(seed=3, detail=0.3, with_roots=True)
         return [r.leaves.vertices, r.armature.vertices, r.stem.vertices,
                 r.roots.vertices if r.roots is not None else np.zeros(0)]
+    if form == "Fruit":
+        from core.fruit import hanging_fruit
+        return [hanging_fruit(preset.fruit, 0.5, 3).vertices]
     if form == "Vine":
         from core.vine import VineEngine, guide_shape
+        from core.fruit_db import FRUIT_CATALOG
         shape = {"Twining": "Pole", "Tendril": "Arch", "Clinging": "Wall", "Trailing": "Ground"}
+        fr = FRUIT_CATALOG["cucurbita_pepo"].fruit
         r = VineEngine(preset.profile, preset.leaf, preset.venation).generate(
-            guide_shape(shape[preset.profile.mode.value], 1.5, 1.5), seed=3, detail=0.5)
+            guide_shape(shape[preset.profile.mode.value], 1.5, 1.5), seed=3, detail=0.5, fruit=fr)
         return [r.stem.vertices, r.tendrils.vertices, r.leaves.vertices, r.fruits.vertices, r.roots.vertices]
     if form == "Flower":
         from core.inflorescence import InflorescenceEngine

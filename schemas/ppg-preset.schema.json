@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
   "title": "Procedural Plant Generator preset",
-  "description": "One plant (tree, cactus, rosette succulent, flower or vine) described by measurable traits. See docs/PRESETS.md.",
+  "description": "One plant (tree, cactus, rosette succulent, flower, vine) or fruit described by measurable traits. See docs/PRESETS.md.",
   "type": "object",
   "required": [
     "format",
@@ -29,7 +29,8 @@
         "Cactus",
         "Rosette",
         "Flower",
-        "Vine"
+        "Vine",
+        "Fruit"
       ]
     },
     "id": {
@@ -44,6 +45,10 @@
     "default_flower": {
       "type": "string",
       "description": "Flower preset id shown on this plant."
+    },
+    "default_fruit": {
+      "type": "string",
+      "description": "Fruit preset id borne by this plant (Tree, Vine)."
     },
     "metadata": {
       "type": "object",
@@ -158,6 +163,22 @@
         "properties": {
           "preset": {
             "$ref": "#/$defs/VinePreset"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "growth_form": {
+            "const": "Fruit"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preset": {
+            "$ref": "#/$defs/FruitPreset"
           }
         }
       }
@@ -3726,133 +3747,6 @@
           "minimum": 0,
           "maximum": 100,
           "default": 0
-        },
-        "fruit_length_cm": {
-          "type": "number",
-          "description": "Along the fruit axis (stalk end to blossom end) Applies when: fruit_count > 0.",
-          "x-unit": "cm",
-          "minimum": 0.5,
-          "maximum": 120.0,
-          "default": 10.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_diameter_cm": {
-          "type": "number",
-          "description": "Largest fruit diameter, cm (pumpkin 25-40, cucumber 3-5, pea pod ~1). Applies when: fruit_count > 0.",
-          "x-unit": "cm",
-          "minimum": 0.3,
-          "maximum": 100.0,
-          "default": 8.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_widest_position": {
-          "type": "number",
-          "description": "0 stalk end .. 1 blossom end (pear-shaped < 0.5 < club-shaped) Applies when: fruit_count > 0.",
-          "minimum": 0.15,
-          "maximum": 0.85,
-          "default": 0.5,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_neck": {
-          "type": "number",
-          "description": "Constriction near the stalk (bottle gourd) Applies when: fruit_count > 0.",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "default": 0.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_ribs": {
-          "type": "integer",
-          "description": "Number of longitudinal ribs (pumpkins 8-12; 0 = smooth). Applies when: fruit_count > 0.",
-          "minimum": 0,
-          "maximum": 30,
-          "default": 0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_rib_depth": {
-          "type": "number",
-          "description": "Depth of the grooves between ribs relative to the radius, 0..0.4. Applies when: fruit_count > 0 and fruit_ribs > 0.",
-          "minimum": 0.0,
-          "maximum": 0.4,
-          "default": 0.1,
-          "x-applies-when": "fruit_count > 0 and fruit_ribs > 0"
-        },
-        "fruit_end_depression": {
-          "type": "number",
-          "description": "Sunken stalk and blossom ends (pumpkin) Applies when: fruit_count > 0.",
-          "minimum": 0.0,
-          "maximum": 0.6,
-          "default": 0.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_stalk_cm": {
-          "type": "number",
-          "description": "Fruit stalk (peduncle) length, cm. Applies when: fruit_count > 0.",
-          "x-unit": "cm",
-          "minimum": 0.0,
-          "maximum": 40.0,
-          "default": 5.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_color": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "minItems": 3,
-          "maxItems": 3,
-          "x-kind": "colour (sRGB 0..1)",
-          "description": "Main fruit colour (sRGB 0..1). Applies when: fruit_count > 0.",
-          "default": [
-            0.85,
-            0.45,
-            0.08
-          ],
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_stripe_color": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "minItems": 3,
-          "maxItems": 3,
-          "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of the longitudinal stripes and mottling (watermelon, squash). Applies when: fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0).",
-          "default": [
-            0.95,
-            0.75,
-            0.4
-          ],
-          "x-applies-when": "fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0)"
-        },
-        "fruit_stripes": {
-          "type": "number",
-          "description": "Contrast of longitudinal stripes Applies when: fruit_count > 0.",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "default": 0.0,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_mottle": {
-          "type": "number",
-          "description": "Blotchy / netted colour variation Applies when: fruit_count > 0.",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "default": 0.2,
-          "x-applies-when": "fruit_count > 0"
-        },
-        "fruit_gloss": {
-          "type": "number",
-          "description": "Fruit surface gloss, 0 matt (pumpkin) .. 1 glossy (aubergine-like). Applies when: fruit_count > 0.",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "default": 0.4,
-          "x-applies-when": "fruit_count > 0"
         }
       },
       "description": "Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the overall extent."
@@ -3897,6 +3791,412 @@
         }
       },
       "description": "Trait values of a Vine preset (all optional when 'base' is given)."
+    },
+    "FruitProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Berry",
+            "Drupe",
+            "Pome",
+            "Hesperidium",
+            "Balausta",
+            "Pepo",
+            "Pod"
+          ],
+          "description": "Fruit type (Spjut 1994): Berry, Drupe, Pome, Hesperidium (citrus), Balausta (pomegranate), Pepo (cucurbits), Pod. Informative; the shape comes from the other fields.",
+          "default": "Pome"
+        },
+        "length_cm": {
+          "type": "number",
+          "description": "Stalk end to blossom end",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 120.0,
+          "default": 7.0
+        },
+        "diameter_cm": {
+          "type": "number",
+          "description": "Largest width",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 100.0,
+          "default": 7.5
+        },
+        "widest_position": {
+          "type": "number",
+          "description": "0 stalk end .. 1 blossom end (pear-shaped > 0.5)",
+          "minimum": 0.15,
+          "maximum": 0.85,
+          "default": 0.45
+        },
+        "bluntness": {
+          "type": "number",
+          "description": "End shape exponent: 0.3 boxy .. 1 pointed",
+          "minimum": 0.2,
+          "maximum": 1.5,
+          "default": 0.55
+        },
+        "distal_point": {
+          "type": "number",
+          "description": "Extra point at the blossom end (lemon, chilli)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "neck": {
+          "type": "number",
+          "description": "Constriction toward the stalk (pear, bottle gourd)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "stalk_cavity": {
+          "type": "number",
+          "description": "Depth of the stalk cavity relative to the length (apple ~0.15)",
+          "minimum": 0.0,
+          "maximum": 0.4,
+          "default": 0.0
+        },
+        "calyx_basin": {
+          "type": "number",
+          "description": "Depth of the distal basin relative to the length (apple ~0.08)",
+          "minimum": 0.0,
+          "maximum": 0.3,
+          "default": 0.0
+        },
+        "ribs": {
+          "type": "integer",
+          "description": "Lobes / ribs (pumpkin 10, tomato 6, apple 5 faint)",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 0
+        },
+        "rib_depth": {
+          "type": "number",
+          "description": "Groove depth relative to the radius Applies when: ribs > 0.",
+          "minimum": 0.0,
+          "maximum": 0.4,
+          "default": 0.0,
+          "x-applies-when": "ribs > 0"
+        },
+        "lopsided": {
+          "type": "number",
+          "description": "One side larger than the other (apples)",
+          "minimum": 0.0,
+          "maximum": 0.3,
+          "default": 0.0
+        },
+        "crown_lobes": {
+          "type": "integer",
+          "description": "Persistent calyx",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 0
+        },
+        "crown_length_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 5.0,
+          "default": 0.5,
+          "x-applies-when": "crown_lobes > 0",
+          "description": "Applies when: crown_lobes > 0."
+        },
+        "crown_flare_deg": {
+          "type": "number",
+          "description": "0 = along the axis (closed) .. 90 = spread flat over the fruit Applies when: crown_lobes > 0.",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 90.0,
+          "default": 30.0,
+          "x-applies-when": "crown_lobes > 0"
+        },
+        "crown_position": {
+          "type": "string",
+          "enum": [
+            "Distal",
+            "Proximal"
+          ],
+          "description": "Where the persistent calyx sits: 'Distal' (blossom end: apple, pomegranate) or 'Proximal' (a star on the stalk end: tomato, aubergine). Applies when: crown_lobes > 0.",
+          "default": "Distal",
+          "x-applies-when": "crown_lobes > 0"
+        },
+        "crown_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the calyx lobes (sRGB 0..1). Applies when: crown_lobes > 0.",
+          "default": [
+            0.35,
+            0.28,
+            0.16
+          ],
+          "x-applies-when": "crown_lobes > 0"
+        },
+        "stalk_length_cm": {
+          "type": "number",
+          "description": "Stalk Applies when: cluster_berries <= 1.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 40.0,
+          "default": 2.5,
+          "x-applies-when": "cluster_berries <= 1"
+        },
+        "stalk_radius_mm": {
+          "type": "number",
+          "description": "Stalk radius, mm; for bunches, the radius of the peduncle and rachis.",
+          "x-unit": "mm",
+          "minimum": 0.2,
+          "maximum": 30.0,
+          "default": 1.2
+        },
+        "stalk_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the stalk, peduncle and pedicels.",
+          "default": [
+            0.38,
+            0.3,
+            0.18
+          ]
+        },
+        "cluster_berries": {
+          "type": "integer",
+          "description": "Bunch (infructescence); 1 = a single fruit",
+          "minimum": 1,
+          "maximum": 400,
+          "default": 1
+        },
+        "cluster_length_cm": {
+          "type": "number",
+          "description": "Rachis length Applies when: cluster_berries > 1.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 60.0,
+          "default": 15.0,
+          "x-applies-when": "cluster_berries > 1"
+        },
+        "cluster_width_cm": {
+          "type": "number",
+          "description": "Width at the shoulders Applies when: cluster_berries > 1.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 40.0,
+          "default": 10.0,
+          "x-applies-when": "cluster_berries > 1"
+        },
+        "shoulders": {
+          "type": "number",
+          "description": "Enlarged basal laterals (wings) Applies when: cluster_berries > 1.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3,
+          "x-applies-when": "cluster_berries > 1"
+        },
+        "compactness": {
+          "type": "number",
+          "description": "0 loose, straggly .. 1 tightly packed Applies when: cluster_berries > 1.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6,
+          "x-applies-when": "cluster_berries > 1"
+        },
+        "pedicel_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "default": 0.6,
+          "x-applies-when": "cluster_berries > 1",
+          "description": "Applies when: cluster_berries > 1."
+        },
+        "peduncle_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 30.0,
+          "default": 4.0,
+          "x-applies-when": "cluster_berries > 1",
+          "description": "Applies when: cluster_berries > 1."
+        },
+        "color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Ground colour of the skin (sRGB 0..1).",
+          "default": [
+            0.75,
+            0.7,
+            0.2
+          ]
+        },
+        "blush_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Over-colour on the sun side (sRGB 0..1). Applies when: blush > 0.",
+          "default": [
+            0.7,
+            0.08,
+            0.06
+          ],
+          "x-applies-when": "blush > 0"
+        },
+        "blush": {
+          "type": "number",
+          "description": "Sun-side over-colour (apples, peaches)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "stripes": {
+          "type": "number",
+          "description": "Streaks / stripes along the fruit",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "stripe_count": {
+          "type": "integer",
+          "description": "Around the fruit (apple streaks ~30, watermelon ~16) Applies when: stripes > 0.",
+          "minimum": 1,
+          "maximum": 80,
+          "default": 14,
+          "x-applies-when": "stripes > 0"
+        },
+        "stripe_width": {
+          "type": "number",
+          "description": "Share of each period covered: 0.15 fine streaks .. 0.5 broad bands Applies when: stripes > 0.",
+          "minimum": 0.05,
+          "maximum": 0.95,
+          "default": 0.5,
+          "x-applies-when": "stripes > 0"
+        },
+        "stripe_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the streaks / stripes. Applies when: stripes > 0.",
+          "default": [
+            0.55,
+            0.05,
+            0.05
+          ],
+          "x-applies-when": "stripes > 0"
+        },
+        "dots": {
+          "type": "number",
+          "description": "Lenticels, oil glands, speckles",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "dot_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the lenticels, oil glands or speckles. Applies when: dots > 0.",
+          "default": [
+            0.9,
+            0.85,
+            0.6
+          ],
+          "x-applies-when": "dots > 0"
+        },
+        "russet": {
+          "type": "number",
+          "description": "Corky brown patches (pears, some apples)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "bloom": {
+          "type": "number",
+          "description": "Waxy whitish bloom (grapes, plums, blueberries)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "gloss": {
+          "type": "number",
+          "description": "Skin gloss, 0 matt .. 1 glossy (cherries, tomatoes).",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5
+        }
+      },
+      "description": "Shape and surface of a fleshy fruit (sizes in cm, along the stalk-to-blossom axis)."
+    },
+    "FruitPreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scientific_name": {
+          "type": "string",
+          "description": "Binomial name of the plant bearing the fruit, e.g. 'Malus domestica'.",
+          "default": ""
+        },
+        "common_name": {
+          "type": "string",
+          "description": "Vernacular name(s) of the fruit.",
+          "default": ""
+        },
+        "family": {
+          "type": "string",
+          "description": "Botanical family, e.g. 'Rosaceae'.",
+          "default": ""
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free text: distinctive features, sources of the values.",
+          "default": ""
+        },
+        "fruit": {
+          "$ref": "#/$defs/FruitProfile"
+        }
+      },
+      "description": "Trait values of a Fruit preset (all optional when 'base' is given)."
     }
   }
 }

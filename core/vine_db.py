@@ -1,7 +1,7 @@
 """
 Climbing and trailing plant presets.
 
-Habit values (climbing mode, helix handedness, internode and leaf sizes, tendril type, fruit dimensions) are
+Habit values (climbing mode, helix handedness, internode and leaf sizes, tendril type, fruit numbers) are
 typical adult values from general botanical references and crop descriptions; they reproduce each
 species' habit rather than a particular specimen. Twining handedness follows Darwin (1875) and Edwards,
 Moles & Franks (2007, "The global trend in plant twining direction", Global Ecol. Biogeogr.): about 90 % of
@@ -72,8 +72,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         mode=M.TWINING, chirality=C.RIGHT, coil_radius_cm=1.5, coil_pitch_cm=14.0, stem_radius_mm=3.0,
         internode_cm=15.0, tip_length_cm=35.0, leaf_size=1.0, branch_probability=0.1, hairiness=0.3,
         stem_color=(0.26, 0.40, 0.14),
-        fruit_count=6, fruit_length_cm=25.0, fruit_diameter_cm=1.8, fruit_widest_position=0.6, fruit_stalk_cm=4.0,
-        fruit_color=(0.30, 0.45, 0.15), fruit_mottle=0.1, fruit_gloss=0.3),
+        fruit_count=6),
     "humulus_lupulus": vine(
         "Humulus lupulus", "Hop (lúpulo)", "Cannabaceae", "Temperate Europe, Asia and North America",
         "Left-handed (clockwise) twiner climbing with hooked hairs; opposite, 3-5-lobed serrate leaves.",
@@ -94,8 +93,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         mode=M.TWINING, chirality=C.RIGHT, coil_radius_cm=4.0, coil_pitch_cm=40.0, stem_radius_mm=25.0,
         stem_taper=0.85, internode_cm=20.0, tip_length_cm=60.0, branch_probability=0.25, branch_length_cm=150.0,
         branch_droop=0.7, woodiness=0.8, stem_color=(0.30, 0.36, 0.20), stem_color_old=(0.45, 0.42, 0.38),
-        hairiness=0.2, fruit_count=3, fruit_length_cm=12.0, fruit_diameter_cm=2.0, fruit_widest_position=0.65,
-        fruit_color=(0.55, 0.58, 0.45), fruit_mottle=0.1, fruit_gloss=0.1),
+        hairiness=0.2, fruit_count=3),
     "pisum_sativum": vine(
         "Pisum sativum", "Garden pea (chícharo)", "Fabaceae", "Mediterranean / Near East; cultivated",
         "Tendril climber: the terminal leaflets of each pinnate leaf are branched tendrils; glaucous foliage.",
@@ -106,8 +104,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         mode=M.TENDRIL, stem_radius_mm=2.0, internode_cm=8.0, wander_cm=2.0, tip_length_cm=15.0,
         tendril_mode=TM.LEAF_TIP, tendril_branches=3, tendril_length_cm=8.0, tendril_coils=4.0,
         tendril_coil_mm=2.0, tendril_radius_mm=0.4, tendril_reach=0.6, stem_color=(0.38, 0.50, 0.32),
-        hairiness=0.0, fruit_count=5, fruit_length_cm=8.0, fruit_diameter_cm=1.2, fruit_widest_position=0.6,
-        fruit_stalk_cm=2.0, fruit_color=(0.32, 0.50, 0.20), fruit_mottle=0.05, fruit_gloss=0.4),
+        hairiness=0.0, fruit_count=5),
     "cucumis_sativus": vine(
         "Cucumis sativus", "Cucumber (pepino)", "Cucurbitaceae", "South Asia; cultivated",
         "Tendril climber with simple axillary tendrils; rough, shallowly lobed leaves; elongated fruits.",
@@ -118,9 +115,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         mode=M.TENDRIL, stem_radius_mm=4.0, internode_cm=9.0, wander_cm=3.0, tip_length_cm=20.0,
         tendril_mode=TM.NODE, tendril_branches=1, tendril_length_cm=20.0, tendril_coils=8.0,
         tendril_coil_mm=4.0, tendril_radius_mm=0.7, hairiness=0.7, stem_color=(0.28, 0.42, 0.16),
-        fruit_count=4, fruit_length_cm=22.0, fruit_diameter_cm=4.0, fruit_widest_position=0.55,
-        fruit_stalk_cm=3.0, fruit_color=(0.10, 0.25, 0.08), fruit_stripe_color=(0.45, 0.55, 0.25),
-        fruit_stripes=0.3, fruit_mottle=0.2, fruit_gloss=0.5),
+        fruit_count=4),
     "cucurbita_pepo": vine(
         "Cucurbita pepo", "Pumpkin (calabaza)", "Cucurbitaceae", "Mexico; cultivated",
         "Trailing runner rooting at the nodes; branched tendrils; very large, shallowly lobed, bristly leaves on "
@@ -134,9 +129,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         tendril_mode=TM.NODE, tendril_branches=3, tendril_length_cm=15.0, tendril_coils=5.0,
         tendril_coil_mm=5.0, tendril_radius_mm=1.0, tendril_reach=0.4, aerial_roots=0.5, rootlet_length_cm=6.0,
         hairiness=0.8, stem_color=(0.30, 0.42, 0.16),
-        fruit_count=2, fruit_length_cm=22.0, fruit_diameter_cm=32.0, fruit_ribs=10, fruit_rib_depth=0.12,
-        fruit_end_depression=0.35, fruit_stalk_cm=6.0, fruit_color=(0.88, 0.45, 0.06),
-        fruit_stripe_color=(0.95, 0.62, 0.20), fruit_stripes=0.15, fruit_mottle=0.15, fruit_gloss=0.3),
+        fruit_count=2),
     "citrullus_lanatus": vine(
         "Citrullus lanatus", "Watermelon (sandía)", "Cucurbitaceae", "Africa; cultivated",
         "Trailing runner with bifid tendrils and deeply pinnately lobed leaves; large striped fruits.",
@@ -149,13 +142,11 @@ VINE_CATALOG: dict[str, VinePreset] = {
         tendril_branches=2, tendril_length_cm=10.0, tendril_coils=4.0, tendril_coil_mm=3.0,
         tendril_radius_mm=0.6, tendril_reach=0.3, aerial_roots=0.3, rootlet_length_cm=4.0, hairiness=0.6,
         stem_color=(0.30, 0.40, 0.18),
-        fruit_count=1, fruit_length_cm=35.0, fruit_diameter_cm=28.0, fruit_stalk_cm=4.0,
-        fruit_color=(0.50, 0.62, 0.30), fruit_stripe_color=(0.12, 0.28, 0.10), fruit_stripes=0.8,
-        fruit_mottle=0.3, fruit_gloss=0.6),
+        fruit_count=1),
     "vitis_vinifera": vine(
         "Vitis vinifera", "Grapevine (vid)", "Vitaceae", "Mediterranean / Caucasus; cultivated",
         "Woody tendril climber: forked tendrils opposite the leaves (two nodes of three); 5-lobed coarsely "
-        "toothed leaves; shredding bark on old trunks. Fruit clusters are not modelled.",
+        "toothed leaves; shredding bark on old trunks; bunches hang opposite the leaves.",
         leaf=dict(archetype=A.PALMATE_LOBED, margin_type=MT.DENTATE, blade_length_cm=15.0, lobe_count=5,
                   lobe_depth=0.4, cordate_depth=0.4, teeth_count=10, tooth_height_ratio=0.07,
                   petiole_length_ratio=0.6, adaxial_color=(0.20, 0.36, 0.12)),
@@ -164,7 +155,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         leaf_arrangement=LA.DISTICHOUS, branch_probability=0.3, branch_length_cm=120.0, branch_droop=0.5,
         tendril_mode=TM.NODE, tendril_branches=2, tendril_length_cm=18.0, tendril_coils=3.0,
         tendril_coil_mm=5.0, tendril_radius_mm=1.2, woodiness=0.7, stem_color=(0.40, 0.42, 0.20),
-        stem_color_old=(0.42, 0.32, 0.24), hairiness=0.1),
+        stem_color_old=(0.42, 0.32, 0.24), hairiness=0.1, fruit_count=8),
     "hedera_helix": vine(
         "Hedera helix", "Ivy (hiedra)", "Araliaceae", "Europe; naturalised worldwide",
         "Root climber: adventitious rootlets on the shaded side press the stem to walls and trunks; dark glossy "
@@ -187,8 +178,7 @@ VINE_CATALOG: dict[str, VinePreset] = {
         mode=M.TENDRIL, stem_radius_mm=3.0, internode_cm=10.0, wander_cm=3.0, tip_length_cm=30.0,
         tendril_mode=TM.NODE, tendril_branches=1, tendril_length_cm=20.0, tendril_coils=6.0,
         tendril_coil_mm=3.5, tendril_radius_mm=0.7, branch_probability=0.15, stem_color=(0.28, 0.40, 0.16),
-        hairiness=0.0, fruit_count=2, fruit_length_cm=6.0, fruit_diameter_cm=4.0, fruit_stalk_cm=4.0,
-        fruit_color=(0.95, 0.55, 0.05), fruit_mottle=0.1, fruit_gloss=0.6),
+        hairiness=0.0, fruit_count=2),
 }
 
 VINE_RANGES = {
@@ -201,10 +191,7 @@ VINE_RANGES = {
     "tendril_branches": (1, 6), "tendril_coils": (0.0, 30.0), "tendril_coil_mm": (0.5, 20.0),
     "tendril_radius_mm": (0.1, 3.0), "tendril_reach": (0.0, 1.0), "aerial_roots": (0.0, 1.0),
     "rootlet_length_cm": (0.2, 30.0), "woodiness": (0.0, 1.0), "hairiness": (0.0, 1.0),
-    "fruit_count": (0, 100), "fruit_length_cm": (0.5, 120.0), "fruit_diameter_cm": (0.3, 100.0),
-    "fruit_widest_position": (0.15, 0.85), "fruit_neck": (0.0, 1.0), "fruit_ribs": (0, 30),
-    "fruit_rib_depth": (0.0, 0.4), "fruit_end_depression": (0.0, 0.6), "fruit_stalk_cm": (0.0, 40.0),
-    "fruit_stripes": (0.0, 1.0), "fruit_mottle": (0.0, 1.0), "fruit_gloss": (0.0, 1.0),
+    "fruit_count": (0, 100),
 }
 
 

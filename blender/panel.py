@@ -33,6 +33,9 @@ try:
     from ..core.vine_db import VINE_CATALOG
     from .vines import vine_properties, LAYOUT as VINE_LAYOUT, SECTION as VINE_SECTION, section_values, \
         write_vine_to_props
+    from ..core.fruit_db import FRUIT_CATALOG
+    from .fruits import fruit_properties, LAYOUT as FRUIT_LAYOUT, FRT, fruit_values, write_fruit_to_props, \
+        sync_fruits_to_plant
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -55,6 +58,9 @@ except (ImportError, ValueError):
     from core.vine_db import VINE_CATALOG
     from blender.vines import vine_properties, LAYOUT as VINE_LAYOUT, SECTION as VINE_SECTION, section_values, \
         write_vine_to_props
+    from core.fruit_db import FRUIT_CATALOG
+    from blender.fruits import fruit_properties, LAYOUT as FRUIT_LAYOUT, FRT, fruit_values, write_fruit_to_props, \
+        sync_fruits_to_plant
 
 
 # -----------------------------------------------------------------------------
@@ -126,6 +132,7 @@ def _sync_flowers(props):
     set_updating(True)
     try:
         sync_flowers_to_plant(props)
+        sync_fruits_to_plant(props)
     finally:
         set_updating(False)
 
@@ -147,6 +154,8 @@ def on_form_change(self, context):
         on_flower_species(self, context)
     elif self.growth_form == 'Vine':
         on_vine_species(self, context)
+    elif self.growth_form == 'Fruit':
+        on_fruit_species(self, context)
     else:
         _sync_flowers(self)
         apply_succulent_preset(self, context)
@@ -158,6 +167,18 @@ def on_flower_species(self, context):
     set_updating(True)
     try:
         write_flower_to_props(self, self.flower_species)
+    finally:
+        set_updating(False)
+    if getattr(self, "auto_update", True):
+        schedule_update()
+
+
+def on_fruit_species(self, context):
+    if is_updating():
+        return
+    set_updating(True)
+    try:
+        write_fruit_to_props(self, self.fruit_species)
     finally:
         set_updating(False)
     if getattr(self, "auto_update", True):
@@ -438,7 +459,18 @@ if BLENDER_AVAILABLE:
             ('Flower', "Flower / Inflorescence", "An isolated flower or inflorescence built from its floral diagram",
              'FREEZE', 3),
             ('Vine', "Vine / Climber", "Twining, tendril, clinging or trailing plants grown along a guide path or "
-             "curve", 'CURVE_BEZCURVE', 4)]),
+             "curve", 'CURVE_BEZCURVE', 4),
+            ('Fruit', "Fruit / Bunch", "A single fruit or bunch (apple, pear, pomegranate, grapes...) on its own",
+             'SHADING_SOLID', 5)]),
+        "fruit_species": EnumProperty(name="Fruit", items=enum_items("Fruit"), default=item_number("malus_domestica"),
+                                      update=on_fruit_species),
+        "show_fruits": BoolProperty(name="Show Fruits", default=False, update=U,
+                                    description="Hang the selected fruit (or bunch) on the plant"),
+        "fruit_density": FloatProperty(name="Fruiting Density", default=0.3, min=0.0, max=1.0, update=U,
+                                       description="Fraction of the flowering sites that bear a fruit (trees)"),
+        "fruit_max": IntProperty(name="Max Fruits", default=1500, min=1, max=20000, update=U),
+        "fruit_scale": FloatProperty(name="Fruit Scale", default=1.0, min=0.1, max=10.0, update=U),
+        "fruit_detail": FloatProperty(name="Fruit Detail", default=1.0, min=0.3, max=3.0, update=U),
         "vine_species": EnumProperty(name="Vine", items=enum_items("Vine"), default=item_number("ipomoea_purpurea"),
                                      update=on_vine_species),
         "flower_species": EnumProperty(name="Flower", items=enum_items("Flower"), default=item_number("rosa_canina"),
@@ -474,6 +506,7 @@ if BLENDER_AVAILABLE:
         PPG_Properties.__annotations__.update(profile_properties(_form, U))
     PPG_Properties.__annotations__.update(flower_properties(U))
     PPG_Properties.__annotations__.update(vine_properties(U))
+    PPG_Properties.__annotations__.update(fruit_properties(U))
     PPG_Properties.__annotations__.update(forest_properties())
 else:
     PPG_Properties = None
@@ -509,6 +542,18 @@ class PPG_PT_MainPanel(Panel):
 
         layout.prop(props, "growth_form", text="")
         box = layout.box()
+        if props.growth_form == 'Fruit':
+            box.prop(props, "fruit_species", text="")
+            spec = FRUIT_CATALOG.get(props.fruit_species)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
+            col = box.column(align=True)
+            col.scale_y = 0.8
+            col.label(text=f"{spec.family} · {props.frt_kind}", icon='SHADING_SOLID')
+            box.operator("ppg.apply_species_preset", text="Reload Fruit", icon='IMPORT')
+            layout.operator("ppg.export_traits", text="Export Traits (JSON)", icon='TEXT')
+            return
         if props.growth_form == 'Flower':
             box.prop(props, "flower_species", text="")
             spec = FLOWER_CATALOG.get(props.flower_species)
@@ -801,7 +846,7 @@ class PPG_PT_Presets(_PPGSub, Panel):
     bl_label = "Presets (Import / Export)"
     bl_idname = "PPG_PT_presets"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit')
 
     def draw(self, context):
         draw_presets(self.layout, context.scene.ppg_properties)
@@ -935,6 +980,56 @@ def _vine_panel(index, title, prefix, names):
         "forms": ('Vine',), "draw": draw, "poll": poll})
 
 
+class PPG_PT_Fruits(_PPGSub, Panel):
+    bl_label = "Fruits"
+    bl_idname = "PPG_PT_fruits"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Vine', 'Fruit')
+
+    def draw_header(self, context):
+        p = context.scene.ppg_properties
+        if p.growth_form != 'Fruit':
+            self.layout.prop(p, "show_fruits", text="")
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        if p.growth_form != 'Fruit':
+            col.prop(p, "fruit_species", text="")
+            if p.growth_form == 'Tree':
+                col.prop(p, "fruit_density", slider=True)
+                col.prop(p, "fruit_max")
+            else:
+                r = col.row()
+                r.active = False
+                r.label(text="Fruits per stem: Stem & Nodes panel", icon='INFO')
+        col.prop(p, "fruit_scale")
+        col.prop(p, "fruit_detail")
+        if p.growth_form == 'Fruit':
+            col.prop(p, "seed")
+            col.prop(p, "assign_materials")
+
+
+def _fruit_panel(index, title, names):
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        draw_fields(col, p, "Fruit", "fruit", [(FRT + n, n) for n in names], fruit_values(p))
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        if p is None or not (p.growth_form == 'Fruit' or (p.show_fruits and p.growth_form in ('Tree', 'Vine'))):
+            return False
+        values = fruit_values(p)
+        return any(applies("Fruit", "fruit", n, values) for n in names)
+    return type(f"PPG_PT_Fruit_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_fruit_{index}", "bl_parent_id": "PPG_PT_fruits",
+        "bl_options": {'DEFAULT_CLOSED'}, "draw": draw, "poll": poll})
+
+
+FRUIT_PANELS = (PPG_PT_Fruits,) + tuple(_fruit_panel(i, t, n) for i, (t, n) in enumerate(FRUIT_LAYOUT))
+
 VINE_PANELS = (PPG_PT_VineGuide,) + tuple(_vine_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(VINE_LAYOUT))
 
 SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTUS, GrowthForm.ROSETTE)
@@ -942,4 +1037,4 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
                  PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + \
-                (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)
+                (PPG_PT_Flowers,) + FLOWER_PANELS + FRUIT_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)

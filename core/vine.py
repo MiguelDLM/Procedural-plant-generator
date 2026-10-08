@@ -20,7 +20,7 @@ guide depends on the climbing mode (Gianoli 2015; Isnard & Silk 2009):
 The stem is a sequence of phytomers (node, internode, leaf, axillary bud). Internodes and leaves expand
 over a zone behind the apex; past the guide end a free searcher tip with an apical hook continues the
 shoot (Vecchiato et al. 2023). Nodes may carry lateral shoots (which droop under their weight), tendrils,
-flower sites, fruits and nodal roots. Leaves reuse the leaf morphology engine of the trees (textured
+flower sites, fruits (any fruit preset, including grape bunches) and nodal roots. Leaves reuse the leaf morphology engine of the trees (textured
 cards), so every leaf trait of the tree presets is available.
 """
 
@@ -36,6 +36,7 @@ from .foliage import FoliageInstances
 from .leaf_morphology import LeafMorphologyProfile, LeafMorphologyEngine
 from .leaf_venation import VenationProfile
 from .mesh_engine import MeshData, BotanicalMeshEngine
+from .fruit import FruitProfile, body_mesh as fruit_body_mesh, hanging_fruit, pole_depth as fruit_pole_depth
 
 UP = np.array([0.0, 0.0, 1.0])
 
@@ -122,21 +123,8 @@ class VineProfile:
     woodiness: float = 0.0             # Fraction of the stem, from the base, that is lignified
     hairiness: float = 0.2             # Pubescence (soft sheen)
 
-    # Fruits
+    # Fruits (their shape comes from a fruit preset, core.fruit)
     fruit_count: int = 0               # Per stem
-    fruit_length_cm: float = 10.0      # Along the fruit axis (stalk end to blossom end)
-    fruit_diameter_cm: float = 8.0
-    fruit_widest_position: float = 0.5 # 0 stalk end .. 1 blossom end (pear-shaped < 0.5 < club-shaped)
-    fruit_neck: float = 0.0            # Constriction near the stalk (bottle gourd)
-    fruit_ribs: int = 0
-    fruit_rib_depth: float = 0.1
-    fruit_end_depression: float = 0.0  # Sunken stalk and blossom ends (pumpkin)
-    fruit_stalk_cm: float = 5.0
-    fruit_color: tuple = (0.85, 0.45, 0.08)
-    fruit_stripe_color: tuple = (0.95, 0.75, 0.40)
-    fruit_stripes: float = 0.0         # Contrast of longitudinal stripes
-    fruit_mottle: float = 0.2          # Blotchy / netted colour variation
-    fruit_gloss: float = 0.4
 
 
 @dataclass
@@ -301,67 +289,6 @@ def _merge(parts, names) -> MeshData:
             if k not in names:
                 del p.point_attributes[k]
     return MeshData.concatenate(parts)
-
-
-def fruit_pole_depth(prof: VineProfile) -> float:
-    """How far the stalk-end pole is sunk into the fruit (m); the stalk must reach it."""
-    return prof.fruit_end_depression * prof.fruit_length_cm * 0.01 * 0.45
-
-
-def fruit_mesh(prof: VineProfile, detail: float = 1.0, rng=None) -> MeshData:
-    """A fruit around +Z from the stalk end (origin) to the blossom end (z = length). Gourd / pumpkin /
-    melon / cucumber / pod shapes from length, diameter, widest position, neck, ribs and end depressions."""
-    L = prof.fruit_length_cm * 0.01
-    D = prof.fruit_diameter_cm * 0.01
-    nt = max(10, int(26 * detail))
-    nth = max(12, int(max(28, prof.fruit_ribs * 6) * detail))
-    v = np.linspace(0.0, 1.0, nt + 1)[1:-1]
-    t = 0.5 - 0.5 * np.cos(np.pi * v)                    # Rings concentrated toward the rounded ends
-    w = float(np.clip(prof.fruit_widest_position, 0.15, 0.85))
-    tw = np.where(t < w, 0.5 * t / w, 0.5 + 0.5 * (t - w) / (1 - w))
-    rho = 0.5 * D * np.sin(np.pi * tw) ** 0.55
-    rho *= 1.0 - prof.fruit_neck * 0.75 * np.exp(-((t - 0.22) / 0.13) ** 2)
-    dep = prof.fruit_end_depression
-    z = L * t + dep * L * 0.5 * (np.exp(-(t / 0.14) ** 2) - np.exp(-((1 - t) / 0.14) ** 2))
-    th = np.linspace(0.0, 2 * math.pi, nth + 1)
-    if prof.fruit_ribs > 0:
-        rib = np.abs(np.sin(prof.fruit_ribs * th / 2.0))
-        groove = 1.0 - prof.fruit_rib_depth * (1.0 - rib) ** 3
-    else:
-        rib = np.ones_like(th)
-        groove = np.ones_like(th)
-    r = rho[:, None] * groove[None, :]
-    X = r * np.cos(th)[None, :]
-    Y = r * np.sin(th)[None, :]
-    Z = np.repeat(z[:, None], nth + 1, 1)
-    V = np.stack([X, Y, Z], axis=-1).reshape(-1, 3)
-    m = nth + 1
-    rows = len(t)
-    j, i = np.meshgrid(np.arange(rows - 1), np.arange(nth), indexing="ij")
-    i0 = (j * m + i).ravel()
-    quads = np.stack([i0, i0 + m, i0 + m + 1, i0 + 1], axis=1)
-    # Poles (stalk end sunk by the depression): one vertex per fan triangle, carrying the mid angle of its
-    # sector, so stripes and UVs converge cleanly instead of smearing from a single shared vertex
-    top = len(V)
-    bot = top + nth
-    pz = fruit_pole_depth(prof)
-    um = (th[:-1] + th[1:]) / (4 * math.pi)
-    poles = np.concatenate([np.repeat([[0.0, 0.0, pz]], nth, 0), np.repeat([[0.0, 0.0, L - pz]], nth, 0)])
-    ring0 = np.arange(nth)
-    ringN = (rows - 1) * m + np.arange(nth)
-    fan0 = np.stack([top + ring0, ring0 + 1, ring0], axis=1)
-    fanN = np.stack([ringN, ringN + 1, bot + ring0], axis=1)
-    verts = np.concatenate([V, poles])
-    tt = np.concatenate([np.repeat(t[:, None], m, 1).reshape(-1), np.zeros(nth), np.ones(nth)])
-    uu = np.concatenate([np.repeat((th / (2 * math.pi))[None, :], rows, 0).reshape(-1), um, um])
-    rr = np.concatenate([np.repeat(rib[None, :], rows, 0).reshape(-1), np.ones(2 * nth)])
-    lv = np.concatenate([quads.reshape(-1), fan0.reshape(-1), fanN.reshape(-1)]).astype(np.int32)
-    lt = np.concatenate([np.full(len(quads), 4), np.full(nth, 3), np.full(nth, 3)]).astype(np.int32)
-    ls = np.concatenate([[0], np.cumsum(lt)[:-1]]).astype(np.int32)
-    uv = np.stack([uu, tt], axis=1)[lv]
-    return MeshData(verts.astype(np.float32), lv, ls, lt, uv.astype(np.float32),
-                    {"fruit_t": tt.astype(np.float32), "fruit_u": uu.astype(np.float32),
-                     "fruit_rib": rr.astype(np.float32)})
 
 
 # -----------------------------------------------------------------------------
@@ -574,7 +501,8 @@ class VineEngine:
         return np.array(out)
 
     def generate(self, guides, seed: int = 0, growth: float = 1.0, detail: float = 1.0,
-                 leaf_density: float = 1.0, with_roots: bool = True, side_flip: bool = False) -> VineResult:
+                 leaf_density: float = 1.0, with_roots: bool = True, side_flip: bool = False,
+                 fruit: FruitProfile | None = None) -> VineResult:
         p = self.p
         rng_stem = np.random.default_rng(seed)
         card = self.leaf_engine.generate_3d_leaf_mesh()
@@ -699,9 +627,10 @@ class VineEngine:
         # Fruits on the main stems
         fruit_parts = []
         n_fruit = 0
-        if p.fruit_count > 0:
+        if p.fruit_count > 0 and fruit is not None:
             rng_fr = np.random.default_rng(seed + 83)
-            proto = fruit_mesh(p, detail)
+            proto = hanging_fruit(fruit, detail, seed) if fruit.cluster_berries > 1 else \
+                fruit_body_mesh(fruit, detail, seed)
             for sh, G, side in all_shoots:
                 if not sh.main:
                     continue
@@ -711,7 +640,7 @@ class VineEngine:
                     continue
                 pick = rng_fr.choice(len(cand), min(p.fruit_count, len(cand)), replace=False)
                 for s0 in np.sort(cand[pick]):
-                    fruit_parts.extend(self._fruit(sh, s0, proto, rng_fr))
+                    fruit_parts.extend(self._fruit(sh, s0, proto, rng_fr, fruit))
                     n_fruit += 1
 
         foliage = FoliageInstances(np.array(leaves_pos).reshape(-1, 3), np.array(leaves_y).reshape(-1, 3),
@@ -720,12 +649,13 @@ class VineEngine:
         leaf_mesh = BotanicalMeshEngine.build_foliage_mesh(foliage, card) if len(foliage) else MeshData.empty()
         stalks = [f for f in fruit_parts if "fruit_t" not in f.point_attributes]
         bodies = [f for f in fruit_parts if "fruit_t" in f.point_attributes]
+        from .fruit import ATTRS as FRUIT_ATTRS
         stem_mesh = _merge(stems + stalks, ("age", "woody"))
         return VineResult(
             stem=stem_mesh,
             tendrils=_merge(tendrils, ("age", "woody")),
             leaves=leaf_mesh,
-            fruits=_merge(bodies, ("fruit_t", "fruit_u", "fruit_rib", "fruit_random")),
+            fruits=_merge(bodies, FRUIT_ATTRS),
             roots=_merge(roots, ()),
             foliage=foliage, leaf_card=card, leaf_engine=self.leaf_engine,
             flower_pos=np.array(fl_pos).reshape(-1, 3), flower_dir=np.array(fl_dir).reshape(-1, 3),
@@ -828,18 +758,23 @@ class VineEngine:
             parts.append(tube(np.array(pts), np.linspace(0.0006, 0.0002, n + 1), 3))
         return parts
 
-    def _fruit(self, sh: _Shoot, s0: float, proto: MeshData, rng) -> list[MeshData]:
+    def _fruit(self, sh: _Shoot, s0: float, proto: MeshData, rng, fr: FruitProfile) -> list[MeshData]:
         """Stalk and fruit at a node. Fruits hang from climbing stems; on the soil (trailing runners, or a
         hanging fruit that would reach the ground) they rest on it, elongated ones on their side and round
         ones with the stalk end turned up toward the runner. The stalk always ends inside the fruit's stalk
-        end (also when it is sunk, as in pumpkins)."""
-        p = self.p
+        end (also when it is sunk, as in pumpkins). Bunches (grapes) hang from their peduncle."""
         x = sample_at(sh.P, sh.s, s0)
         T = _tangent_at(sh, s0)
         sc = rng.uniform(0.85, 1.12)
-        L = p.fruit_length_cm * 0.01 * sc
-        Dm = p.fruit_diameter_cm * 0.01 * sc
-        stalk = max(p.fruit_stalk_cm * 0.01, 0.005)
+        if fr.cluster_berries > 1:
+            Rm = _frame_rot(_unit(UP + rng.normal(0, 0.1, 3)), rng.uniform(0, 2 * math.pi))
+            V = (proto.vertices.astype(float) * sc) @ Rm.T + x[None, :]
+            return [MeshData(V.astype(np.float32), proto.loop_vertex.copy(), proto.loop_start.copy(),
+                             proto.loop_total.copy(), proto.loop_uv.copy(),
+                             {k: v.copy() for k, v in proto.point_attributes.items()})]
+        L = fr.length_cm * 0.01 * sc
+        Dm = fr.diameter_cm * 0.01 * sc
+        stalk = max(fr.stalk_length_cm * 0.01, 0.005)
         side = _unit(np.cross(T, UP) if abs(T @ UP) < 0.95 else np.cross(T, [1.0, 0, 0]))
         side = side if rng.random() < 0.5 else -side
         hang_axis = _unit(-UP + rng.normal(0, 0.12, 3))
@@ -854,22 +789,17 @@ class VineEngine:
             attach = x + h * stalk * 0.6       # Provisional; the fruit is then dropped onto the soil
         else:
             axis, attach = hang_axis, hang_attach
-        z = axis
-        e1 = _unit(np.cross(z, UP) if abs(z @ UP) < 0.95 else np.cross(z, [1.0, 0, 0]))
-        e2 = np.cross(z, e1)
-        a = rng.uniform(0, 2 * math.pi)
-        e1, e2 = math.cos(a) * e1 + math.sin(a) * e2, -math.sin(a) * e1 + math.cos(a) * e2
-        Rm = np.stack([e1, e2, z], axis=1)
+        Rm = _frame_rot(axis, rng.uniform(0, 2 * math.pi))
         V = (proto.vertices.astype(float) * sc) @ Rm.T + attach[None, :]
         if on_soil:                            # Rest exactly on the soil (slightly settled into it)
             dz = sh.soil - 0.004 * sc - V[:, 2].min()
             V[:, 2] += dz
             attach = attach + np.array([0.0, 0.0, dz])
-        end = attach + axis * (fruit_pole_depth(p) * sc + 0.004)       # Inside the stalk end
+        end = attach + axis * (fruit_pole_depth(fr) * sc + 0.004)       # Inside the stalk end
         lift = max(end[2] - x[2], 0.0)
         mid = x + (end - x) * 0.5 + UP * (0.25 * lift + 0.01) if on_soil else x + side * stalk * 0.45
         pts = _bezier_q(np.array([x, mid, end]), 12)
-        rs = float(np.clip(0.035 * Dm, 0.0012, 0.025))
+        rs = float(np.clip(fr.stalk_radius_mm * 0.001, 0.0008, 0.03))
         stalk_mesh = tube(pts, np.linspace(rs, rs * 1.3, len(pts)), 6, {"age": np.full(len(pts), 0.3),
                                                                        "woody": np.full(len(pts), 0.5)})
         body = MeshData(V.astype(np.float32), proto.loop_vertex.copy(), proto.loop_start.copy(),
@@ -877,6 +807,15 @@ class VineEngine:
                         {**{k: v.copy() for k, v in proto.point_attributes.items()},
                          "fruit_random": np.full(len(V), rng.random(), np.float32)})
         return [stalk_mesh, body]
+
+
+def _frame_rot(z, roll):
+    """Rotation whose third column is z (rolled by `roll` about it)."""
+    z = _unit(np.asarray(z, float))
+    e1 = _unit(np.cross(z, UP) if abs(z @ UP) < 0.95 else np.cross(z, [1.0, 0, 0]))
+    e2 = np.cross(z, e1)
+    e1, e2 = math.cos(roll) * e1 + math.sin(roll) * e2, -math.sin(roll) * e1 + math.cos(roll) * e2
+    return np.stack([e1, e2, z], axis=1)
 
 
 def _rotate(v, axis, ang):

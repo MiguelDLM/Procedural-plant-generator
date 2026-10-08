@@ -41,21 +41,19 @@ except (ImportError, ValueError):
     from blender.flowers import _props_for
 
 VIN, VLF, VVN = "vin_", "vlf_", "vvn_"
-SUFFIXES = ("_VineStem", "_Tendrils", "_VineLeaves", "_Fruits", "_VineRoots")
+SUFFIXES = ("_VineStem", "_Tendrils", "_VineLeaves", "_VineFruits", "_VineRoots")
 GUIDE_NAME = "VineGuide"          # Not "PPG_...": PPG_ objects are taken for plant roots when selected
 
 LAYOUT = [
     ("Climbing Habit", VIN, ["mode", "chirality", "coil_radius_cm", "coil_pitch_cm", "wander_cm", "tip_length_cm",
                              "tip_hook"]),
     ("Stem & Nodes", VIN, ["stem_radius_mm", "stem_taper", "internode_cm", "leaf_arrangement", "leaf_size",
-                           "young_leaf_size", "expansion_zone_cm", "leaf_facing", "basal_leaf_loss"]),
+                           "young_leaf_size", "expansion_zone_cm", "leaf_facing", "basal_leaf_loss",
+                           "fruit_count"]),
     ("Lateral Shoots & Roots", VIN, ["branch_probability", "branch_length_cm", "branch_angle_deg", "branch_droop",
                                      "aerial_roots", "rootlet_length_cm"]),
     ("Tendrils", VIN, ["tendril_mode", "tendril_length_cm", "tendril_branches", "tendril_coils", "tendril_coil_mm",
                        "tendril_radius_mm", "tendril_reach"]),
-    ("Fruits", VIN, ["fruit_count", "fruit_length_cm", "fruit_diameter_cm", "fruit_widest_position", "fruit_neck",
-                     "fruit_ribs", "fruit_rib_depth", "fruit_end_depression", "fruit_stalk_cm", "fruit_color",
-                     "fruit_stripe_color", "fruit_stripes", "fruit_mottle", "fruit_gloss"]),
     ("Stem Colour", VIN, ["stem_color", "stem_color_old", "woodiness", "hairiness"]),
     ("Leaf Shape", VLF, ["archetype", "blade_length_cm", "aspect_ratio", "widest_position", "base_angle_deg",
                          "apex_angle_deg", "base_curvature", "apex_curvature", "cordate_depth", "petiole_length_ratio",
@@ -324,45 +322,6 @@ def stem_material(name, p: VineProfile):
     return mat
 
 
-def fruit_material(name, p: VineProfile):
-    from .succulents import _new_mat, _attr, _mix, _noise, _math
-    from .materials import _srgb_to_linear, _set
-    mat, nt, b = _new_mat(name)
-    base = nt.nodes.new('ShaderNodeRGB')
-    base.location = (-900, 300)
-    base.outputs[0].default_value = _srgb_to_linear(p.fruit_color)
-    stripe = nt.nodes.new('ShaderNodeRGB')
-    stripe.location = (-900, 100)
-    stripe.outputs[0].default_value = _srgb_to_linear(p.fruit_stripe_color)
-    u = _attr(nt, "fruit_u", (-1300, -100))
-    rib = _attr(nt, "fruit_rib", (-1300, -300))
-    tc = nt.nodes.new('ShaderNodeTexCoord')
-    tc.location = (-1500, -500)
-    warp = _noise(nt, tc.outputs['Object'], 6.0, 3.0, (-1300, -500))
-    # Longitudinal stripes: cos(2 pi n u) with a noisy, irregular edge (watermelon, squash)
-    n = max(p.fruit_ribs, 14)
-    a = _math(nt, 'MULTIPLY', u.outputs['Fac'], 2 * math.pi * n, (-1100, -100))
-    a = _math(nt, 'MULTIPLY_ADD', warp.outputs['Fac'], 2.5, (-950, -150), c=a)
-    s = _math(nt, 'COSINE', a, None, (-800, -150))
-    s = _math(nt, 'MULTIPLY_ADD', s, 0.5, (-650, -150), c=0.5)
-    s = _math(nt, 'GREATER_THAN', s, 0.55, (-500, -150))
-    s = _math(nt, 'MULTIPLY', s, p.fruit_stripes, (-350, -150))
-    col = _mix(nt, s, base.outputs[0], stripe.outputs[0], (-250, 200))
-    mot = _noise(nt, tc.outputs['Object'], 14.0, 6.0, (-650, -450))
-    m = _math(nt, 'MULTIPLY', mot.outputs['Fac'], p.fruit_mottle, (-450, -450))
-    col = _mix(nt, m, col, stripe.outputs[0], (-100, 150))
-    # Grooves between ribs slightly darker
-    g = _math(nt, 'SUBTRACT', 1.0, rib.outputs['Fac'], (-650, -650))
-    g = _math(nt, 'MULTIPLY', g, 0.35, (-450, -650))
-    dark = nt.nodes.new('ShaderNodeRGB')
-    dark.location = (-300, -650)
-    dark.outputs[0].default_value = (0.0, 0.0, 0.0, 1.0)
-    col = _mix(nt, g, col, dark.outputs[0], (50, 100))
-    nt.links.new(col, b.inputs['Base Color'])
-    _set(b, 0.75 - 0.6 * p.fruit_gloss, "Roughness")
-    return mat
-
-
 # -----------------------------------------------------------------------------
 # Geometry
 # -----------------------------------------------------------------------------
@@ -390,29 +349,27 @@ def update_vine_geometry(context, props, find_root):
         print("[PPG] No valid vine preset selected")
         return None
     root = find_root(context, f"PPG_{sp.scientific_name.replace(' ', '_').replace(chr(39), '')}")
-    keep = SUFFIXES + ("_Flowers", "_FlowerProto")
+    keep = SUFFIXES + ("_Flowers", "_FlowerProto")       # Everything else (other forms) is hidden
     for c in root.children:
         if not c.name.endswith(keep):
             c.hide_viewport = c.hide_render = True
+    from .fruits import fruit_from_props, ensure_fruit_material, hide_fruits
     prof, leaf, ven = vine_from_props(props)
     guides = guides_for(context, props, root)
+    fruit = fruit_from_props(props) if props.show_fruits else None
     res = VineEngine(prof, leaf, ven).generate(
         guides, seed=props.seed, growth=props.vine_growth, detail=props.succ_detail,
         leaf_density=props.vine_leaf_density if props.show_leaves else 0.0, with_roots=props.show_roots,
-        side_flip=props.vine_flip_side)
-    stem = fruit = leaf_mat = None
+        side_flip=props.vine_flip_side, fruit=fruit)
+    hide_fruits(root)                      # Tree-style instanced fruits; vine fruits are real geometry
+    stem = leaf_mat = fruit_mat = None
     if props.assign_materials:
         k = _key(prof.stem_color, prof.stem_color_old, prof.hairiness)
         stem = bpy.data.materials.get(root.name + "_VineStemMat")
         if stem is None or stem.get("ppg_key") != k:
             stem = stem_material(root.name + "_VineStemMat", prof)
             stem["ppg_key"] = k
-        if prof.fruit_count > 0:
-            k = _key(*(getattr(prof, f.name) for f in fields(prof) if f.name.startswith("fruit_")))
-            fruit = bpy.data.materials.get(root.name + "_FruitMat")
-            if fruit is None or fruit.get("ppg_key") != k:
-                fruit = fruit_material(root.name + "_FruitMat", prof)
-                fruit["ppg_key"] = k
+        fruit_mat = ensure_fruit_material(root, props, fruit) if fruit is not None and res.fruit_count else None
         if res.leaf_count:
             leaf_mat = _ensure_leaf_material(root, SimpleNamespace(leaf_morphology=leaf, venation=ven), props,
                                              res.leaf_engine.shape_model, 0)
@@ -420,7 +377,7 @@ def update_vine_geometry(context, props, find_root):
     _child(context, root, "_VineStem", res.stem, stem)
     _child(context, root, "_Tendrils", res.tendrils, stem)
     _child(context, root, "_VineLeaves", res.leaves if props.show_leaves else None, leaf_mat)
-    _child(context, root, "_Fruits", res.fruits, fruit)
+    _child(context, root, "_VineFruits", res.fruits, fruit_mat)
     _child(context, root, "_VineRoots", res.roots if props.show_roots else None, _root_material(root.name))
     # Flowers in the leaf axils
     if props.show_flowers and len(res.flower_pos):

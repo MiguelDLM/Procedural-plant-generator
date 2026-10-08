@@ -1,6 +1,6 @@
 # Plant presets (JSON)
 
-A preset describes one plant (tree, cactus, rosette succulent, flower or vine) by **measurable botanical traits**.
+A preset describes one plant (tree, cactus, rosette succulent, flower or vine) or one fruit by **measurable botanical traits**.
 Presets are plain JSON files: easy to share, review in git, validate, and write by hand or with an AI agent.
 
 - Schema: [`schemas/ppg-preset.schema.json`](../schemas/ppg-preset.schema.json) (JSON Schema 2020-12).
@@ -54,10 +54,11 @@ A user preset with the same `id` as a built-in one replaces it.
 | Key | Required | Meaning |
 |---|---|---|
 | `format`, `format_version` | yes | Always `"ppg-preset"` and `1`. |
-| `growth_form` | yes | `Tree`, `Cactus`, `Rosette`, `Flower` or `Vine`. |
+| `growth_form` | yes | `Tree`, `Cactus`, `Rosette`, `Flower`, `Vine` or `Fruit`. |
 | `id` | yes | Unique key, `lower_snake_case` (letter first; letters, digits, `_`; 2–64 chars). Usually the binomial: `agave_salmiana`. |
 | `base` | no | Id of a built-in or library preset **of the same growth form** to start from. With a base, `preset` lists only what differs. |
 | `default_flower` | no | Flower preset shown on the plant (`Tree`, `Cactus`, `Rosette`, `Vine`). |
+| `default_fruit` | no | Fruit preset borne by the plant (`Tree`, `Vine`). |
 | `metadata` | no | Author, licence, description, sources, tags. Always cite your sources. |
 | `preset` | yes | The trait values, nested exactly like the field reference. |
 
@@ -72,6 +73,8 @@ A user preset with the same `id` as a built-in one replaces it.
 - **Vine** → `scientific_name`, `common_name`, `family`, `biome`, `notes`, and `profile` (climbing habit, stem,
   tendrils, laterals, rootlets, fruits), `leaf` and `venation` (same fields as a tree's `leaf_morphology`
   and `venation`). The guide path is not part of the preset: it is chosen in the scene.
+- **Fruit** → `scientific_name`, `common_name`, `family`, `notes`, and `fruit` (shape, calyx, stalk, bunch,
+  skin colours).
 
 ### Conventions
 
