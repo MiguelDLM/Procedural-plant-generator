@@ -97,24 +97,24 @@ Parameters governing the 3D branching skeleton.
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
 | `model` | enum: `Rauh`, `Massart`, `Troll`, `Attims`, `Corner` |  |  | Rauh | Hallé-Oldeman architectural model: Rauh (rhythmic orthotropic, oaks, pines), Massart (horizontal tiers, firs), Troll (plagiotropic axes erect at the tip, beech, elm), Attims (continuous branching, eucalyptus), Corner (unbranched with apical crown, palms). |
-| `phyllotaxis` | enum: `Spiral`, `Decussate`, `Distichous`, `Whorled` |  |  | Spiral | Arrangement of leaves and branches along a shoot: Spiral (alternate), Decussate (opposite pairs, maples, ash), Distichous (two ranks), Whorled. |
-| `max_order` | integer |  | 0 – 4 | 3 | 0 = trunk only, 1 = scaffolds, 2 = branches, 3 = twigs, 4 = shoots |
-| `branch_angle_mean_deg` | number | deg | 10.0 – 95.0 | 48.0 | Scaffold insertion angle from the parent axis |
-| `branch_angle_std_deg` | number | deg |  | 6.5 | Standard deviation of the scaffold branch angle, degrees (natural irregularity, 4-10). |
-| `twig_angle_mean_deg` | number | deg | 10.0 – 95.0 | 52.0 | Higher-order insertion angle |
-| `divergence_angle_deg` | number | deg | 60.0 – 180.0 | 137.508 | Angle between successive lateral organs around the axis, degrees: 137.5 spiral (golden angle), 180 distichous, 90 decussate. |
-| `whorl_size` | integer |  | 1 – 7 | 1 | Laterals per node |
+| `phyllotaxis` | enum: `Spiral`, `Decussate`, `Distichous`, `Whorled` |  |  | Spiral | Arrangement of leaves and branches along a shoot: Spiral (alternate), Decussate (opposite pairs, maples, ash), Distichous (two ranks), Whorled. Applies when: model != 'Corner'. |
+| `max_order` | integer |  | 0 – 4 | 3 | 0 = trunk only, 1 = scaffolds, 2 = branches, 3 = twigs, 4 = shoots Applies when: model != 'Corner'. |
+| `branch_angle_mean_deg` | number | deg | 10.0 – 95.0 | 48.0 | Scaffold insertion angle from the parent axis Applies when: model != 'Corner'. |
+| `branch_angle_std_deg` | number | deg |  | 6.5 | Standard deviation of the scaffold branch angle, degrees (natural irregularity, 4-10). Applies when: model != 'Corner'. |
+| `twig_angle_mean_deg` | number | deg | 10.0 – 95.0 | 52.0 | Higher-order insertion angle Applies when: model != 'Corner'. |
+| `divergence_angle_deg` | number | deg | 60.0 – 180.0 | 137.508 | Angle between successive lateral organs around the axis, degrees: 137.5 spiral (golden angle), 180 distichous, 90 decussate. Applies when: model != 'Corner' and phyllotaxis == 'Spiral'. |
+| `whorl_size` | integer |  | 1 – 7 | 1 | Laterals per node Applies when: model != 'Corner'. |
 | `apical_dominance` | number |  | 0.0 – 1.0 | 0.65 | 0 = shrubby/decurrent, 1 = single excurrent leader |
 | `leader_count` | integer |  |  | 0 | Codominant leaders (0 = from apical dominance) |
-| `gravitropism` | number |  | -0.6 – 0.8 | -0.22 | < 0 bends up, > 0 weeping |
-| `phototropism` | number |  | 0.0 – 1.0 | 0.35 | Outward (light-seeking) bias of laterals |
-| `plagiotropy` | number |  | 0.0 – 1.0 | 0.2 | 0 = laterals spiral in 3D, 1 = flattened horizontal sprays |
-| `internode_length_base_m` | number | m | 0.1 – 1.2 | 0.45 | Length of a growth unit on the main axes, metres (0.2-0.8 for trees). |
-| `internode_decay_per_order` | number |  | 0.3 – 0.95 | 0.68 | Child / parent length ratio |
-| `branch_frequency_per_meter` | number |  | 0.5 – 8.0 | 3.0 | Scaffold nodes per meter of crown axis |
+| `gravitropism` | number |  | -0.6 – 0.8 | -0.22 | < 0 bends up, > 0 weeping Applies when: model != 'Corner'. |
+| `phototropism` | number |  | 0.0 – 1.0 | 0.35 | Outward (light-seeking) bias of laterals Applies when: model != 'Corner'. |
+| `plagiotropy` | number |  | 0.0 – 1.0 | 0.2 | 0 = laterals spiral in 3D, 1 = flattened horizontal sprays Applies when: model != 'Corner'. |
+| `internode_length_base_m` | number | m | 0.1 – 1.2 | 0.45 | Length of a growth unit on the main axes, metres (0.2-0.8 for trees). Applies when: model != 'Corner'. |
+| `internode_decay_per_order` | number |  | 0.3 – 0.95 | 0.68 | Child / parent length ratio Applies when: model != 'Corner'. |
+| `branch_frequency_per_meter` | number |  | 0.5 – 8.0 | 3.0 | Scaffold nodes per meter of crown axis Applies when: model != 'Corner'. |
 | `crookedness` | number |  | 0.0 – 0.6 | 0.12 | Tortuosity of the axes, 0 straight .. 0.6 very winding (olive, old oaks). |
-| `crown_widest_position` | number |  | 0.02 – 0.95 | 0.4 | Relative height (0 bottom .. 1 top of the crown) where the crown is widest: ~0.2 conical, 0.4-0.5 rounded, 0.7 vase. |
-| `crown_fullness` | number |  | 0.3 – 3.0 | 1.6 | Shape of the beta crown envelope: < 1 columnar / flat sides, 1.5 rounded, > 2 peaked. |
+| `crown_widest_position` | number |  | 0.02 – 0.95 | 0.4 | Relative height (0 bottom .. 1 top of the crown) where the crown is widest: ~0.2 conical, 0.4-0.5 rounded, 0.7 vase. Applies when: model != 'Corner'. |
+| `crown_fullness` | number |  | 0.3 – 3.0 | 1.6 | Shape of the beta crown envelope: < 1 columnar / flat sides, 1.5 rounded, > 2 peaked. Applies when: model != 'Corner'. |
 | `leaf_area_index` | number |  | 0.5 – 12.0 | 4.5 | One-sided leaf area per unit crown projection area |
 
 ## LeafMorphologyProfile
@@ -137,22 +137,22 @@ Measurable leaf descriptors. Lengths are relative to blade length unless noted.
 | `apex_notch` | number |  | 0.0 – 0.5 | 0.0 | Emarginate apex depth (Liriodendron, Ginkgo) |
 | `falcate_bend` | number |  | 0.0 – 0.3 | 0.0 | Sickle curvature of the midvein (Eucalyptus) |
 | `lobe_type` | enum: `None`, `Pinnate`, `Palmate` |  |  | None | Lobation |
-| `lobe_count` | integer |  | 1 – 11 | 5 | Palmate: total lobes. Pinnate: lobes per side |
-| `lobe_depth` | number |  | 0.0 – 0.95 | 0.5 | Sinus depth: 0 = unlobed, 1 = to the midvein |
-| `lobe_angle_deg` | number | deg | 15.0 – 85.0 | 50.0 | Pinnate lobe divergence from the midvein |
+| `lobe_count` | integer |  | 1 – 11 | 5 | Palmate: total lobes. Pinnate: lobes per side Applies when: lobe_type != 'None'. |
+| `lobe_depth` | number |  | 0.0 – 0.95 | 0.5 | Sinus depth: 0 = unlobed, 1 = to the midvein Applies when: lobe_type != 'None'. |
+| `lobe_angle_deg` | number | deg | 15.0 – 85.0 | 50.0 | Pinnate lobe divergence from the midvein Applies when: lobe_type != 'None'. |
 | `lobe_spread_deg` | number | deg | 10.0 – 330.0 | 200.0 | Palmate: total angle between outermost lobes |
-| `lobe_width` | number |  | 0.2 – 1.2 | 0.55 | Lobe breadth relative to its angular sector |
-| `lobe_roundness` | number |  | 0.0 – 1.0 | 0.5 | Sinus rounding (0 = V sinus, 1 = U sinus) |
-| `lobe_apex_angle_deg` | number | deg | 10.0 – 179.0 | 80.0 | Apex angle of each lobe |
-| `teeth_count` | integer |  | 0 – 80 | 24 | Teeth per side along one lamina |
-| `tooth_height_ratio` | number |  | 0.0 – 0.2 | 0.035 | Tooth depth relative to lamina width |
-| `tooth_skew` | number |  | 0.3 – 0.92 | 0.75 | 0.5 symmetric (dentate) .. 0.9 strongly forward |
+| `lobe_width` | number |  | 0.2 – 1.2 | 0.55 | Lobe breadth relative to its angular sector Applies when: lobe_type != 'None'. |
+| `lobe_roundness` | number |  | 0.0 – 1.0 | 0.5 | Sinus rounding (0 = V sinus, 1 = U sinus) Applies when: lobe_type != 'None'. |
+| `lobe_apex_angle_deg` | number | deg | 10.0 – 179.0 | 80.0 | Apex angle of each lobe Applies when: lobe_type != 'None'. |
+| `teeth_count` | integer |  | 0 – 80 | 24 | Teeth per side along one lamina Applies when: margin_type != 'Entire'. |
+| `tooth_height_ratio` | number |  | 0.0 – 0.2 | 0.035 | Tooth depth relative to lamina width Applies when: margin_type != 'Entire'. |
+| `tooth_skew` | number |  | 0.3 – 0.92 | 0.75 | 0.5 symmetric (dentate) .. 0.9 strongly forward Applies when: margin_type != 'Entire'. |
 | `compound_type` | enum: `Simple`, `Pinnate`, `Palmate`, `Fascicle`, `Spray` |  |  | Simple | Compound organisation / needle units |
-| `leaflet_count` | integer |  | 1 – 150 | 7 | Pinnate: pairs. Palmate/fascicle: total. Spray: per side |
-| `leaflet_angle_deg` | number | deg | 5.0 – 90.0 | 60.0 | Leaflet / needle angle from rachis |
-| `rachis_length_ratio` | number |  | 0.2 – 30.0 | 2.5 | Rachis length / leaflet length |
-| `terminal_leaflet` | boolean |  |  | true | Odd-pinnate |
-| `leaflet_size_gradient` | number |  | 0.0 – 0.8 | 0.3 | Basal leaflets smaller by this fraction |
+| `leaflet_count` | integer |  | 1 – 150 | 7 | Pinnate: pairs. Palmate/fascicle: total. Spray: per side Applies when: compound_type != 'Simple'. |
+| `leaflet_angle_deg` | number | deg | 5.0 – 90.0 | 60.0 | Leaflet / needle angle from rachis Applies when: compound_type in ('Pinnate', 'Spray'). |
+| `rachis_length_ratio` | number |  | 0.2 – 30.0 | 2.5 | Rachis length / leaflet length Applies when: compound_type in ('Pinnate', 'Spray'). |
+| `terminal_leaflet` | boolean |  |  | true | Odd-pinnate Applies when: compound_type == 'Pinnate'. |
+| `leaflet_size_gradient` | number |  | 0.0 – 0.8 | 0.3 | Basal leaflets smaller by this fraction Applies when: compound_type != 'Simple'. |
 | `petiole_length_ratio` | number |  | 0.0 – 1.5 | 0.35 | Petiole |
 | `petiole_radius_mm` | number | mm |  | 1.2 | Petiole radius, millimetres. |
 | `petiole_angle_deg` | number | deg | 10.0 – 110.0 | 50.0 | Insertion angle between petiole and shoot |
@@ -215,9 +215,9 @@ BarkProfile(pattern: core.bark.BarkPattern = <BarkPattern.FISSURED: 'Fissured'>,
 | `onset_radius_cm` | number | cm | 0.1 – 30.0 | 4.0 | Axis radius (cm) where the mature bark pattern replaces the smooth young periderm; fissures widen beyond it. |
 | `inner_color` | colour (sRGB 0..1) |  |  | [0.209, 0.127, 0.086] | Exposed inner bark at the bottom of fissures |
 | `weathering` | number |  | 0.0 – 1.0 | 0.35 | Grey, bleached ridge tops |
-| `blockiness` | number |  | 0.0 – 1.0 | 0.4 | 0 irregular, rounded cells .. 1 rectangular blocks (Minkowski exponent) |
-| `segments` | number |  | 0.0 – 1.0 | 0.3 | Transverse splits cutting ridges into segments (blocky oak, Ulmus) |
-| `plate_tilt` | number |  | 0.0 – 1.0 | 0.3 | Per-plate tilt / offset (scales and plates catching light differently) |
+| `blockiness` | number |  | 0.0 – 1.0 | 0.4 | 0 irregular, rounded cells .. 1 rectangular blocks (Minkowski exponent) Applies when: pattern in ('Fissured', 'Plated', 'Annulated'). |
+| `segments` | number |  | 0.0 – 1.0 | 0.3 | Transverse splits cutting ridges into segments (blocky oak, Ulmus) Applies when: pattern in ('Fissured', 'Plated', 'Fibrous'). |
+| `plate_tilt` | number |  | 0.0 – 1.0 | 0.3 | Per-plate tilt / offset (scales and plates catching light differently) Applies when: pattern in ('Fissured', 'Plated', 'Annulated'). |
 | `warp` | number |  | 0.0 – 1.0 | 0.4 | Organic distortion; high = interlacing, anastomosing ridges (Fraxinus, Tilia) |
 | `moss` | number |  | 0.0 – 1.0 | 0.15 | Moss cover (upper sides, base, shaded side) |
 | `lichen` | number |  | 0.0 – 1.0 | 0.15 | Crustose lichen patches (favoured on smooth bark) |
@@ -229,24 +229,24 @@ RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>,
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
 | `system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous` |  |  | Heart | Root system type (Köstler et al. 1968): Taproot, Heart, Plate (shallow), Fibrous, Buttress, Tuberous. |
-| `lateral_count` | integer |  | 1 – 16 | 6 | Main structural laterals (= buttress count when buttressed) |
-| `spread_crown_ratio` | number |  | 0.3 – 4.0 | 1.4 | Lateral reach / crown radius |
-| `max_depth_m` | number | m | 0.3 – 60.0 | 3.0 | Species/biome maximum rooting depth |
-| `beta` | number |  | 0.9 – 0.99 | 0.966 | Jackson vertical distribution coefficient |
-| `taproot_share` | number |  | 0.0 – 0.8 | 0.15 | Fraction of the collar pipe flow taken by the taproot / obliques |
-| `zrt_dbh_ratio` | number |  |  | 2.2 | Zone of rapid taper radius / DBH |
-| `sinker_spacing_m` | number | m |  | 1.2 | Mean distance between sinkers along laterals |
-| `branch_spacing_m` | number | m |  | 0.9 | Mean distance between second-order laterals |
-| `surface_exposure` | number |  | 0.0 – 1.0 | 0.15 | 0 buried .. 1 laterals ride on the soil surface near the stem |
-| `plank` | number |  | 0.0 – 5.0 | 0.5 | Vertical elongation of lateral cross-sections near the stem |
-| `buttress_height_dbh` | number |  | 0.0 – 4.0 | 0.6 | Height on the stem where laterals/buttresses merge (x DBH) |
-| `tortuosity` | number |  |  | 0.25 | Winding of the roots through the soil, 0 straight .. 1 very tortuous. |
-| `knees` | integer |  |  | 0 | Pneumatophores ("cypress knees") on shallow laterals |
-| `fibrous_count` | integer |  |  | 60 | Adventitious roots (FIBROUS) |
-| `fibrous_radius_m` | number | m |  | 0.006 | Radius of the fine fibrous roots, metres. |
-| `fibrous_spread_m` | number | m |  | 0.0 | Horizontal reach of fibrous roots (0 = 1-3 m, palms) |
-| `tuber_length_m` | number | m |  | 0.12 | TUBEROUS storage root |
-| `tuber_radius_m` | number | m |  | 0.03 | Radius of a storage tuber (Tuberous system), metres. |
+| `lateral_count` | integer |  | 1 – 16 | 6 | Main structural laterals (= buttress count when buttressed) Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `spread_crown_ratio` | number |  | 0.3 – 4.0 | 1.4 | Lateral reach / crown radius Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `max_depth_m` | number | m | 0.3 – 60.0 | 3.0 | Species/biome maximum rooting depth Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `beta` | number |  | 0.9 – 0.99 | 0.966 | Jackson vertical distribution coefficient Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `taproot_share` | number |  | 0.0 – 0.8 | 0.15 | Fraction of the collar pipe flow taken by the taproot / obliques Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `zrt_dbh_ratio` | number |  |  | 2.2 | Zone of rapid taper radius / DBH Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `sinker_spacing_m` | number | m |  | 1.2 | Mean distance between sinkers along laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `branch_spacing_m` | number | m |  | 0.9 | Mean distance between second-order laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `surface_exposure` | number |  | 0.0 – 1.0 | 0.15 | 0 buried .. 1 laterals ride on the soil surface near the stem Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `plank` | number |  | 0.0 – 5.0 | 0.5 | Vertical elongation of lateral cross-sections near the stem Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `buttress_height_dbh` | number |  | 0.0 – 4.0 | 0.6 | Height on the stem where laterals/buttresses merge (x DBH) Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `tortuosity` | number |  |  | 0.25 | Winding of the roots through the soil, 0 straight .. 1 very tortuous. Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `knees` | integer |  |  | 0 | Pneumatophores ("cypress knees") on shallow laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
+| `fibrous_count` | integer |  |  | 60 | Adventitious roots (FIBROUS) Applies when: system == 'Fibrous'. |
+| `fibrous_radius_m` | number | m |  | 0.006 | Radius of the fine fibrous roots, metres. Applies when: system == 'Fibrous'. |
+| `fibrous_spread_m` | number | m |  | 0.0 | Horizontal reach of fibrous roots (0 = 1-3 m, palms) Applies when: system == 'Fibrous'. |
+| `tuber_length_m` | number | m |  | 0.12 | TUBEROUS storage root Applies when: system == 'Tuberous'. |
+| `tuber_radius_m` | number | m |  | 0.03 | Radius of a storage tuber (Tuberous system), metres. Applies when: system == 'Tuberous'. |
 
 ## CactusProfile
 
@@ -255,46 +255,46 @@ CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
 | `habit` | enum: `Columnar`, `Barrel`, `Globose`, `Cladode` |  |  | Columnar | Body plan: Columnar (saguaro, organ pipe), Barrel, Globose, Cladode (Opuntia pads). |
-| `arrangement` | enum: `Ribs`, `Spiral` |  |  | Ribs | Areole layout: Ribs (on rib crests) or Tubercles (spiral lattice of podaria, Mammillaria). |
-| `height_m` | number | m | 0.03 – 20.0 | 3.0 | Stem body |
-| `diameter_m` | number | m | 0.02 – 1.5 | 0.35 | Stem diameter, metres (main trunk for branched species). |
-| `base_taper` | number |  | 0.0 – 0.8 | 0.15 | Narrowing toward the ground (fraction of radius) |
-| `apex_dome` | number |  | 0.2 – 3.0 | 1.0 | Dome height in stem radii |
-| `apex_roundness` | number |  | 1.2 – 6.0 | 2.0 | Superellipse exponent of the dome (2 = elliptic, >2 = flat-topped) |
-| `apex_depression` | number |  | 0.0 – 0.5 | 0.0 | Sunken apex (fraction of radius) |
-| `rib_count` | integer |  | 2 – 60 | 13 | Ribs and tubercles |
-| `rib_depth` | number |  | 0.0 – 0.6 | 0.18 | Groove depth relative to radius |
-| `rib_sharpness` | number |  | 0.2 – 3.0 | 0.7 | < 1 rounded crests, > 1 sharp crests |
-| `rib_twist_deg_per_m` | number | deg/m | -200.0 – 200.0 | 0.0 | Helical twist of the ribs, degrees per metre of height (0 straight). |
-| `tubercle_height` | number |  | 0.0 – 0.8 | 0.0 | Relative bump raised by each areole |
+| `arrangement` | enum: `Ribs`, `Spiral` |  |  | Ribs | Areole layout: Ribs (on rib crests) or Tubercles (spiral lattice of podaria, Mammillaria). Applies when: habit != 'Cladode'. |
+| `height_m` | number | m | 0.03 – 20.0 | 3.0 | Stem body Applies when: habit != 'Cladode'. |
+| `diameter_m` | number | m | 0.02 – 1.5 | 0.35 | Stem diameter, metres (main trunk for branched species). Applies when: habit != 'Cladode'. |
+| `base_taper` | number |  | 0.0 – 0.8 | 0.15 | Narrowing toward the ground (fraction of radius) Applies when: habit != 'Cladode'. |
+| `apex_dome` | number |  | 0.2 – 3.0 | 1.0 | Dome height in stem radii Applies when: habit != 'Cladode'. |
+| `apex_roundness` | number |  | 1.2 – 6.0 | 2.0 | Superellipse exponent of the dome (2 = elliptic, >2 = flat-topped) Applies when: habit != 'Cladode'. |
+| `apex_depression` | number |  | 0.0 – 0.5 | 0.0 | Sunken apex (fraction of radius) Applies when: habit != 'Cladode'. |
+| `rib_count` | integer |  | 2 – 60 | 13 | Ribs and tubercles Applies when: habit != 'Cladode'. |
+| `rib_depth` | number |  | 0.0 – 0.6 | 0.18 | Groove depth relative to radius Applies when: habit != 'Cladode' and arrangement == 'Ribs'. |
+| `rib_sharpness` | number |  | 0.2 – 3.0 | 0.7 | < 1 rounded crests, > 1 sharp crests Applies when: habit != 'Cladode' and arrangement == 'Ribs'. |
+| `rib_twist_deg_per_m` | number | deg/m | -200.0 – 200.0 | 0.0 | Helical twist of the ribs, degrees per metre of height (0 straight). Applies when: habit != 'Cladode'. |
+| `tubercle_height` | number |  | 0.0 – 0.8 | 0.0 | Relative bump raised by each areole Applies when: habit != 'Cladode'. |
 | `areole_spacing_cm` | number | cm | 0.3 – 8.0 | 2.5 | Distance between neighbouring areoles along a rib or in the lattice, cm. |
 | `radial_spines` | integer |  | 0 – 40 | 10 | Spines |
 | `radial_length_cm` | number | cm | 0.0 – 15.0 | 1.5 | Length of the radial spines, cm. |
 | `central_spines` | integer |  | 0 – 10 | 3 | Number of central spines per areole. |
-| `central_length_cm` | number | cm | 0.0 – 15.0 | 4.0 | Length of the central spines, cm. |
+| `central_length_cm` | number | cm | 0.0 – 15.0 | 4.0 | Length of the central spines, cm. Applies when: central_spines > 0. |
 | `spine_thickness_mm` | number | mm | 0.03 – 4.0 | 0.8 | Spine base diameter, mm. |
 | `spine_curvature` | number |  | 0.0 – 1.5 | 0.1 | Gravity curvature (0 straight .. 1 strongly bent) |
-| `central_hook` | number |  | 0.0 – 2.0 | 0.0 | Terminal hook on centrals (Ferocactus wislizeni, Mammillaria) |
+| `central_hook` | number |  | 0.0 – 2.0 | 0.0 | Terminal hook on centrals (Ferocactus wislizeni, Mammillaria) Applies when: central_spines > 0. |
 | `radial_lift_deg` | number | deg | 0.0 – 80.0 | 15.0 | Angle of radials above the surface |
 | `spine_jitter` | number |  | 0.0 – 0.8 | 0.25 | Random variation of spine direction and length, 0 regular .. 1 messy. |
 | `wool` | number |  | 0.0 – 2.0 | 0.3 | Areolar wool / felt size (relative to spacing) |
 | `apical_wool` | number |  | 0.0 – 3.0 | 0.0 | Extra wool on the apex (Echinocactus grusonii, cephalia) |
-| `arm_count` | integer |  | 0 – 60 | 0 | Branching |
-| `arm_height_min` | number |  | 0.05 – 0.95 | 0.35 | Relative height range of arm insertions |
-| `arm_height_max` | number |  | 0.05 – 1.0 | 0.65 | Highest arm insertion, as a fraction of the stem height. |
-| `arm_radius_ratio` | number |  | 0.1 – 1.0 | 0.8 | Arm radius relative to the trunk radius. |
-| `arm_reach_m` | number | m | 0.05 – 4.0 | 0.5 | Horizontal elbow before turning upward |
-| `arm_length_ratio` | number |  | 0.1 – 5.0 | 0.5 | Vertical rise of an arm relative to the main stem height |
-| `arm_lean_deg` | number | deg | 0.0 – 30.0 | 3.0 | Outward lean of the erect part of each arm |
-| `arm_branching` | number |  | 0.0 – 3.0 | 0.0 | Mean number of secondary arms per arm (dense candelabra crowns). |
-| `crown_fill` | number |  | 0.0 – 1.0 | 0.0 | Fraction of arms whose columns fill the crown disc (area-uniform) instead of a ring      # Mean secondary arms per arm (dense candelabra crowns) |
-| `offsets` | integer |  | 0 – 20 | 0 | Basal offsets (clumping) |
-| `offset_scale` | number |  | 0.2 – 1.0 | 0.7 | Size of basal offsets (pups) relative to the mother stem. |
-| `pad_length_cm` | number | cm | 3.0 – 80.0 | 30.0 | Cladodes (Opuntia) |
-| `pad_width_ratio` | number |  | 0.2 – 1.2 | 0.65 | Cladode width / length (Opuntia ~0.6). |
-| `pad_thickness_ratio` | number |  | 0.02 – 0.3 | 0.08 | Cladode thickness / length (Opuntia ~0.06). |
-| `pad_levels` | integer |  | 1 – 8 | 4 | Number of cladode generations in the chain (plant age / height). |
-| `pad_branching` | number |  | 0.0 – 4.0 | 1.6 | Mean daughter pads per pad |
+| `arm_count` | integer |  | 0 – 60 | 0 | Branching Applies when: habit != 'Cladode'. |
+| `arm_height_min` | number |  | 0.05 – 0.95 | 0.35 | Relative height range of arm insertions Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_height_max` | number |  | 0.05 – 1.0 | 0.65 | Highest arm insertion, as a fraction of the stem height. Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_radius_ratio` | number |  | 0.1 – 1.0 | 0.8 | Arm radius relative to the trunk radius. Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_reach_m` | number | m | 0.05 – 4.0 | 0.5 | Horizontal elbow before turning upward Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_length_ratio` | number |  | 0.1 – 5.0 | 0.5 | Vertical rise of an arm relative to the main stem height Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_lean_deg` | number | deg | 0.0 – 30.0 | 3.0 | Outward lean of the erect part of each arm Applies when: habit != 'Cladode' and arm_count > 0. |
+| `arm_branching` | number |  | 0.0 – 3.0 | 0.0 | Mean number of secondary arms per arm (dense candelabra crowns). Applies when: habit != 'Cladode' and arm_count > 0. |
+| `crown_fill` | number |  | 0.0 – 1.0 | 0.0 | Fraction of arms whose columns fill the crown disc (area-uniform) instead of a ring      # Mean secondary arms per arm (dense candelabra crowns) Applies when: habit != 'Cladode' and arm_count > 0. |
+| `offsets` | integer |  | 0 – 20 | 0 | Basal offsets (clumping) Applies when: habit != 'Cladode'. |
+| `offset_scale` | number |  | 0.2 – 1.0 | 0.7 | Size of basal offsets (pups) relative to the mother stem. Applies when: habit != 'Cladode' and offsets > 0. |
+| `pad_length_cm` | number | cm | 3.0 – 80.0 | 30.0 | Cladodes (Opuntia) Applies when: habit == 'Cladode'. |
+| `pad_width_ratio` | number |  | 0.2 – 1.2 | 0.65 | Cladode width / length (Opuntia ~0.6). Applies when: habit == 'Cladode'. |
+| `pad_thickness_ratio` | number |  | 0.02 – 0.3 | 0.08 | Cladode thickness / length (Opuntia ~0.06). Applies when: habit == 'Cladode'. |
+| `pad_levels` | integer |  | 1 – 8 | 4 | Number of cladode generations in the chain (plant age / height). Applies when: habit == 'Cladode'. |
+| `pad_branching` | number |  | 0.0 – 4.0 | 1.6 | Mean daughter pads per pad Applies when: habit == 'Cladode'. |
 | `stem_color` | colour (sRGB 0..1) |  |  | [0.24, 0.4, 0.2] | Colour (sRGB) |
 | `groove_color` | colour (sRGB 0..1) |  |  | [0.15, 0.28, 0.13] | Colour at the bottom of the grooves between ribs, sRGB 0..1. |
 | `spine_color` | colour (sRGB 0..1) |  |  | [0.85, 0.8, 0.62] | Spine colour at the base, sRGB 0..1. |
@@ -303,12 +303,12 @@ CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'
 | `glaucous` | number |  | 0.0 – 1.0 | 0.2 | Waxy bloom |
 | `flecks` | number |  | 0.0 – 1.0 | 0.0 | White trichome flecks (Astrophytum) |
 | `browning_height_m` | number | m | 0.0 – 6.0 | 0.0 | Height reached by epidermal browning (bark) on the equatorial side |
-| `equator_bias` | number |  | 0.0 – 1.0 | 0.6 | How much higher it climbs on the equator-facing side |
-| `equator_azimuth_deg` | number | deg | 0.0 – 360.0 | 270.0 | Azimuth (from +X, counter-clockwise) of the equator-facing side |
-| `scaling_color` | colour (sRGB 0..1) |  |  | [0.62, 0.44, 0.3] | Colour of early epidermal browning ('scaling', tan to red-orange), sRGB 0..1. |
-| `barking_color` | colour (sRGB 0..1) |  |  | [0.27, 0.22, 0.18] | Colour of old epidermal bark ('barking', dark brown or grey), sRGB 0..1. |
+| `equator_bias` | number |  | 0.0 – 1.0 | 0.6 | How much higher it climbs on the equator-facing side Applies when: browning_height_m > 0. |
+| `equator_azimuth_deg` | number | deg | 0.0 – 360.0 | 270.0 | Azimuth (from +X, counter-clockwise) of the equator-facing side Applies when: browning_height_m > 0. |
+| `scaling_color` | colour (sRGB 0..1) |  |  | [0.62, 0.44, 0.3] | Colour of early epidermal browning ('scaling', tan to red-orange), sRGB 0..1. Applies when: browning_height_m > 0. |
+| `barking_color` | colour (sRGB 0..1) |  |  | [0.27, 0.22, 0.18] | Colour of old epidermal bark ('barking', dark brown or grey), sRGB 0..1. Applies when: browning_height_m > 0. |
 | `scars` | number |  | 0.0 – 1.0 | 0.15 | Density of corky scars |
-| `scar_color` | colour (sRGB 0..1) |  |  | [0.64, 0.55, 0.41] | Colour of corky scars, sRGB 0..1. |
+| `scar_color` | colour (sRGB 0..1) |  |  | [0.64, 0.55, 0.41] | Colour of corky scars, sRGB 0..1. Applies when: scars > 0. |
 | `areole_stain` | number |  | 0.0 – 1.0 | 0.4 | Dark halos and drip streaks below the areoles |
 | `crest_light` | number |  | 0.0 – 1.0 | 0.25 | Paler, yellower rib crests |
 | `groove_dust` | number |  | 0.0 – 1.0 | 0.3 | Soil and dust in the grooves and near the ground |
@@ -320,8 +320,8 @@ CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'
 | `taproot_share` | number |  | 0.0 – 0.8 | 0.0 | Fraction of the root collar taken by a taproot (0 none .. 0.8 dominant taproot). |
 | `taproot_depth_m` | number | m | 0.05 – 3.0 | 0.5 | Taproot depth, metres. |
 | `root_core_ratio` | number |  | 0.05 – 0.6 | 0.25 | Vascular cylinder / stem radius (root collar) |
-| `tuber_length_cm` | number | cm | 1.0 – 60.0 | 12.0 | Length of a napiform storage tuber (peyote), cm. |
-| `tuber_radius_ratio` | number |  | 0.1 – 1.5 | 0.8 | Tuber radius relative to stem radius |
+| `tuber_length_cm` | number | cm | 1.0 – 60.0 | 12.0 | Length of a napiform storage tuber (peyote), cm. Applies when: root_system == 'Tuberous'. |
+| `tuber_radius_ratio` | number |  | 0.1 – 1.5 | 0.8 | Tuber radius relative to stem radius Applies when: root_system == 'Tuberous'. |
 
 ## RosetteProfile
 
@@ -356,24 +356,24 @@ RosetteProfile(phyllotaxis: core.rosette.RosettePhyllotaxis = <RosettePhyllotaxi
 | `base_swell` | number |  | 0.0 – 4.0 | 0.0 | Extra thickness of the fleshy leaf base |
 | `furl` | number |  | 0.0 – 1.0 | 0.0 | Rolling of young central leaves into the spike (cogollo) |
 | `dead_leaves` | integer |  | 0 – 40 | 0 | Persistent dry leaves below the living rosette (skirt) |
-| `dead_color` | colour (sRGB 0..1) |  |  | [0.55, 0.46, 0.34] | Colour of withered leaves, sRGB 0..1. |
+| `dead_color` | colour (sRGB 0..1) |  |  | [0.55, 0.46, 0.34] | Colour of withered leaves, sRGB 0..1. Applies when: dead_leaves > 0. |
 | `stem_color` | colour (sRGB 0..1) |  |  | [0.5, 0.45, 0.36] | Corky stem below the leaves |
-| `stem_scars` | number |  | 0.0 – 1.0 | 0.0 | Visibility of crescent leaf scars on the stem |
-| `scar_spacing_mm` | number | mm | 1.0 – 30.0 | 6.0 | Internode length along the bare stem |
+| `stem_scars` | number |  | 0.0 – 1.0 | 0.0 | Visibility of crescent leaf scars on the stem Applies when: stem_height_m > 0. |
+| `scar_spacing_mm` | number | mm | 1.0 – 30.0 | 6.0 | Internode length along the bare stem Applies when: stem_height_m > 0. |
 | `terminal_spine_cm` | number | cm | 0.0 – 8.0 | 0.0 | Length of the terminal leaf spine (Agave), cm; 0 = none. |
 | `teeth_count` | integer |  | 0 – 60 | 0 | Per margin |
-| `teeth_size_cm` | number | cm | 0.0 – 3.0 | 0.0 | Size of the marginal teeth, cm; 0 = none. |
-| `teeth_hook` | number |  | -1.0 – 1.5 | 0.4 | How much marginal teeth curve toward the leaf tip, 0 straight .. 1 hooked. |
+| `teeth_size_cm` | number | cm | 0.0 – 3.0 | 0.0 | Size of the marginal teeth, cm; 0 = none. Applies when: teeth_count > 0. |
+| `teeth_hook` | number |  | -1.0 – 1.5 | 0.4 | How much marginal teeth curve toward the leaf tip, 0 straight .. 1 hooked. Applies when: teeth_count > 0. |
 | `offsets` | integer |  | 0 – 20 | 0 | Number of offsets (pups) around the main rosette. |
-| `offset_scale` | number |  | 0.1 – 1.0 | 0.45 | Size of the offsets relative to the main rosette. |
+| `offset_scale` | number |  | 0.1 – 1.0 | 0.45 | Size of the offsets relative to the main rosette. Applies when: offsets > 0. |
 | `leaf_color` | colour (sRGB 0..1) |  |  | [0.45, 0.58, 0.55] | Base leaf colour, sRGB 0..1. |
-| `blush_color` | colour (sRGB 0..1) |  |  | [0.75, 0.35, 0.4] | Anthocyanin blush colour of margins and tips, sRGB 0..1. |
+| `blush_color` | colour (sRGB 0..1) |  |  | [0.75, 0.35, 0.4] | Anthocyanin blush colour of margins and tips, sRGB 0..1. Applies when: blush_amount > 0. |
 | `blush_amount` | number |  | 0.0 – 1.0 | 0.0 | Margin / tip anthocyanin |
 | `glaucous` | number |  | 0.0 – 1.0 | 0.6 | Epicuticular wax bloom |
 | `spots` | number |  | 0.0 – 1.0 | 0.0 | Pale spots (Aloe) |
 | `bands` | number |  | 0.0 – 1.0 | 0.0 | Transverse tubercle bands (Haworthiopsis) |
 | `armature_color` | colour (sRGB 0..1) |  |  | [0.3, 0.2, 0.15] | Colour of spines and teeth, sRGB 0..1. |
-| `blush_tip` | number |  | 0.0 – 1.0 | 1.0 | Weight of the tip in the blush (0 = margins only) |
+| `blush_tip` | number |  | 0.0 – 1.0 | 1.0 | Weight of the tip in the blush (0 = margins only) Applies when: blush_amount > 0. |
 | `margin_band` | number |  | 0.0 – 1.0 | 0.0 | Horny dark margin (Agave) |
 | `striation` | number |  | 0.0 – 1.0 | 0.0 | Fine longitudinal lines |
 | `imprints` | number |  | 0.0 – 1.0 | 0.0 | Bud imprints of neighbouring leaves' teeth and outline (Agave) |
@@ -389,13 +389,13 @@ FlowerProfile(arrangement: core.flower.Arrangement = <Arrangement.WHORLED: 'Whor
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
-| `arrangement` | enum: `Whorled`, `Spiral` |  |  | Whorled | Floral diagram |
-| `merosity` | integer |  | 2 – 16 | 5 | Organs per whorl |
-| `petal_whorls` | integer |  | 1 – 8 | 1 | > 1: double flowers (extra petal whorls replace stamens) |
-| `spiral_tepals` | integer |  | 0 – 200 | 0 | Perianth organs when spiral (Magnolia, cactus, double rose) |
-| `zygomorphy` | number |  | 0.0 – 1.0 | 0.0 | 0 radial symmetry .. 1 strongly bilateral |
-| `lip_bias` | number |  | -1.0 – 1.0 | 0.0 | + dorsal organs larger (standard), - ventral lip larger |
-| `petals_visible` | boolean |  |  | true | False: perianth reduced or shed (Eucalyptus operculum, catkin flowers) |
+| `arrangement` | enum: `Whorled`, `Spiral` |  |  | Whorled | Floral diagram Applies when: not capitulum. |
+| `merosity` | integer |  | 2 – 16 | 5 | Organs per whorl Applies when: not capitulum. |
+| `petal_whorls` | integer |  | 1 – 8 | 1 | > 1: double flowers (extra petal whorls replace stamens) Applies when: not capitulum and arrangement == 'Whorled'. |
+| `spiral_tepals` | integer |  | 0 – 200 | 0 | Perianth organs when spiral (Magnolia, cactus, double rose) Applies when: not capitulum and arrangement == 'Spiral'. |
+| `zygomorphy` | number |  | 0.0 – 1.0 | 0.0 | 0 radial symmetry .. 1 strongly bilateral Applies when: not capitulum. |
+| `lip_bias` | number |  | -1.0 – 1.0 | 0.0 | + dorsal organs larger (standard), - ventral lip larger Applies when: not capitulum and zygomorphy > 0. |
+| `petals_visible` | boolean |  |  | true | False: perianth reduced or shed (Eucalyptus operculum, catkin flowers) Applies when: not capitulum. |
 | `petal_length_cm` | number | cm | 0.05 – 30.0 | 2.0 | Perianth (petal or tepal) geometry |
 | `petal_aspect` | number |  | 0.3 – 12.0 | 1.2 | Length / width |
 | `widest_position` | number |  | 0.05 – 0.95 | 0.6 | Position of the widest point of the petal, 0 base .. 1 tip. |
@@ -406,7 +406,7 @@ FlowerProfile(arrangement: core.flower.Arrangement = <Arrangement.WHORLED: 'Whor
 | `truncation` | number |  | 0.0 – 1.0 | 0.0 | Blunt, wide apex (0 pointed .. 1 truncate) |
 | `notch` | number |  | 0.0 – 0.5 | 0.0 | Emarginate apex (cherry, Silene) |
 | `fringe` | number |  | 0.0 – 0.5 | 0.0 | Laciniate / toothed apex (Dianthus, ligule teeth) |
-| `fringe_count` | integer |  | 0 – 40 | 0 | Number of teeth or fringe lobes at the petal apex. |
+| `fringe_count` | integer |  | 0 – 40 | 0 | Number of teeth or fringe lobes at the petal apex. Applies when: fringe > 0. |
 | `undulation` | number |  | 0.0 – 1.0 | 0.0 | Wavy margins |
 | `opening_deg` | number | deg | -60.0 – 90.0 | 15.0 | Elevation of the organ base above the floral plane (90 = erect) |
 | `reflex_deg` | number | deg | -220.0 – 120.0 | -10.0 | Bending along the organ (+ incurved, - reflexed) |
@@ -414,50 +414,50 @@ FlowerProfile(arrangement: core.flower.Arrangement = <Arrangement.WHORLED: 'Whor
 | `twist_deg` | number | deg | -90.0 – 90.0 | 0.0 | Twist along the organ (convolute, pinwheel) |
 | `inner_scale` | number |  | 0.1 – 1.5 | 0.7 | Size of innermost perianth organ relative to outer (spiral / double) |
 | `inner_opening_deg` | number | deg | -30.0 – 95.0 | 60.0 | Elevation of innermost perianth organs (spiral / double) |
-| `tube_length_cm` | number | cm | 0.0 – 30.0 | 0.0 | Corolla tube (sympetaly) |
-| `tube_radius_cm` | number | cm | 0.01 – 5.0 | 0.2 | At the base |
-| `tube_flare` | number |  | 0.3 – 5.0 | 2.0 | Exponent of the tube profile (1 conical, >1 trumpet) |
-| `limb_fusion` | number |  | 0.0 – 1.0 | 0.0 | Fused limb: lobes widen to fill their sector (1 = entire rim, Ipomoea) |
-| `sepal_length_ratio` | number |  | 0.0 – 2.0 | 0.5 | Relative to petal length (0 = no visible calyx) |
-| `sepal_aspect` | number |  | 0.5 – 10.0 | 2.0 | Sepal length / width. |
-| `sepal_opening_deg` | number | deg | -80.0 – 90.0 | 20.0 | Elevation of the sepals above the floral plane, degrees (negative = reflexed). |
-| `hypanthium_cm` | number | cm | 0.0 – 10.0 | 0.3 | Floral cup / inferior ovary below the perianth (cactus pericarpel) |
-| `hypanthium_scales` | integer |  | 0 – 60 | 0 | Bract scales on it (cactus pericarpel) |
-| `stamen_count` | integer |  | 0 – 600 | 10 | Androecium |
-| `stamen_length_ratio` | number |  | 0.0 – 4.0 | 0.35 | Stamen length relative to the petal length. |
-| `stamen_spread_deg` | number | deg | 0.0 – 90.0 | 25.0 | Outward tilt of the stamens from the floral axis, degrees. |
-| `anther_size_mm` | number | mm | 0.1 – 40.0 | 1.5 | Anther length, mm. |
-| `staminal_column` | number |  | 0.0 – 1.0 | 0.0 | Monadelphous column (Hibiscus): fraction of stamen length fused |
-| `stamen_declination` | number |  | 0.0 – 1.0 | 0.0 | Stamens curve toward the dorsal side (zygomorphic flowers) |
-| `carpels` | integer |  | 1 – 20 | 5 | Stigma lobes |
-| `style_length_ratio` | number |  | 0.0 – 4.0 | 0.3 | Style length relative to the petal length (0 = no visible pistil). |
-| `stigma_size_mm` | number | mm | 0.1 – 10.0 | 1.2 | Size of each stigma lobe, mm. |
+| `tube_length_cm` | number | cm | 0.0 – 30.0 | 0.0 | Corolla tube (sympetaly) Applies when: not capitulum. |
+| `tube_radius_cm` | number | cm | 0.01 – 5.0 | 0.2 | At the base Applies when: not capitulum and tube_length_cm > 0. |
+| `tube_flare` | number |  | 0.3 – 5.0 | 2.0 | Exponent of the tube profile (1 conical, >1 trumpet) Applies when: not capitulum and tube_length_cm > 0. |
+| `limb_fusion` | number |  | 0.0 – 1.0 | 0.0 | Fused limb: lobes widen to fill their sector (1 = entire rim, Ipomoea) Applies when: not capitulum and tube_length_cm > 0. |
+| `sepal_length_ratio` | number |  | 0.0 – 2.0 | 0.5 | Relative to petal length (0 = no visible calyx) Applies when: not capitulum. |
+| `sepal_aspect` | number |  | 0.5 – 10.0 | 2.0 | Sepal length / width. Applies when: not capitulum and sepal_length_ratio > 0. |
+| `sepal_opening_deg` | number | deg | -80.0 – 90.0 | 20.0 | Elevation of the sepals above the floral plane, degrees (negative = reflexed). Applies when: not capitulum and sepal_length_ratio > 0. |
+| `hypanthium_cm` | number | cm | 0.0 – 10.0 | 0.3 | Floral cup / inferior ovary below the perianth (cactus pericarpel) Applies when: not capitulum. |
+| `hypanthium_scales` | integer |  | 0 – 60 | 0 | Bract scales on it (cactus pericarpel) Applies when: not capitulum and hypanthium_cm > 0. |
+| `stamen_count` | integer |  | 0 – 600 | 10 | Androecium Applies when: not capitulum. |
+| `stamen_length_ratio` | number |  | 0.0 – 4.0 | 0.35 | Stamen length relative to the petal length. Applies when: not capitulum and stamen_count > 0. |
+| `stamen_spread_deg` | number | deg | 0.0 – 90.0 | 25.0 | Outward tilt of the stamens from the floral axis, degrees. Applies when: not capitulum and stamen_count > 0. |
+| `anther_size_mm` | number | mm | 0.1 – 40.0 | 1.5 | Anther length, mm. Applies when: not capitulum and stamen_count > 0. |
+| `staminal_column` | number |  | 0.0 – 1.0 | 0.0 | Monadelphous column (Hibiscus): fraction of stamen length fused Applies when: not capitulum and stamen_count > 0. |
+| `stamen_declination` | number |  | 0.0 – 1.0 | 0.0 | Stamens curve toward the dorsal side (zygomorphic flowers) Applies when: not capitulum and stamen_count > 0. |
+| `carpels` | integer |  | 1 – 20 | 5 | Stigma lobes Applies when: not capitulum and style_length_ratio > 0. |
+| `style_length_ratio` | number |  | 0.0 – 4.0 | 0.3 | Style length relative to the petal length (0 = no visible pistil). Applies when: not capitulum. |
+| `stigma_size_mm` | number | mm | 0.1 – 10.0 | 1.2 | Size of each stigma lobe, mm. Applies when: not capitulum and style_length_ratio > 0. |
 | `receptacle_radius_cm` | number | cm | 0.0 – 5.0 | 0.2 | Radius of the receptacle (floral base), cm. |
-| `receptacle_height_cm` | number | cm | 0.0 – 10.0 | 0.1 | > radius: conical receptacle (Magnolia gynoecium) |
+| `receptacle_height_cm` | number | cm | 0.0 – 10.0 | 0.1 | > radius: conical receptacle (Magnolia gynoecium) Applies when: not capitulum. |
 | `capitulum` | boolean |  |  | false | Capitulum (Asteraceae head) |
-| `disc_florets` | integer |  | 0 – 3000 | 0 | Number of disc florets in a capitulum (sunflower ~1000). |
-| `disc_radius_cm` | number | cm | 0.1 – 25.0 | 1.0 | Radius of the capitulum disc, cm. |
-| `disc_dome` | number |  | 0.0 – 1.0 | 0.15 | Doming of the disc, 0 flat .. 1 hemispherical. |
-| `ray_count` | integer |  | 0 – 400 | 0 | Ray florets; spread over the whole head when ray_fill > 0 (double) |
-| `ray_fill` | number |  | 0.0 – 1.0 | 0.0 | 0 one rim row .. 1 rays fill the head (Dahlia, Tagetes) |
-| `involucre_bracts` | integer |  | 0 – 80 | 0 | Number of involucral bracts (phyllaries) under a capitulum. |
+| `disc_florets` | integer |  | 0 – 3000 | 0 | Number of disc florets in a capitulum (sunflower ~1000). Applies when: capitulum. |
+| `disc_radius_cm` | number | cm | 0.1 – 25.0 | 1.0 | Radius of the capitulum disc, cm. Applies when: capitulum. |
+| `disc_dome` | number |  | 0.0 – 1.0 | 0.15 | Doming of the disc, 0 flat .. 1 hemispherical. Applies when: capitulum. |
+| `ray_count` | integer |  | 0 – 400 | 0 | Ray florets; spread over the whole head when ray_fill > 0 (double) Applies when: capitulum. |
+| `ray_fill` | number |  | 0.0 – 1.0 | 0.0 | 0 one rim row .. 1 rays fill the head (Dahlia, Tagetes) Applies when: capitulum. |
+| `involucre_bracts` | integer |  | 0 – 80 | 0 | Number of involucral bracts (phyllaries) under a capitulum. Applies when: capitulum. |
 | `petal_color` | colour (sRGB 0..1) |  |  | [0.95, 0.85, 0.9] | Colour (sRGB) |
 | `tip_color` | colour (sRGB 0..1) |  |  | [0.95, 0.85, 0.9] | Petal colour at the tip (gradient from petal_color), sRGB 0..1. |
 | `tip_start` | number |  | 0.0 – 1.0 | 0.6 | Where the tip colour starts along the petal |
 | `eye_color` | colour (sRGB 0..1) |  |  | [0.95, 0.85, 0.3] | Colour of the contrasting zone at the petal base (eye) and of nectar guides, sRGB 0..1. |
 | `eye_size` | number |  | 0.0 – 1.0 | 0.0 | Contrasting base zone (0..1 of the perianth length) |
 | `guide_lines` | integer |  | 0 – 12 | 0 | Nectar guides per petal |
-| `guide_contrast` | number |  | 0.0 – 1.0 | 0.0 | Strength of the nectar guides, 0 none .. 1 strong. |
+| `guide_contrast` | number |  | 0.0 – 1.0 | 0.0 | Strength of the nectar guides, 0 none .. 1 strong. Applies when: guide_lines > 0. |
 | `spots` | number |  | 0.0 – 1.0 | 0.0 | Dark spots on the inner perianth (Lilium, Aesculus) |
-| `spot_color` | colour (sRGB 0..1) |  |  | [0.35, 0.08, 0.05] | Colour of petal spots (Lilium), sRGB 0..1. |
-| `outer_color` | colour (sRGB 0..1) |  |  | [0.45, 0.55, 0.3] | Outer tepals / sepaloid gradient |
+| `spot_color` | colour (sRGB 0..1) |  |  | [0.35, 0.08, 0.05] | Colour of petal spots (Lilium), sRGB 0..1. Applies when: spots > 0. |
+| `outer_color` | colour (sRGB 0..1) |  |  | [0.45, 0.55, 0.3] | Outer tepals / sepaloid gradient Applies when: outer_tint > 0. |
 | `outer_tint` | number |  | 0.0 – 1.0 | 0.0 | Strength of the outer_color tint on outer tepals (sepaloid gradient), 0..1. |
 | `sepal_color` | colour (sRGB 0..1) |  |  | [0.3, 0.45, 0.18] | Colour of sepals, bracts and the floral cup, sRGB 0..1. |
 | `stamen_color` | colour (sRGB 0..1) |  |  | [0.95, 0.92, 0.75] | Filament colour, sRGB 0..1. |
 | `anther_color` | colour (sRGB 0..1) |  |  | [0.95, 0.75, 0.15] | Anther (pollen) colour, sRGB 0..1. |
 | `pistil_color` | colour (sRGB 0..1) |  |  | [0.8, 0.85, 0.55] | Style, stigma and receptacle colour, sRGB 0..1. |
-| `disc_color` | colour (sRGB 0..1) |  |  | [0.3, 0.17, 0.07] | Colour of mature disc florets (capitulum rim), sRGB 0..1. |
-| `disc_center_color` | colour (sRGB 0..1) |  |  | [0.3, 0.35, 0.1] | Colour of the young central disc florets, sRGB 0..1. |
+| `disc_color` | colour (sRGB 0..1) |  |  | [0.3, 0.17, 0.07] | Colour of mature disc florets (capitulum rim), sRGB 0..1. Applies when: capitulum. |
+| `disc_center_color` | colour (sRGB 0..1) |  |  | [0.3, 0.35, 0.1] | Colour of the young central disc florets, sRGB 0..1. Applies when: capitulum. |
 | `sheen` | number |  | 0.0 – 1.0 | 0.3 | Velvety epidermis (conical cells) |
 | `translucency` | number |  | 0.0 – 1.0 | 0.3 | Light transmission of the petals, 0 opaque .. 1 thin and translucent. |
 
@@ -468,18 +468,18 @@ InflorescenceProfile(kind: core.inflorescence.InflorescenceType = <Inflorescence
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
 | `kind` | enum: `Solitary`, `Raceme`, `Spike`, `Catkin`, `Umbel`, `Corymb`, `Panicle` |  |  | Solitary | Inflorescence type: Solitary, Raceme, Spike, Catkin, Umbel, Corymb, Panicle (Weberling 1989). |
-| `flower_count` | integer |  | 1 – 600 | 1 | Number of flowers (per panicle branch counts are derived). |
+| `flower_count` | integer |  | 1 – 600 | 1 | Number of flowers (per panicle branch counts are derived). Applies when: kind != 'Solitary'. |
 | `peduncle_cm` | number | cm | 0.0 – 800.0 | 5.0 | Stalk below the first flower (scape) |
-| `rachis_cm` | number | cm | 0.0 – 800.0 | 0.0 | Flower-bearing axis |
-| `pedicel_cm` | number | cm | 0.0 – 30.0 | 1.0 | Length of the individual flower stalks, cm (0 for spikes and catkins). |
-| `pedicel_angle_deg` | number | deg | 0.0 – 120.0 | 45.0 | From the rachis |
-| `divergence_deg` | number | deg | 30.0 – 180.0 | 137.5 | Angle between successive flowers around the rachis, degrees (137.5 spiral). |
-| `branches` | integer |  | 0 – 60 | 0 | Panicle laterals |
-| `branch_start` | number |  | 0.0 – 0.95 | 0.0 | Fraction of the rachis below the first lateral |
-| `branch_length_ratio` | number |  | 0.02 – 1.0 | 0.4 | Length of panicle branches relative to the rachis. |
-| `branch_angle_deg` | number | deg | 5.0 – 110.0 | 45.0 | Angle of panicle branches from the rachis, degrees. |
-| `branch_umbels` | boolean |  |  | false | Laterals end in umbellate clusters (Agave) |
-| `maturation` | number |  | 0.0 – 1.0 | 0.6 | Acropetal opening gradient (0 all open .. 1 apical buds) |
+| `rachis_cm` | number | cm | 0.0 – 800.0 | 0.0 | Flower-bearing axis Applies when: kind not in ('Solitary', 'Umbel'). |
+| `pedicel_cm` | number | cm | 0.0 – 30.0 | 1.0 | Length of the individual flower stalks, cm (0 for spikes and catkins). Applies when: kind not in ('Solitary', 'Spike', 'Catkin'). |
+| `pedicel_angle_deg` | number | deg | 0.0 – 120.0 | 45.0 | From the rachis Applies when: kind != 'Solitary'. |
+| `divergence_deg` | number | deg | 30.0 – 180.0 | 137.5 | Angle between successive flowers around the rachis, degrees (137.5 spiral). Applies when: kind not in ('Solitary', 'Umbel'). |
+| `branches` | integer |  | 0 – 60 | 0 | Panicle laterals Applies when: kind == 'Panicle'. |
+| `branch_start` | number |  | 0.0 – 0.95 | 0.0 | Fraction of the rachis below the first lateral Applies when: kind == 'Panicle'. |
+| `branch_length_ratio` | number |  | 0.02 – 1.0 | 0.4 | Length of panicle branches relative to the rachis. Applies when: kind == 'Panicle'. |
+| `branch_angle_deg` | number | deg | 5.0 – 110.0 | 45.0 | Angle of panicle branches from the rachis, degrees. Applies when: kind == 'Panicle'. |
+| `branch_umbels` | boolean |  |  | false | Laterals end in umbellate clusters (Agave) Applies when: kind == 'Panicle'. |
+| `maturation` | number |  | 0.0 – 1.0 | 0.6 | Acropetal opening gradient (0 all open .. 1 apical buds) Applies when: kind != 'Solitary'. |
 | `nodding` | number |  | 0.0 – 1.0 | 0.0 | Flowers turn downward (0 facing out/up .. 1 pendent) |
 | `droop` | number |  | 0.0 – 1.0 | 0.0 | Whole axis arches / hangs (catkins, Robinia, Echeveria) |
 | `stem_radius_mm` | number | mm | 0.1 – 120.0 | 1.5 | Radius of the peduncle at its base, mm. |

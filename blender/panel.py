@@ -28,6 +28,8 @@ try:
     from .runtime import set_updating
     from .forest import forest_properties, draw_forest_panel
     from .preset_io import enum_items, item_number, draw_presets
+    from ..core.relevance import applies, condition
+    from .runtime import PROP_MAP
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -45,6 +47,67 @@ except (ImportError, ValueError):
     from blender.runtime import set_updating
     from blender.forest import forest_properties, draw_forest_panel
     from blender.preset_io import enum_items, item_number, draw_presets
+    from core.relevance import applies, condition
+    from blender.runtime import PROP_MAP
+
+
+# -----------------------------------------------------------------------------
+# Context-dependent fields: inactive ones are greyed out with a short note (core.relevance)
+# -----------------------------------------------------------------------------
+_PROP_PATH = {prop: path for prop, path in PROP_MAP}
+
+
+def _section_values(props, prefix: str, names) -> dict:
+    return {n: getattr(props, prefix + n) for n in names if hasattr(props, prefix + n)}
+
+
+def _tree_values(props, section: str) -> dict:
+    out = {}
+    for prop, path in PROP_MAP:
+        sec, _, field = path.partition(".")
+        if sec == section and hasattr(props, prop):
+            out[field] = getattr(props, prop)
+    return out
+
+
+def draw_fields(col, props, form: str, section: str, items, values: dict, notes=None):
+    """items: (property name, field name) pairs. Inactive fields stay visible but greyed, with a note
+    (pass a shared `notes` list to collect the notes and draw them once at the end of a group)."""
+    own = notes is None
+    notes = [] if own else notes
+    for prop, field in items:
+        row = col.row(align=True)
+        ok = applies(form, section, field, values)
+        row.active = ok
+        row.prop(props, prop)
+        if not ok:
+            note = condition(form, section, field)[1]
+            if note not in notes:
+                notes.append(note)
+    if own:
+        _draw_notes(col, notes)
+
+
+def _draw_notes(col, notes):
+    for note in notes[:3]:
+        r = col.row()
+        r.active = False
+        r.label(text=note, icon='INFO')
+
+
+def draw_tree_fields(col, props, names):
+    """Tree properties (PROP_MAP names), greyed out when their trait does not apply."""
+    by_section: dict = {}
+    notes: list = []
+    for name in names:
+        path = _PROP_PATH.get(name)
+        if path is None:
+            col.prop(props, name)
+            continue
+        sec, _, field = path.partition(".")
+        draw_fields(col, props, "Tree", sec, [(name, field)], by_section.setdefault(sec, _tree_values(props, sec)),
+                    notes)
+    _draw_notes(col, notes)
 
 
 def on_param_update(self, context):
@@ -504,26 +567,14 @@ class PPG_PT_Crown(_PPGSub, Panel):
         col = self.layout.column(align=True)
         col.prop(p, "arch_model")
         col.prop(p, "crown_shape")
-        col.prop(p, "crown_widest", slider=True)
-        col.prop(p, "crown_fullness")
+        draw_tree_fields(col, p, ("crown_widest", "crown_fullness"))
         col.separator()
-        col.prop(p, "apical_dominance", slider=True)
-        col.prop(p, "leader_count")
-        col.prop(p, "branch_levels")
-        col.prop(p, "branch_angle_deg")
-        col.prop(p, "twig_angle_deg")
-        col.prop(p, "branch_frequency")
-        col.prop(p, "branch_length_decay")
-        col.prop(p, "internode_length")
+        draw_tree_fields(col, p, ("apical_dominance", "leader_count", "branch_levels", "branch_angle_deg",
+                                  "twig_angle_deg", "branch_frequency", "branch_length_decay", "internode_length"))
         col.separator()
-        col.prop(p, "branch_gravity")
-        col.prop(p, "phototropism")
-        col.prop(p, "plagiotropy")
+        draw_tree_fields(col, p, ("branch_gravity", "phototropism", "plagiotropy"))
         col.separator()
-        col.prop(p, "phyllotaxis_type")
-        if p.phyllotaxis_type == "Spiral":
-            col.prop(p, "phyllotaxis_angle_deg")
-        col.prop(p, "whorl_size")
+        draw_tree_fields(col, p, ("phyllotaxis_type", "phyllotaxis_angle_deg", "whorl_size"))
         col.prop(p, "seed")
 
 
@@ -624,10 +675,9 @@ class PPG_PT_Roots(_PPGSub, Panel):
         col.prop(p, "root_system")
         col.prop(p, "root_display_depth")
         col.separator()
-        for name in ("root_laterals", "root_spread", "root_max_depth", "root_beta", "root_taproot_share",
-                     "root_zrt", "root_sinker_spacing", "root_exposure", "root_plank", "root_buttress_height",
-                     "root_knees"):
-            col.prop(p, name)
+        draw_tree_fields(col, p, ("root_laterals", "root_spread", "root_max_depth", "root_beta",
+                                  "root_taproot_share", "root_zrt", "root_sinker_spacing", "root_exposure",
+                                  "root_plank", "root_buttress_height", "root_knees"))
 
 
 class PPG_PT_Bark(_PPGSub, Panel):
@@ -638,9 +688,10 @@ class PPG_PT_Bark(_PPGSub, Panel):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        for name in ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief", "bark_color_young",
-                     "bark_onset_cm", "bark_weathering", "bark_blockiness", "bark_segments", "bark_plate_tilt",
-                     "bark_warp", "bark_moss", "bark_lichen", "bark_displacement"):
+        draw_tree_fields(col, p, ("bark_pattern", "bark_color", "bark_color2", "bark_scale", "bark_relief",
+                                  "bark_color_young", "bark_onset_cm", "bark_weathering", "bark_blockiness",
+                                  "bark_segments", "bark_plate_tilt", "bark_warp", "bark_moss", "bark_lichen"))
+        for name in ("bark_displacement",):
             col.prop(p, name)
 
 
@@ -680,15 +731,29 @@ class PPG_PT_Topology(_PPGSub, Panel):
             col.prop(p, name)
 
 
+def _succulent_values(p, form):
+    from dataclasses import fields as _fields
+    from ..core.succulent_db import PROFILE_CLASSES
+    return _section_values(p, PREFIX[form], [f.name for f in _fields(PROFILE_CLASSES[form])])
+
+
 def _succulent_panel(form, index, title, names):
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        for n in names:
-            col.prop(p, PREFIX[form] + n)
+        draw_fields(col, p, form.value, "profile", [(PREFIX[form] + n, n) for n in names], _succulent_values(p, form))
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        if p is None or p.growth_form != form.value:
+            return False
+        values = _succulent_values(p, form)       # Hide sections where nothing applies (e.g. Cladodes)
+        return any(applies(form.value, "profile", n, values) for n in names)
     return type(f"PPG_PT_{form.value}_{index}", (_PPGSub, Panel), {
         "bl_label": title, "bl_idname": f"PPG_PT_{form.value.lower()}_{index}",
-        "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw})
+        "bl_options": {'DEFAULT_CLOSED'} if index else set(), "forms": (form.value,), "draw": draw,
+        "poll": poll})
 
 
 class PPG_PT_Presets(_PPGSub, Panel):
@@ -739,17 +804,29 @@ class PPG_PT_Flowers(_PPGSub, Panel):
         col.prop(p, "flower_detail")
 
 
+def _flower_values(p, prefix):
+    from dataclasses import fields as _fields
+    from ..core.flower import FlowerProfile
+    from ..core.inflorescence import InflorescenceProfile
+    cls = FlowerProfile if prefix == "flw_" else InflorescenceProfile
+    return _section_values(p, prefix, [f.name for f in _fields(cls)])
+
+
 def _flower_panel(index, title, prefix, names):
+    section = "flower" if prefix == "flw_" else "infl"
+
     def draw(self, context):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
-        for n in names:
-            col.prop(p, prefix + n)
+        draw_fields(col, p, "Flower", section, [(prefix + n, n) for n in names], _flower_values(p, prefix))
 
     @classmethod
     def poll(cls, context):
         p = getattr(context.scene, "ppg_properties", None)
-        return p is not None and (p.growth_form == 'Flower' or p.show_flowers)
+        if p is None or not (p.growth_form == 'Flower' or p.show_flowers):
+            return False
+        values = _flower_values(p, prefix)        # Hide sections where nothing applies (e.g. Capitulum)
+        return any(applies("Flower", section, n, values) for n in names)
     return type(f"PPG_PT_Flower_{index}", (_PPGSub, Panel), {
         "bl_label": title, "bl_idname": f"PPG_PT_flower_{index}", "bl_parent_id": "PPG_PT_flowers",
         "bl_options": {'DEFAULT_CLOSED'}, "draw": draw, "poll": poll})

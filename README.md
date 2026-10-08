@@ -142,6 +142,11 @@ people's presets. The format, the [JSON Schema](schemas/ppg-preset.schema.json),
 new species from botanical data (for people and AI agents) are in [docs/PRESETS.md](docs/PRESETS.md).
 Presets can be validated without Blender: `python -m core.presets validate my_plant.json`.
 
+Controls that have no effect in the current context are greyed out with a short note (for example rib
+depth for cladodes, the corolla tube for a capitulum, branching for palms), and sections with nothing
+applicable are hidden. The rules live in `core/relevance.py`; a perturbation test changes every field
+they mark inactive and checks that the generated geometry stays identical.
+
 ## Species catalogue (37)
 
 | Group | Species |

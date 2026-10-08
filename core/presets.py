@@ -404,7 +404,9 @@ def _json_type(v) -> dict:
     return {}
 
 
-def _class_schema(cls, instance, prefix: str, ranges: dict, defs: dict) -> dict:
+def _class_schema(cls, instance, prefix: str, ranges: dict, defs: dict, form: str = "",
+                  section: str = "") -> dict:
+    from .relevance import condition
     props = {}
     for f in dataclasses.fields(cls):
         v = getattr(instance, f.name)
@@ -413,7 +415,7 @@ def _class_schema(cls, instance, prefix: str, ranges: dict, defs: dict) -> dict:
             sub = type(v).__name__
             if sub not in defs:
                 defs[sub] = None
-                defs[sub] = _class_schema(type(v), v, f"{path}.", ranges, defs)
+                defs[sub] = _class_schema(type(v), v, f"{path}.", ranges, defs, form, f.name)
             props[f.name] = {"$ref": f"#/$defs/{sub}"}
             continue
         if isinstance(v, Enum):
@@ -431,6 +433,10 @@ def _class_schema(cls, instance, prefix: str, ranges: dict, defs: dict) -> dict:
         dv = to_plain(v)
         if dv is not None:
             p["default"] = dv
+        rule = condition(form, section, f.name)
+        if rule is not None:
+            p["x-applies-when"] = rule[0]
+            p["description"] = (p.get("description", "") + f" Applies when: {rule[0]}.").strip()
         props[f.name] = p
     return {"type": "object", "additionalProperties": False, "properties": props,
             "description": (inspect.getdoc(cls) or "").split("\n\n")[0]}
@@ -443,7 +449,7 @@ def json_schema() -> dict:
         t = _template(form)
         name = {"Tree": "TreePreset", "Cactus": "CactusPreset", "Rosette": "RosettePreset",
                 "Flower": "FlowerPreset"}[form]
-        sch = _class_schema(type(t), t, "", _ranges(form), defs)
+        sch = _class_schema(type(t), t, "", _ranges(form), defs, form, "")
         sch["description"] = f"Trait values of a {form} preset (all optional when 'base' is given)."
         defs[name] = sch
         forms[form] = name

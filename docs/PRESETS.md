@@ -116,10 +116,14 @@ python -m core.presets export-builtin presets/builtin            # every built-i
    | Rosette diameter, leaf length and number, teeth, terminal spine | `profile.*` of a Rosette |
    | Floral formula, petal number and size, colour, inflorescence type | `flower.*`, `infl.*` |
 
-4. **Keep values inside the documented ranges** and consistent with each other. For example,
+4. **Skip what does not apply.** Many fields only matter in a context: rib depth means nothing for
+   cladodes (Opuntia), the corolla tube nothing for a capitulum, arm parameters nothing without arms.
+   Each such field has an `x-applies-when` condition in the schema ("Applies when: ..." in the field
+   reference); values given outside their context are harmless but have no effect.
+5. **Keep values inside the documented ranges** and consistent with each other. For example,
    `elevation_inner_deg` should be greater than `elevation_outer_deg`, and `arm_height_min` lower than
    `arm_height_max`.
-5. **Validate** with `python -m core.presets validate`, then import the file in Blender, generate the plant
+6. **Validate** with `python -m core.presets validate`, then import the file in Blender, generate the plant
    and compare it with photographs. Iterate on the few traits that matter visually.
 
 ### Minimal examples

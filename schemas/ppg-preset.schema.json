@@ -278,52 +278,59 @@
             "Distichous",
             "Whorled"
           ],
-          "description": "Arrangement of leaves and branches along a shoot: Spiral (alternate), Decussate (opposite pairs, maples, ash), Distichous (two ranks), Whorled.",
-          "default": "Spiral"
+          "description": "Arrangement of leaves and branches along a shoot: Spiral (alternate), Decussate (opposite pairs, maples, ash), Distichous (two ranks), Whorled. Applies when: model != 'Corner'.",
+          "default": "Spiral",
+          "x-applies-when": "model != 'Corner'"
         },
         "max_order": {
           "type": "integer",
-          "description": "0 = trunk only, 1 = scaffolds, 2 = branches, 3 = twigs, 4 = shoots",
+          "description": "0 = trunk only, 1 = scaffolds, 2 = branches, 3 = twigs, 4 = shoots Applies when: model != 'Corner'.",
           "minimum": 0,
           "maximum": 4,
-          "default": 3
+          "default": 3,
+          "x-applies-when": "model != 'Corner'"
         },
         "branch_angle_mean_deg": {
           "type": "number",
-          "description": "Scaffold insertion angle from the parent axis",
+          "description": "Scaffold insertion angle from the parent axis Applies when: model != 'Corner'.",
           "x-unit": "deg",
           "minimum": 10.0,
           "maximum": 95.0,
-          "default": 48.0
+          "default": 48.0,
+          "x-applies-when": "model != 'Corner'"
         },
         "branch_angle_std_deg": {
           "type": "number",
-          "description": "Standard deviation of the scaffold branch angle, degrees (natural irregularity, 4-10).",
+          "description": "Standard deviation of the scaffold branch angle, degrees (natural irregularity, 4-10). Applies when: model != 'Corner'.",
           "x-unit": "deg",
-          "default": 6.5
+          "default": 6.5,
+          "x-applies-when": "model != 'Corner'"
         },
         "twig_angle_mean_deg": {
           "type": "number",
-          "description": "Higher-order insertion angle",
+          "description": "Higher-order insertion angle Applies when: model != 'Corner'.",
           "x-unit": "deg",
           "minimum": 10.0,
           "maximum": 95.0,
-          "default": 52.0
+          "default": 52.0,
+          "x-applies-when": "model != 'Corner'"
         },
         "divergence_angle_deg": {
           "type": "number",
-          "description": "Angle between successive lateral organs around the axis, degrees: 137.5 spiral (golden angle), 180 distichous, 90 decussate.",
+          "description": "Angle between successive lateral organs around the axis, degrees: 137.5 spiral (golden angle), 180 distichous, 90 decussate. Applies when: model != 'Corner' and phyllotaxis == 'Spiral'.",
           "x-unit": "deg",
           "minimum": 60.0,
           "maximum": 180.0,
-          "default": 137.508
+          "default": 137.508,
+          "x-applies-when": "model != 'Corner' and phyllotaxis == 'Spiral'"
         },
         "whorl_size": {
           "type": "integer",
-          "description": "Laterals per node",
+          "description": "Laterals per node Applies when: model != 'Corner'.",
           "minimum": 1,
           "maximum": 7,
-          "default": 1
+          "default": 1,
+          "x-applies-when": "model != 'Corner'"
         },
         "apical_dominance": {
           "type": "number",
@@ -339,46 +346,52 @@
         },
         "gravitropism": {
           "type": "number",
-          "description": "< 0 bends up, > 0 weeping",
+          "description": "< 0 bends up, > 0 weeping Applies when: model != 'Corner'.",
           "minimum": -0.6,
           "maximum": 0.8,
-          "default": -0.22
+          "default": -0.22,
+          "x-applies-when": "model != 'Corner'"
         },
         "phototropism": {
           "type": "number",
-          "description": "Outward (light-seeking) bias of laterals",
+          "description": "Outward (light-seeking) bias of laterals Applies when: model != 'Corner'.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.35
+          "default": 0.35,
+          "x-applies-when": "model != 'Corner'"
         },
         "plagiotropy": {
           "type": "number",
-          "description": "0 = laterals spiral in 3D, 1 = flattened horizontal sprays",
+          "description": "0 = laterals spiral in 3D, 1 = flattened horizontal sprays Applies when: model != 'Corner'.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.2
+          "default": 0.2,
+          "x-applies-when": "model != 'Corner'"
         },
         "internode_length_base_m": {
           "type": "number",
-          "description": "Length of a growth unit on the main axes, metres (0.2-0.8 for trees).",
+          "description": "Length of a growth unit on the main axes, metres (0.2-0.8 for trees). Applies when: model != 'Corner'.",
           "x-unit": "m",
           "minimum": 0.1,
           "maximum": 1.2,
-          "default": 0.45
+          "default": 0.45,
+          "x-applies-when": "model != 'Corner'"
         },
         "internode_decay_per_order": {
           "type": "number",
-          "description": "Child / parent length ratio",
+          "description": "Child / parent length ratio Applies when: model != 'Corner'.",
           "minimum": 0.3,
           "maximum": 0.95,
-          "default": 0.68
+          "default": 0.68,
+          "x-applies-when": "model != 'Corner'"
         },
         "branch_frequency_per_meter": {
           "type": "number",
-          "description": "Scaffold nodes per meter of crown axis",
+          "description": "Scaffold nodes per meter of crown axis Applies when: model != 'Corner'.",
           "minimum": 0.5,
           "maximum": 8.0,
-          "default": 3.0
+          "default": 3.0,
+          "x-applies-when": "model != 'Corner'"
         },
         "crookedness": {
           "type": "number",
@@ -389,17 +402,19 @@
         },
         "crown_widest_position": {
           "type": "number",
-          "description": "Relative height (0 bottom .. 1 top of the crown) where the crown is widest: ~0.2 conical, 0.4-0.5 rounded, 0.7 vase.",
+          "description": "Relative height (0 bottom .. 1 top of the crown) where the crown is widest: ~0.2 conical, 0.4-0.5 rounded, 0.7 vase. Applies when: model != 'Corner'.",
           "minimum": 0.02,
           "maximum": 0.95,
-          "default": 0.4
+          "default": 0.4,
+          "x-applies-when": "model != 'Corner'"
         },
         "crown_fullness": {
           "type": "number",
-          "description": "Shape of the beta crown envelope: < 1 columnar / flat sides, 1.5 rounded, > 2 peaked.",
+          "description": "Shape of the beta crown envelope: < 1 columnar / flat sides, 1.5 rounded, > 2 peaked. Applies when: model != 'Corner'.",
           "minimum": 0.3,
           "maximum": 3.0,
-          "default": 1.6
+          "default": 1.6,
+          "x-applies-when": "model != 'Corner'"
         },
         "leaf_area_index": {
           "type": "number",
@@ -548,25 +563,28 @@
         },
         "lobe_count": {
           "type": "integer",
-          "description": "Palmate: total lobes. Pinnate: lobes per side",
+          "description": "Palmate: total lobes. Pinnate: lobes per side Applies when: lobe_type != 'None'.",
           "minimum": 1,
           "maximum": 11,
-          "default": 5
+          "default": 5,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "lobe_depth": {
           "type": "number",
-          "description": "Sinus depth: 0 = unlobed, 1 = to the midvein",
+          "description": "Sinus depth: 0 = unlobed, 1 = to the midvein Applies when: lobe_type != 'None'.",
           "minimum": 0.0,
           "maximum": 0.95,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "lobe_angle_deg": {
           "type": "number",
-          "description": "Pinnate lobe divergence from the midvein",
+          "description": "Pinnate lobe divergence from the midvein Applies when: lobe_type != 'None'.",
           "x-unit": "deg",
           "minimum": 15.0,
           "maximum": 85.0,
-          "default": 50.0
+          "default": 50.0,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "lobe_spread_deg": {
           "type": "number",
@@ -578,46 +596,52 @@
         },
         "lobe_width": {
           "type": "number",
-          "description": "Lobe breadth relative to its angular sector",
+          "description": "Lobe breadth relative to its angular sector Applies when: lobe_type != 'None'.",
           "minimum": 0.2,
           "maximum": 1.2,
-          "default": 0.55
+          "default": 0.55,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "lobe_roundness": {
           "type": "number",
-          "description": "Sinus rounding (0 = V sinus, 1 = U sinus)",
+          "description": "Sinus rounding (0 = V sinus, 1 = U sinus) Applies when: lobe_type != 'None'.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "lobe_apex_angle_deg": {
           "type": "number",
-          "description": "Apex angle of each lobe",
+          "description": "Apex angle of each lobe Applies when: lobe_type != 'None'.",
           "x-unit": "deg",
           "minimum": 10.0,
           "maximum": 179.0,
-          "default": 80.0
+          "default": 80.0,
+          "x-applies-when": "lobe_type != 'None'"
         },
         "teeth_count": {
           "type": "integer",
-          "description": "Teeth per side along one lamina",
+          "description": "Teeth per side along one lamina Applies when: margin_type != 'Entire'.",
           "minimum": 0,
           "maximum": 80,
-          "default": 24
+          "default": 24,
+          "x-applies-when": "margin_type != 'Entire'"
         },
         "tooth_height_ratio": {
           "type": "number",
-          "description": "Tooth depth relative to lamina width",
+          "description": "Tooth depth relative to lamina width Applies when: margin_type != 'Entire'.",
           "minimum": 0.0,
           "maximum": 0.2,
-          "default": 0.035
+          "default": 0.035,
+          "x-applies-when": "margin_type != 'Entire'"
         },
         "tooth_skew": {
           "type": "number",
-          "description": "0.5 symmetric (dentate) .. 0.9 strongly forward",
+          "description": "0.5 symmetric (dentate) .. 0.9 strongly forward Applies when: margin_type != 'Entire'.",
           "minimum": 0.3,
           "maximum": 0.92,
-          "default": 0.75
+          "default": 0.75,
+          "x-applies-when": "margin_type != 'Entire'"
         },
         "compound_type": {
           "type": "string",
@@ -633,37 +657,42 @@
         },
         "leaflet_count": {
           "type": "integer",
-          "description": "Pinnate: pairs. Palmate/fascicle: total. Spray: per side",
+          "description": "Pinnate: pairs. Palmate/fascicle: total. Spray: per side Applies when: compound_type != 'Simple'.",
           "minimum": 1,
           "maximum": 150,
-          "default": 7
+          "default": 7,
+          "x-applies-when": "compound_type != 'Simple'"
         },
         "leaflet_angle_deg": {
           "type": "number",
-          "description": "Leaflet / needle angle from rachis",
+          "description": "Leaflet / needle angle from rachis Applies when: compound_type in ('Pinnate', 'Spray').",
           "x-unit": "deg",
           "minimum": 5.0,
           "maximum": 90.0,
-          "default": 60.0
+          "default": 60.0,
+          "x-applies-when": "compound_type in ('Pinnate', 'Spray')"
         },
         "rachis_length_ratio": {
           "type": "number",
-          "description": "Rachis length / leaflet length",
+          "description": "Rachis length / leaflet length Applies when: compound_type in ('Pinnate', 'Spray').",
           "minimum": 0.2,
           "maximum": 30.0,
-          "default": 2.5
+          "default": 2.5,
+          "x-applies-when": "compound_type in ('Pinnate', 'Spray')"
         },
         "terminal_leaflet": {
           "type": "boolean",
-          "description": "Odd-pinnate",
-          "default": true
+          "description": "Odd-pinnate Applies when: compound_type == 'Pinnate'.",
+          "default": true,
+          "x-applies-when": "compound_type == 'Pinnate'"
         },
         "leaflet_size_gradient": {
           "type": "number",
-          "description": "Basal leaflets smaller by this fraction",
+          "description": "Basal leaflets smaller by this fraction Applies when: compound_type != 'Simple'.",
           "minimum": 0.0,
           "maximum": 0.8,
-          "default": 0.3
+          "default": 0.3,
+          "x-applies-when": "compound_type != 'Simple'"
         },
         "petiole_length_ratio": {
           "type": "number",
@@ -1058,24 +1087,27 @@
         },
         "blockiness": {
           "type": "number",
-          "description": "0 irregular, rounded cells .. 1 rectangular blocks (Minkowski exponent)",
+          "description": "0 irregular, rounded cells .. 1 rectangular blocks (Minkowski exponent) Applies when: pattern in ('Fissured', 'Plated', 'Annulated').",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.4
+          "default": 0.4,
+          "x-applies-when": "pattern in ('Fissured', 'Plated', 'Annulated')"
         },
         "segments": {
           "type": "number",
-          "description": "Transverse splits cutting ridges into segments (blocky oak, Ulmus)",
+          "description": "Transverse splits cutting ridges into segments (blocky oak, Ulmus) Applies when: pattern in ('Fissured', 'Plated', 'Fibrous').",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.3
+          "default": 0.3,
+          "x-applies-when": "pattern in ('Fissured', 'Plated', 'Fibrous')"
         },
         "plate_tilt": {
           "type": "number",
-          "description": "Per-plate tilt / offset (scales and plates catching light differently)",
+          "description": "Per-plate tilt / offset (scales and plates catching light differently) Applies when: pattern in ('Fissured', 'Plated', 'Annulated').",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.3
+          "default": 0.3,
+          "x-applies-when": "pattern in ('Fissured', 'Plated', 'Annulated')"
         },
         "warp": {
           "type": "number",
@@ -1120,116 +1152,134 @@
         },
         "lateral_count": {
           "type": "integer",
-          "description": "Main structural laterals (= buttress count when buttressed)",
+          "description": "Main structural laterals (= buttress count when buttressed) Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 1,
           "maximum": 16,
-          "default": 6
+          "default": 6,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "spread_crown_ratio": {
           "type": "number",
-          "description": "Lateral reach / crown radius",
+          "description": "Lateral reach / crown radius Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.3,
           "maximum": 4.0,
-          "default": 1.4
+          "default": 1.4,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "max_depth_m": {
           "type": "number",
-          "description": "Species/biome maximum rooting depth",
+          "description": "Species/biome maximum rooting depth Applies when: system not in ('Fibrous', 'Tuberous').",
           "x-unit": "m",
           "minimum": 0.3,
           "maximum": 60.0,
-          "default": 3.0
+          "default": 3.0,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "beta": {
           "type": "number",
-          "description": "Jackson vertical distribution coefficient",
+          "description": "Jackson vertical distribution coefficient Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.9,
           "maximum": 0.99,
-          "default": 0.966
+          "default": 0.966,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "taproot_share": {
           "type": "number",
-          "description": "Fraction of the collar pipe flow taken by the taproot / obliques",
+          "description": "Fraction of the collar pipe flow taken by the taproot / obliques Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.0,
           "maximum": 0.8,
-          "default": 0.15
+          "default": 0.15,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "zrt_dbh_ratio": {
           "type": "number",
-          "description": "Zone of rapid taper radius / DBH",
-          "default": 2.2
+          "description": "Zone of rapid taper radius / DBH Applies when: system not in ('Fibrous', 'Tuberous').",
+          "default": 2.2,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "sinker_spacing_m": {
           "type": "number",
-          "description": "Mean distance between sinkers along laterals",
+          "description": "Mean distance between sinkers along laterals Applies when: system not in ('Fibrous', 'Tuberous').",
           "x-unit": "m",
-          "default": 1.2
+          "default": 1.2,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "branch_spacing_m": {
           "type": "number",
-          "description": "Mean distance between second-order laterals",
+          "description": "Mean distance between second-order laterals Applies when: system not in ('Fibrous', 'Tuberous').",
           "x-unit": "m",
-          "default": 0.9
+          "default": 0.9,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "surface_exposure": {
           "type": "number",
-          "description": "0 buried .. 1 laterals ride on the soil surface near the stem",
+          "description": "0 buried .. 1 laterals ride on the soil surface near the stem Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.15
+          "default": 0.15,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "plank": {
           "type": "number",
-          "description": "Vertical elongation of lateral cross-sections near the stem",
+          "description": "Vertical elongation of lateral cross-sections near the stem Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.0,
           "maximum": 5.0,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "buttress_height_dbh": {
           "type": "number",
-          "description": "Height on the stem where laterals/buttresses merge (x DBH)",
+          "description": "Height on the stem where laterals/buttresses merge (x DBH) Applies when: system not in ('Fibrous', 'Tuberous').",
           "minimum": 0.0,
           "maximum": 4.0,
-          "default": 0.6
+          "default": 0.6,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "tortuosity": {
           "type": "number",
-          "description": "Winding of the roots through the soil, 0 straight .. 1 very tortuous.",
-          "default": 0.25
+          "description": "Winding of the roots through the soil, 0 straight .. 1 very tortuous. Applies when: system not in ('Fibrous', 'Tuberous').",
+          "default": 0.25,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "knees": {
           "type": "integer",
-          "description": "Pneumatophores (\"cypress knees\") on shallow laterals",
-          "default": 0
+          "description": "Pneumatophores (\"cypress knees\") on shallow laterals Applies when: system not in ('Fibrous', 'Tuberous').",
+          "default": 0,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous')"
         },
         "fibrous_count": {
           "type": "integer",
-          "description": "Adventitious roots (FIBROUS)",
-          "default": 60
+          "description": "Adventitious roots (FIBROUS) Applies when: system == 'Fibrous'.",
+          "default": 60,
+          "x-applies-when": "system == 'Fibrous'"
         },
         "fibrous_radius_m": {
           "type": "number",
-          "description": "Radius of the fine fibrous roots, metres.",
+          "description": "Radius of the fine fibrous roots, metres. Applies when: system == 'Fibrous'.",
           "x-unit": "m",
-          "default": 0.006
+          "default": 0.006,
+          "x-applies-when": "system == 'Fibrous'"
         },
         "fibrous_spread_m": {
           "type": "number",
-          "description": "Horizontal reach of fibrous roots (0 = 1-3 m, palms)",
+          "description": "Horizontal reach of fibrous roots (0 = 1-3 m, palms) Applies when: system == 'Fibrous'.",
           "x-unit": "m",
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "system == 'Fibrous'"
         },
         "tuber_length_m": {
           "type": "number",
-          "description": "TUBEROUS storage root",
+          "description": "TUBEROUS storage root Applies when: system == 'Tuberous'.",
           "x-unit": "m",
-          "default": 0.12
+          "default": 0.12,
+          "x-applies-when": "system == 'Tuberous'"
         },
         "tuber_radius_m": {
           "type": "number",
-          "description": "Radius of a storage tuber (Tuberous system), metres.",
+          "description": "Radius of a storage tuber (Tuberous system), metres. Applies when: system == 'Tuberous'.",
           "x-unit": "m",
-          "default": 0.03
+          "default": 0.03,
+          "x-applies-when": "system == 'Tuberous'"
         }
       },
       "description": "RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03)"
@@ -1323,88 +1373,100 @@
             "Ribs",
             "Spiral"
           ],
-          "description": "Areole layout: Ribs (on rib crests) or Tubercles (spiral lattice of podaria, Mammillaria).",
-          "default": "Ribs"
+          "description": "Areole layout: Ribs (on rib crests) or Tubercles (spiral lattice of podaria, Mammillaria). Applies when: habit != 'Cladode'.",
+          "default": "Ribs",
+          "x-applies-when": "habit != 'Cladode'"
         },
         "height_m": {
           "type": "number",
-          "description": "Stem body",
+          "description": "Stem body Applies when: habit != 'Cladode'.",
           "x-unit": "m",
           "minimum": 0.03,
           "maximum": 20.0,
-          "default": 3.0
+          "default": 3.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "diameter_m": {
           "type": "number",
-          "description": "Stem diameter, metres (main trunk for branched species).",
+          "description": "Stem diameter, metres (main trunk for branched species). Applies when: habit != 'Cladode'.",
           "x-unit": "m",
           "minimum": 0.02,
           "maximum": 1.5,
-          "default": 0.35
+          "default": 0.35,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "base_taper": {
           "type": "number",
-          "description": "Narrowing toward the ground (fraction of radius)",
+          "description": "Narrowing toward the ground (fraction of radius) Applies when: habit != 'Cladode'.",
           "minimum": 0.0,
           "maximum": 0.8,
-          "default": 0.15
+          "default": 0.15,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "apex_dome": {
           "type": "number",
-          "description": "Dome height in stem radii",
+          "description": "Dome height in stem radii Applies when: habit != 'Cladode'.",
           "minimum": 0.2,
           "maximum": 3.0,
-          "default": 1.0
+          "default": 1.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "apex_roundness": {
           "type": "number",
-          "description": "Superellipse exponent of the dome (2 = elliptic, >2 = flat-topped)",
+          "description": "Superellipse exponent of the dome (2 = elliptic, >2 = flat-topped) Applies when: habit != 'Cladode'.",
           "minimum": 1.2,
           "maximum": 6.0,
-          "default": 2.0
+          "default": 2.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "apex_depression": {
           "type": "number",
-          "description": "Sunken apex (fraction of radius)",
+          "description": "Sunken apex (fraction of radius) Applies when: habit != 'Cladode'.",
           "minimum": 0.0,
           "maximum": 0.5,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "rib_count": {
           "type": "integer",
-          "description": "Ribs and tubercles",
+          "description": "Ribs and tubercles Applies when: habit != 'Cladode'.",
           "minimum": 2,
           "maximum": 60,
-          "default": 13
+          "default": 13,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "rib_depth": {
           "type": "number",
-          "description": "Groove depth relative to radius",
+          "description": "Groove depth relative to radius Applies when: habit != 'Cladode' and arrangement == 'Ribs'.",
           "minimum": 0.0,
           "maximum": 0.6,
-          "default": 0.18
+          "default": 0.18,
+          "x-applies-when": "habit != 'Cladode' and arrangement == 'Ribs'"
         },
         "rib_sharpness": {
           "type": "number",
-          "description": "< 1 rounded crests, > 1 sharp crests",
+          "description": "< 1 rounded crests, > 1 sharp crests Applies when: habit != 'Cladode' and arrangement == 'Ribs'.",
           "minimum": 0.2,
           "maximum": 3.0,
-          "default": 0.7
+          "default": 0.7,
+          "x-applies-when": "habit != 'Cladode' and arrangement == 'Ribs'"
         },
         "rib_twist_deg_per_m": {
           "type": "number",
-          "description": "Helical twist of the ribs, degrees per metre of height (0 straight).",
+          "description": "Helical twist of the ribs, degrees per metre of height (0 straight). Applies when: habit != 'Cladode'.",
           "x-unit": "deg/m",
           "minimum": -200.0,
           "maximum": 200.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "tubercle_height": {
           "type": "number",
-          "description": "Relative bump raised by each areole",
+          "description": "Relative bump raised by each areole Applies when: habit != 'Cladode'.",
           "minimum": 0.0,
           "maximum": 0.8,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "areole_spacing_cm": {
           "type": "number",
@@ -1438,11 +1500,12 @@
         },
         "central_length_cm": {
           "type": "number",
-          "description": "Length of the central spines, cm.",
+          "description": "Length of the central spines, cm. Applies when: central_spines > 0.",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 15.0,
-          "default": 4.0
+          "default": 4.0,
+          "x-applies-when": "central_spines > 0"
         },
         "spine_thickness_mm": {
           "type": "number",
@@ -1461,10 +1524,11 @@
         },
         "central_hook": {
           "type": "number",
-          "description": "Terminal hook on centrals (Ferocactus wislizeni, Mammillaria)",
+          "description": "Terminal hook on centrals (Ferocactus wislizeni, Mammillaria) Applies when: central_spines > 0.",
           "minimum": 0.0,
           "maximum": 2.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "central_spines > 0"
         },
         "radial_lift_deg": {
           "type": "number",
@@ -1497,118 +1561,134 @@
         },
         "arm_count": {
           "type": "integer",
-          "description": "Branching",
+          "description": "Branching Applies when: habit != 'Cladode'.",
           "minimum": 0,
           "maximum": 60,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "arm_height_min": {
           "type": "number",
-          "description": "Relative height range of arm insertions",
+          "description": "Relative height range of arm insertions Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.05,
           "maximum": 0.95,
-          "default": 0.35
+          "default": 0.35,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_height_max": {
           "type": "number",
-          "description": "Highest arm insertion, as a fraction of the stem height.",
+          "description": "Highest arm insertion, as a fraction of the stem height. Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.05,
           "maximum": 1.0,
-          "default": 0.65
+          "default": 0.65,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_radius_ratio": {
           "type": "number",
-          "description": "Arm radius relative to the trunk radius.",
+          "description": "Arm radius relative to the trunk radius. Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.1,
           "maximum": 1.0,
-          "default": 0.8
+          "default": 0.8,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_reach_m": {
           "type": "number",
-          "description": "Horizontal elbow before turning upward",
+          "description": "Horizontal elbow before turning upward Applies when: habit != 'Cladode' and arm_count > 0.",
           "x-unit": "m",
           "minimum": 0.05,
           "maximum": 4.0,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_length_ratio": {
           "type": "number",
-          "description": "Vertical rise of an arm relative to the main stem height",
+          "description": "Vertical rise of an arm relative to the main stem height Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.1,
           "maximum": 5.0,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_lean_deg": {
           "type": "number",
-          "description": "Outward lean of the erect part of each arm",
+          "description": "Outward lean of the erect part of each arm Applies when: habit != 'Cladode' and arm_count > 0.",
           "x-unit": "deg",
           "minimum": 0.0,
           "maximum": 30.0,
-          "default": 3.0
+          "default": 3.0,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "arm_branching": {
           "type": "number",
-          "description": "Mean number of secondary arms per arm (dense candelabra crowns).",
+          "description": "Mean number of secondary arms per arm (dense candelabra crowns). Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.0,
           "maximum": 3.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "crown_fill": {
           "type": "number",
-          "description": "Fraction of arms whose columns fill the crown disc (area-uniform) instead of a ring      # Mean secondary arms per arm (dense candelabra crowns)",
+          "description": "Fraction of arms whose columns fill the crown disc (area-uniform) instead of a ring      # Mean secondary arms per arm (dense candelabra crowns) Applies when: habit != 'Cladode' and arm_count > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "habit != 'Cladode' and arm_count > 0"
         },
         "offsets": {
           "type": "integer",
-          "description": "Basal offsets (clumping)",
+          "description": "Basal offsets (clumping) Applies when: habit != 'Cladode'.",
           "minimum": 0,
           "maximum": 20,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "habit != 'Cladode'"
         },
         "offset_scale": {
           "type": "number",
-          "description": "Size of basal offsets (pups) relative to the mother stem.",
+          "description": "Size of basal offsets (pups) relative to the mother stem. Applies when: habit != 'Cladode' and offsets > 0.",
           "minimum": 0.2,
           "maximum": 1.0,
-          "default": 0.7
+          "default": 0.7,
+          "x-applies-when": "habit != 'Cladode' and offsets > 0"
         },
         "pad_length_cm": {
           "type": "number",
-          "description": "Cladodes (Opuntia)",
+          "description": "Cladodes (Opuntia) Applies when: habit == 'Cladode'.",
           "x-unit": "cm",
           "minimum": 3.0,
           "maximum": 80.0,
-          "default": 30.0
+          "default": 30.0,
+          "x-applies-when": "habit == 'Cladode'"
         },
         "pad_width_ratio": {
           "type": "number",
-          "description": "Cladode width / length (Opuntia ~0.6).",
+          "description": "Cladode width / length (Opuntia ~0.6). Applies when: habit == 'Cladode'.",
           "minimum": 0.2,
           "maximum": 1.2,
-          "default": 0.65
+          "default": 0.65,
+          "x-applies-when": "habit == 'Cladode'"
         },
         "pad_thickness_ratio": {
           "type": "number",
-          "description": "Cladode thickness / length (Opuntia ~0.06).",
+          "description": "Cladode thickness / length (Opuntia ~0.06). Applies when: habit == 'Cladode'.",
           "minimum": 0.02,
           "maximum": 0.3,
-          "default": 0.08
+          "default": 0.08,
+          "x-applies-when": "habit == 'Cladode'"
         },
         "pad_levels": {
           "type": "integer",
-          "description": "Number of cladode generations in the chain (plant age / height).",
+          "description": "Number of cladode generations in the chain (plant age / height). Applies when: habit == 'Cladode'.",
           "minimum": 1,
           "maximum": 8,
-          "default": 4
+          "default": 4,
+          "x-applies-when": "habit == 'Cladode'"
         },
         "pad_branching": {
           "type": "number",
-          "description": "Mean daughter pads per pad",
+          "description": "Mean daughter pads per pad Applies when: habit == 'Cladode'.",
           "minimum": 0.0,
           "maximum": 4.0,
-          "default": 1.6
+          "default": 1.6,
+          "x-applies-when": "habit == 'Cladode'"
         },
         "stem_color": {
           "type": "array",
@@ -1719,18 +1799,20 @@
         },
         "equator_bias": {
           "type": "number",
-          "description": "How much higher it climbs on the equator-facing side",
+          "description": "How much higher it climbs on the equator-facing side Applies when: browning_height_m > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.6
+          "default": 0.6,
+          "x-applies-when": "browning_height_m > 0"
         },
         "equator_azimuth_deg": {
           "type": "number",
-          "description": "Azimuth (from +X, counter-clockwise) of the equator-facing side",
+          "description": "Azimuth (from +X, counter-clockwise) of the equator-facing side Applies when: browning_height_m > 0.",
           "x-unit": "deg",
           "minimum": 0.0,
           "maximum": 360.0,
-          "default": 270.0
+          "default": 270.0,
+          "x-applies-when": "browning_height_m > 0"
         },
         "scaling_color": {
           "type": "array",
@@ -1742,12 +1824,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of early epidermal browning ('scaling', tan to red-orange), sRGB 0..1.",
+          "description": "Colour of early epidermal browning ('scaling', tan to red-orange), sRGB 0..1. Applies when: browning_height_m > 0.",
           "default": [
             0.62,
             0.44,
             0.3
-          ]
+          ],
+          "x-applies-when": "browning_height_m > 0"
         },
         "barking_color": {
           "type": "array",
@@ -1759,12 +1842,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of old epidermal bark ('barking', dark brown or grey), sRGB 0..1.",
+          "description": "Colour of old epidermal bark ('barking', dark brown or grey), sRGB 0..1. Applies when: browning_height_m > 0.",
           "default": [
             0.27,
             0.22,
             0.18
-          ]
+          ],
+          "x-applies-when": "browning_height_m > 0"
         },
         "scars": {
           "type": "number",
@@ -1783,12 +1867,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of corky scars, sRGB 0..1.",
+          "description": "Colour of corky scars, sRGB 0..1. Applies when: scars > 0.",
           "default": [
             0.64,
             0.55,
             0.41
-          ]
+          ],
+          "x-applies-when": "scars > 0"
         },
         "areole_stain": {
           "type": "number",
@@ -1877,18 +1962,20 @@
         },
         "tuber_length_cm": {
           "type": "number",
-          "description": "Length of a napiform storage tuber (peyote), cm.",
+          "description": "Length of a napiform storage tuber (peyote), cm. Applies when: root_system == 'Tuberous'.",
           "x-unit": "cm",
           "minimum": 1.0,
           "maximum": 60.0,
-          "default": 12.0
+          "default": 12.0,
+          "x-applies-when": "root_system == 'Tuberous'"
         },
         "tuber_radius_ratio": {
           "type": "number",
-          "description": "Tuber radius relative to stem radius",
+          "description": "Tuber radius relative to stem radius Applies when: root_system == 'Tuberous'.",
           "minimum": 0.1,
           "maximum": 1.5,
-          "default": 0.8
+          "default": 0.8,
+          "x-applies-when": "root_system == 'Tuberous'"
         }
       },
       "description": "CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'>, arrangement: core.cactus.AreoleArrangement = <AreoleArrangement.RIBS: 'Ribs'>, height_m: float = 3.0, diameter_m: float = 0.35, base_taper: float = 0.15, apex_dome: float = 1.0, apex_roundness: float = 2.0, apex_depression: float = 0.0, rib_count: int = 13, rib_depth: float = 0.18, rib_sharpness: float = 0.7, rib_twist_deg_per_m: float = 0.0, tubercle_height: float = 0.0, areole_spacing_cm: float = 2.5, radial_spines: int = 10, radial_length_cm: float = 1.5, central_spines: int = 3, central_length_cm: float = 4.0, spine_thickness_mm: float = 0.8, spine_curvature: float = 0.1, central_hook: float = 0.0, radial_lift_deg: float = 15.0, spine_jitter: float = 0.25, wool: float = 0.3, apical_wool: float = 0.0, arm_count: int = 0, arm_height_min: float = 0.35, arm_height_max: float = 0.65, arm_radius_ratio: float = 0.8, arm_reach_m: float = 0.5, arm_length_ratio: float = 0.5, arm_lean_deg: float = 3.0, arm_branching: float = 0.0, crown_fill: float = 0.0, offsets: int = 0, offset_scale: float = 0.7, pad_length_cm: float = 30.0, pad_width_ratio: float = 0.65, pad_thickness_ratio: float = 0.08, pad_levels: int = 4, pad_branching: float = 1.6, stem_color: tuple = (0.24, 0.4, 0.2), groove_color: tuple = (0.15, 0.28, 0.13), spine_color: tuple = (0.85, 0.8, 0.62), spine_tip_color: tuple = (0.35, 0.25, 0.18), wool_color: tuple = (0.92, 0.9, 0.85), glaucous: float = 0.2, flecks: float = 0.0, browning_height_m: float = 0.0, equator_bias: float = 0.6, equator_azimuth_deg: float = 270.0, scaling_color: tuple = (0.62, 0.44, 0.3), barking_color: tuple = (0.27, 0.22, 0.18), scars: float = 0.15, scar_color: tuple = (0.64, 0.55, 0.41), areole_stain: float = 0.4, crest_light: float = 0.25, groove_dust: float = 0.3, streaks: float = 0.3, root_system: core.roots.RootSystemType = <RootSystemType.PLATE: 'Plate'>, root_count: int = 10, root_spread_ratio: float = 1.0, root_depth_m: float = 0.3, taproot_share: float = 0.0, taproot_depth_m: float = 0.5, root_core_ratio: float = 0.25, tuber_length_cm: float = 12.0, tuber_radius_ratio: float = 0.8)"
@@ -2152,12 +2239,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of withered leaves, sRGB 0..1.",
+          "description": "Colour of withered leaves, sRGB 0..1. Applies when: dead_leaves > 0.",
           "default": [
             0.55,
             0.46,
             0.34
-          ]
+          ],
+          "x-applies-when": "dead_leaves > 0"
         },
         "stem_color": {
           "type": "array",
@@ -2178,18 +2266,20 @@
         },
         "stem_scars": {
           "type": "number",
-          "description": "Visibility of crescent leaf scars on the stem",
+          "description": "Visibility of crescent leaf scars on the stem Applies when: stem_height_m > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "stem_height_m > 0"
         },
         "scar_spacing_mm": {
           "type": "number",
-          "description": "Internode length along the bare stem",
+          "description": "Internode length along the bare stem Applies when: stem_height_m > 0.",
           "x-unit": "mm",
           "minimum": 1.0,
           "maximum": 30.0,
-          "default": 6.0
+          "default": 6.0,
+          "x-applies-when": "stem_height_m > 0"
         },
         "terminal_spine_cm": {
           "type": "number",
@@ -2208,18 +2298,20 @@
         },
         "teeth_size_cm": {
           "type": "number",
-          "description": "Size of the marginal teeth, cm; 0 = none.",
+          "description": "Size of the marginal teeth, cm; 0 = none. Applies when: teeth_count > 0.",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 3.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "teeth_count > 0"
         },
         "teeth_hook": {
           "type": "number",
-          "description": "How much marginal teeth curve toward the leaf tip, 0 straight .. 1 hooked.",
+          "description": "How much marginal teeth curve toward the leaf tip, 0 straight .. 1 hooked. Applies when: teeth_count > 0.",
           "minimum": -1.0,
           "maximum": 1.5,
-          "default": 0.4
+          "default": 0.4,
+          "x-applies-when": "teeth_count > 0"
         },
         "offsets": {
           "type": "integer",
@@ -2230,10 +2322,11 @@
         },
         "offset_scale": {
           "type": "number",
-          "description": "Size of the offsets relative to the main rosette.",
+          "description": "Size of the offsets relative to the main rosette. Applies when: offsets > 0.",
           "minimum": 0.1,
           "maximum": 1.0,
-          "default": 0.45
+          "default": 0.45,
+          "x-applies-when": "offsets > 0"
         },
         "leaf_color": {
           "type": "array",
@@ -2262,12 +2355,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Anthocyanin blush colour of margins and tips, sRGB 0..1.",
+          "description": "Anthocyanin blush colour of margins and tips, sRGB 0..1. Applies when: blush_amount > 0.",
           "default": [
             0.75,
             0.35,
             0.4
-          ]
+          ],
+          "x-applies-when": "blush_amount > 0"
         },
         "blush_amount": {
           "type": "number",
@@ -2316,10 +2410,11 @@
         },
         "blush_tip": {
           "type": "number",
-          "description": "Weight of the tip in the blush (0 = margins only)",
+          "description": "Weight of the tip in the blush (0 = margins only) Applies when: blush_amount > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 1.0
+          "default": 1.0,
+          "x-applies-when": "blush_amount > 0"
         },
         "margin_band": {
           "type": "number",
@@ -2443,48 +2538,55 @@
             "Whorled",
             "Spiral"
           ],
-          "description": "Floral diagram",
-          "default": "Whorled"
+          "description": "Floral diagram Applies when: not capitulum.",
+          "default": "Whorled",
+          "x-applies-when": "not capitulum"
         },
         "merosity": {
           "type": "integer",
-          "description": "Organs per whorl",
+          "description": "Organs per whorl Applies when: not capitulum.",
           "minimum": 2,
           "maximum": 16,
-          "default": 5
+          "default": 5,
+          "x-applies-when": "not capitulum"
         },
         "petal_whorls": {
           "type": "integer",
-          "description": "> 1: double flowers (extra petal whorls replace stamens)",
+          "description": "> 1: double flowers (extra petal whorls replace stamens) Applies when: not capitulum and arrangement == 'Whorled'.",
           "minimum": 1,
           "maximum": 8,
-          "default": 1
+          "default": 1,
+          "x-applies-when": "not capitulum and arrangement == 'Whorled'"
         },
         "spiral_tepals": {
           "type": "integer",
-          "description": "Perianth organs when spiral (Magnolia, cactus, double rose)",
+          "description": "Perianth organs when spiral (Magnolia, cactus, double rose) Applies when: not capitulum and arrangement == 'Spiral'.",
           "minimum": 0,
           "maximum": 200,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "not capitulum and arrangement == 'Spiral'"
         },
         "zygomorphy": {
           "type": "number",
-          "description": "0 radial symmetry .. 1 strongly bilateral",
+          "description": "0 radial symmetry .. 1 strongly bilateral Applies when: not capitulum.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum"
         },
         "lip_bias": {
           "type": "number",
-          "description": "+ dorsal organs larger (standard), - ventral lip larger",
+          "description": "+ dorsal organs larger (standard), - ventral lip larger Applies when: not capitulum and zygomorphy > 0.",
           "minimum": -1.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum and zygomorphy > 0"
         },
         "petals_visible": {
           "type": "boolean",
-          "description": "False: perianth reduced or shed (Eucalyptus operculum, catkin flowers)",
-          "default": true
+          "description": "False: perianth reduced or shed (Eucalyptus operculum, catkin flowers) Applies when: not capitulum.",
+          "default": true,
+          "x-applies-when": "not capitulum"
         },
         "petal_length_cm": {
           "type": "number",
@@ -2561,10 +2663,11 @@
         },
         "fringe_count": {
           "type": "integer",
-          "description": "Number of teeth or fringe lobes at the petal apex.",
+          "description": "Number of teeth or fringe lobes at the petal apex. Applies when: fringe > 0.",
           "minimum": 0,
           "maximum": 40,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "fringe > 0"
         },
         "undulation": {
           "type": "number",
@@ -2621,136 +2724,154 @@
         },
         "tube_length_cm": {
           "type": "number",
-          "description": "Corolla tube (sympetaly)",
+          "description": "Corolla tube (sympetaly) Applies when: not capitulum.",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 30.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum"
         },
         "tube_radius_cm": {
           "type": "number",
-          "description": "At the base",
+          "description": "At the base Applies when: not capitulum and tube_length_cm > 0.",
           "x-unit": "cm",
           "minimum": 0.01,
           "maximum": 5.0,
-          "default": 0.2
+          "default": 0.2,
+          "x-applies-when": "not capitulum and tube_length_cm > 0"
         },
         "tube_flare": {
           "type": "number",
-          "description": "Exponent of the tube profile (1 conical, >1 trumpet)",
+          "description": "Exponent of the tube profile (1 conical, >1 trumpet) Applies when: not capitulum and tube_length_cm > 0.",
           "minimum": 0.3,
           "maximum": 5.0,
-          "default": 2.0
+          "default": 2.0,
+          "x-applies-when": "not capitulum and tube_length_cm > 0"
         },
         "limb_fusion": {
           "type": "number",
-          "description": "Fused limb: lobes widen to fill their sector (1 = entire rim, Ipomoea)",
+          "description": "Fused limb: lobes widen to fill their sector (1 = entire rim, Ipomoea) Applies when: not capitulum and tube_length_cm > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum and tube_length_cm > 0"
         },
         "sepal_length_ratio": {
           "type": "number",
-          "description": "Relative to petal length (0 = no visible calyx)",
+          "description": "Relative to petal length (0 = no visible calyx) Applies when: not capitulum.",
           "minimum": 0.0,
           "maximum": 2.0,
-          "default": 0.5
+          "default": 0.5,
+          "x-applies-when": "not capitulum"
         },
         "sepal_aspect": {
           "type": "number",
-          "description": "Sepal length / width.",
+          "description": "Sepal length / width. Applies when: not capitulum and sepal_length_ratio > 0.",
           "minimum": 0.5,
           "maximum": 10.0,
-          "default": 2.0
+          "default": 2.0,
+          "x-applies-when": "not capitulum and sepal_length_ratio > 0"
         },
         "sepal_opening_deg": {
           "type": "number",
-          "description": "Elevation of the sepals above the floral plane, degrees (negative = reflexed).",
+          "description": "Elevation of the sepals above the floral plane, degrees (negative = reflexed). Applies when: not capitulum and sepal_length_ratio > 0.",
           "x-unit": "deg",
           "minimum": -80.0,
           "maximum": 90.0,
-          "default": 20.0
+          "default": 20.0,
+          "x-applies-when": "not capitulum and sepal_length_ratio > 0"
         },
         "hypanthium_cm": {
           "type": "number",
-          "description": "Floral cup / inferior ovary below the perianth (cactus pericarpel)",
+          "description": "Floral cup / inferior ovary below the perianth (cactus pericarpel) Applies when: not capitulum.",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 10.0,
-          "default": 0.3
+          "default": 0.3,
+          "x-applies-when": "not capitulum"
         },
         "hypanthium_scales": {
           "type": "integer",
-          "description": "Bract scales on it (cactus pericarpel)",
+          "description": "Bract scales on it (cactus pericarpel) Applies when: not capitulum and hypanthium_cm > 0.",
           "minimum": 0,
           "maximum": 60,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "not capitulum and hypanthium_cm > 0"
         },
         "stamen_count": {
           "type": "integer",
-          "description": "Androecium",
+          "description": "Androecium Applies when: not capitulum.",
           "minimum": 0,
           "maximum": 600,
-          "default": 10
+          "default": 10,
+          "x-applies-when": "not capitulum"
         },
         "stamen_length_ratio": {
           "type": "number",
-          "description": "Stamen length relative to the petal length.",
+          "description": "Stamen length relative to the petal length. Applies when: not capitulum and stamen_count > 0.",
           "minimum": 0.0,
           "maximum": 4.0,
-          "default": 0.35
+          "default": 0.35,
+          "x-applies-when": "not capitulum and stamen_count > 0"
         },
         "stamen_spread_deg": {
           "type": "number",
-          "description": "Outward tilt of the stamens from the floral axis, degrees.",
+          "description": "Outward tilt of the stamens from the floral axis, degrees. Applies when: not capitulum and stamen_count > 0.",
           "x-unit": "deg",
           "minimum": 0.0,
           "maximum": 90.0,
-          "default": 25.0
+          "default": 25.0,
+          "x-applies-when": "not capitulum and stamen_count > 0"
         },
         "anther_size_mm": {
           "type": "number",
-          "description": "Anther length, mm.",
+          "description": "Anther length, mm. Applies when: not capitulum and stamen_count > 0.",
           "x-unit": "mm",
           "minimum": 0.1,
           "maximum": 40.0,
-          "default": 1.5
+          "default": 1.5,
+          "x-applies-when": "not capitulum and stamen_count > 0"
         },
         "staminal_column": {
           "type": "number",
-          "description": "Monadelphous column (Hibiscus): fraction of stamen length fused",
+          "description": "Monadelphous column (Hibiscus): fraction of stamen length fused Applies when: not capitulum and stamen_count > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum and stamen_count > 0"
         },
         "stamen_declination": {
           "type": "number",
-          "description": "Stamens curve toward the dorsal side (zygomorphic flowers)",
+          "description": "Stamens curve toward the dorsal side (zygomorphic flowers) Applies when: not capitulum and stamen_count > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "not capitulum and stamen_count > 0"
         },
         "carpels": {
           "type": "integer",
-          "description": "Stigma lobes",
+          "description": "Stigma lobes Applies when: not capitulum and style_length_ratio > 0.",
           "minimum": 1,
           "maximum": 20,
-          "default": 5
+          "default": 5,
+          "x-applies-when": "not capitulum and style_length_ratio > 0"
         },
         "style_length_ratio": {
           "type": "number",
-          "description": "Style length relative to the petal length (0 = no visible pistil).",
+          "description": "Style length relative to the petal length (0 = no visible pistil). Applies when: not capitulum.",
           "minimum": 0.0,
           "maximum": 4.0,
-          "default": 0.3
+          "default": 0.3,
+          "x-applies-when": "not capitulum"
         },
         "stigma_size_mm": {
           "type": "number",
-          "description": "Size of each stigma lobe, mm.",
+          "description": "Size of each stigma lobe, mm. Applies when: not capitulum and style_length_ratio > 0.",
           "x-unit": "mm",
           "minimum": 0.1,
           "maximum": 10.0,
-          "default": 1.2
+          "default": 1.2,
+          "x-applies-when": "not capitulum and style_length_ratio > 0"
         },
         "receptacle_radius_cm": {
           "type": "number",
@@ -2762,11 +2883,12 @@
         },
         "receptacle_height_cm": {
           "type": "number",
-          "description": "> radius: conical receptacle (Magnolia gynoecium)",
+          "description": "> radius: conical receptacle (Magnolia gynoecium) Applies when: not capitulum.",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 10.0,
-          "default": 0.1
+          "default": 0.1,
+          "x-applies-when": "not capitulum"
         },
         "capitulum": {
           "type": "boolean",
@@ -2775,46 +2897,52 @@
         },
         "disc_florets": {
           "type": "integer",
-          "description": "Number of disc florets in a capitulum (sunflower ~1000).",
+          "description": "Number of disc florets in a capitulum (sunflower ~1000). Applies when: capitulum.",
           "minimum": 0,
           "maximum": 3000,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "capitulum"
         },
         "disc_radius_cm": {
           "type": "number",
-          "description": "Radius of the capitulum disc, cm.",
+          "description": "Radius of the capitulum disc, cm. Applies when: capitulum.",
           "x-unit": "cm",
           "minimum": 0.1,
           "maximum": 25.0,
-          "default": 1.0
+          "default": 1.0,
+          "x-applies-when": "capitulum"
         },
         "disc_dome": {
           "type": "number",
-          "description": "Doming of the disc, 0 flat .. 1 hemispherical.",
+          "description": "Doming of the disc, 0 flat .. 1 hemispherical. Applies when: capitulum.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.15
+          "default": 0.15,
+          "x-applies-when": "capitulum"
         },
         "ray_count": {
           "type": "integer",
-          "description": "Ray florets; spread over the whole head when ray_fill > 0 (double)",
+          "description": "Ray florets; spread over the whole head when ray_fill > 0 (double) Applies when: capitulum.",
           "minimum": 0,
           "maximum": 400,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "capitulum"
         },
         "ray_fill": {
           "type": "number",
-          "description": "0 one rim row .. 1 rays fill the head (Dahlia, Tagetes)",
+          "description": "0 one rim row .. 1 rays fill the head (Dahlia, Tagetes) Applies when: capitulum.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "capitulum"
         },
         "involucre_bracts": {
           "type": "integer",
-          "description": "Number of involucral bracts (phyllaries) under a capitulum.",
+          "description": "Number of involucral bracts (phyllaries) under a capitulum. Applies when: capitulum.",
           "minimum": 0,
           "maximum": 80,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "capitulum"
         },
         "petal_color": {
           "type": "array",
@@ -2890,10 +3018,11 @@
         },
         "guide_contrast": {
           "type": "number",
-          "description": "Strength of the nectar guides, 0 none .. 1 strong.",
+          "description": "Strength of the nectar guides, 0 none .. 1 strong. Applies when: guide_lines > 0.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "guide_lines > 0"
         },
         "spots": {
           "type": "number",
@@ -2912,12 +3041,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of petal spots (Lilium), sRGB 0..1.",
+          "description": "Colour of petal spots (Lilium), sRGB 0..1. Applies when: spots > 0.",
           "default": [
             0.35,
             0.08,
             0.05
-          ]
+          ],
+          "x-applies-when": "spots > 0"
         },
         "outer_color": {
           "type": "array",
@@ -2929,12 +3059,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Outer tepals / sepaloid gradient",
+          "description": "Outer tepals / sepaloid gradient Applies when: outer_tint > 0.",
           "default": [
             0.45,
             0.55,
             0.3
-          ]
+          ],
+          "x-applies-when": "outer_tint > 0"
         },
         "outer_tint": {
           "type": "number",
@@ -3021,12 +3152,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of mature disc florets (capitulum rim), sRGB 0..1.",
+          "description": "Colour of mature disc florets (capitulum rim), sRGB 0..1. Applies when: capitulum.",
           "default": [
             0.3,
             0.17,
             0.07
-          ]
+          ],
+          "x-applies-when": "capitulum"
         },
         "disc_center_color": {
           "type": "array",
@@ -3038,12 +3170,13 @@
           "minItems": 3,
           "maxItems": 3,
           "x-kind": "colour (sRGB 0..1)",
-          "description": "Colour of the young central disc florets, sRGB 0..1.",
+          "description": "Colour of the young central disc florets, sRGB 0..1. Applies when: capitulum.",
           "default": [
             0.3,
             0.35,
             0.1
-          ]
+          ],
+          "x-applies-when": "capitulum"
         },
         "sheen": {
           "type": "number",
@@ -3082,10 +3215,11 @@
         },
         "flower_count": {
           "type": "integer",
-          "description": "Number of flowers (per panicle branch counts are derived).",
+          "description": "Number of flowers (per panicle branch counts are derived). Applies when: kind != 'Solitary'.",
           "minimum": 1,
           "maximum": 600,
-          "default": 1
+          "default": 1,
+          "x-applies-when": "kind != 'Solitary'"
         },
         "peduncle_cm": {
           "type": "number",
@@ -3097,76 +3231,86 @@
         },
         "rachis_cm": {
           "type": "number",
-          "description": "Flower-bearing axis",
+          "description": "Flower-bearing axis Applies when: kind not in ('Solitary', 'Umbel').",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 800.0,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "kind not in ('Solitary', 'Umbel')"
         },
         "pedicel_cm": {
           "type": "number",
-          "description": "Length of the individual flower stalks, cm (0 for spikes and catkins).",
+          "description": "Length of the individual flower stalks, cm (0 for spikes and catkins). Applies when: kind not in ('Solitary', 'Spike', 'Catkin').",
           "x-unit": "cm",
           "minimum": 0.0,
           "maximum": 30.0,
-          "default": 1.0
+          "default": 1.0,
+          "x-applies-when": "kind not in ('Solitary', 'Spike', 'Catkin')"
         },
         "pedicel_angle_deg": {
           "type": "number",
-          "description": "From the rachis",
+          "description": "From the rachis Applies when: kind != 'Solitary'.",
           "x-unit": "deg",
           "minimum": 0.0,
           "maximum": 120.0,
-          "default": 45.0
+          "default": 45.0,
+          "x-applies-when": "kind != 'Solitary'"
         },
         "divergence_deg": {
           "type": "number",
-          "description": "Angle between successive flowers around the rachis, degrees (137.5 spiral).",
+          "description": "Angle between successive flowers around the rachis, degrees (137.5 spiral). Applies when: kind not in ('Solitary', 'Umbel').",
           "x-unit": "deg",
           "minimum": 30.0,
           "maximum": 180.0,
-          "default": 137.5
+          "default": 137.5,
+          "x-applies-when": "kind not in ('Solitary', 'Umbel')"
         },
         "branches": {
           "type": "integer",
-          "description": "Panicle laterals",
+          "description": "Panicle laterals Applies when: kind == 'Panicle'.",
           "minimum": 0,
           "maximum": 60,
-          "default": 0
+          "default": 0,
+          "x-applies-when": "kind == 'Panicle'"
         },
         "branch_start": {
           "type": "number",
-          "description": "Fraction of the rachis below the first lateral",
+          "description": "Fraction of the rachis below the first lateral Applies when: kind == 'Panicle'.",
           "minimum": 0.0,
           "maximum": 0.95,
-          "default": 0.0
+          "default": 0.0,
+          "x-applies-when": "kind == 'Panicle'"
         },
         "branch_length_ratio": {
           "type": "number",
-          "description": "Length of panicle branches relative to the rachis.",
+          "description": "Length of panicle branches relative to the rachis. Applies when: kind == 'Panicle'.",
           "minimum": 0.02,
           "maximum": 1.0,
-          "default": 0.4
+          "default": 0.4,
+          "x-applies-when": "kind == 'Panicle'"
         },
         "branch_angle_deg": {
           "type": "number",
-          "description": "Angle of panicle branches from the rachis, degrees.",
+          "description": "Angle of panicle branches from the rachis, degrees. Applies when: kind == 'Panicle'.",
           "x-unit": "deg",
           "minimum": 5.0,
           "maximum": 110.0,
-          "default": 45.0
+          "default": 45.0,
+          "x-applies-when": "kind == 'Panicle'"
         },
         "branch_umbels": {
           "type": "boolean",
-          "description": "Laterals end in umbellate clusters (Agave)",
-          "default": false
+          "description": "Laterals end in umbellate clusters (Agave) Applies when: kind == 'Panicle'.",
+          "default": false,
+          "x-applies-when": "kind == 'Panicle'"
         },
         "maturation": {
           "type": "number",
-          "description": "Acropetal opening gradient (0 all open .. 1 apical buds)",
+          "description": "Acropetal opening gradient (0 all open .. 1 apical buds) Applies when: kind != 'Solitary'.",
           "minimum": 0.0,
           "maximum": 1.0,
-          "default": 0.6
+          "default": 0.6,
+          "x-applies-when": "kind != 'Solitary'"
         },
         "nodding": {
           "type": "number",

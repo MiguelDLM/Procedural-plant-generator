@@ -897,5 +897,26 @@ class TestPresets(unittest.TestCase):
                     self.assertTrue(p.get("description"), f"{name}.{field} has no description")
 
 
+class TestRelevance(unittest.TestCase):
+    """Fields marked as not applicable (core.relevance) must not change the geometry when perturbed."""
+
+    def test_inactive_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for form, key in (("Cactus", "opuntia_ficus_indica"), ("Cactus", "mammillaria_hahniana"),
+                          ("Flower", "helianthus_annuus"), ("Flower", "rosa_canina"),
+                          ("Tree", "phoenix_canariensis"), ("Rosette", "echeveria_elegans")):
+            self.assertEqual(check(form, key, report=lambda m: None), [], f"{form}/{key}")
+
+    def test_rules_examples(self):
+        from core.relevance import applies, inactive_fields
+        from core.succulent_db import CACTUS_CATALOG
+        nopal = CACTUS_CATALOG["opuntia_ficus_indica"].profile
+        self.assertFalse(applies("Cactus", "profile", "rib_depth", nopal))
+        self.assertTrue(applies("Cactus", "profile", "pad_levels", nopal))
+        saguaro = CACTUS_CATALOG["carnegiea_gigantea"]
+        self.assertIn("profile.pad_length_cm", inactive_fields("Cactus", saguaro))
+        self.assertNotIn("profile.rib_depth", inactive_fields("Cactus", saguaro))
+
+
 if __name__ == "__main__":
     unittest.main()
