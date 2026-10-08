@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
   "title": "Procedural Plant Generator preset",
-  "description": "One plant (tree, cactus, rosette succulent or flower) described by measurable traits. See docs/PRESETS.md.",
+  "description": "One plant (tree, cactus, rosette succulent, flower or vine) described by measurable traits. See docs/PRESETS.md.",
   "type": "object",
   "required": [
     "format",
@@ -28,7 +28,8 @@
         "Tree",
         "Cactus",
         "Rosette",
-        "Flower"
+        "Flower",
+        "Vine"
       ]
     },
     "id": {
@@ -141,6 +142,22 @@
         "properties": {
           "preset": {
             "$ref": "#/$defs/FlowerPreset"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "growth_form": {
+            "const": "Vine"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preset": {
+            "$ref": "#/$defs/VinePreset"
           }
         }
       }
@@ -3407,6 +3424,479 @@
         }
       },
       "description": "Trait values of a Flower preset (all optional when 'base' is given)."
+    },
+    "VineProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Twining",
+            "Tendril",
+            "Clinging",
+            "Trailing"
+          ],
+          "description": "How the stem uses its guide path: 'Twining' coils around it (the guide is the support), 'Tendril' follows it and grasps it with tendrils, 'Clinging' is pressed to it by rootlets (walls), 'Trailing' creeps along it on the ground.",
+          "default": "Twining"
+        },
+        "chirality": {
+          "type": "string",
+          "enum": [
+            "Right",
+            "Left"
+          ],
+          "description": "Handedness of the twining helix: 'Right' = counter-clockwise seen from above (about 90 % of twiners: Ipomoea, Phaseolus, Wisteria sinensis); 'Left' = clockwise (Humulus, Lonicera). Applies when: mode == 'Twining'.",
+          "default": "Right",
+          "x-applies-when": "mode == 'Twining'"
+        },
+        "coil_radius_cm": {
+          "type": "number",
+          "description": "Helix radius around the guide (support radius + stem) Applies when: mode == 'Twining'.",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 30.0,
+          "default": 1.5,
+          "x-applies-when": "mode == 'Twining'"
+        },
+        "coil_pitch_cm": {
+          "type": "number",
+          "description": "Rise per helix turn along the guide Applies when: mode == 'Twining'.",
+          "x-unit": "cm",
+          "minimum": 2.0,
+          "maximum": 150.0,
+          "default": 12.0,
+          "x-applies-when": "mode == 'Twining'"
+        },
+        "wander_cm": {
+          "type": "number",
+          "description": "Lateral meander of the stem around the guide",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 50.0,
+          "default": 2.0
+        },
+        "tip_length_cm": {
+          "type": "number",
+          "description": "Free searcher tip beyond the reached part of the guide",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 300.0,
+          "default": 25.0
+        },
+        "tip_hook": {
+          "type": "number",
+          "description": "Apical hook / nutation curl of the free tip Applies when: tip_length_cm > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5,
+          "x-applies-when": "tip_length_cm > 0"
+        },
+        "stem_radius_mm": {
+          "type": "number",
+          "description": "At the base",
+          "x-unit": "mm",
+          "minimum": 0.3,
+          "maximum": 200.0,
+          "default": 2.5
+        },
+        "stem_taper": {
+          "type": "number",
+          "description": "Fraction of the radius lost toward the tip",
+          "minimum": 0.0,
+          "maximum": 0.95,
+          "default": 0.6
+        },
+        "internode_cm": {
+          "type": "number",
+          "description": "Mature internode length",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 80.0,
+          "default": 10.0
+        },
+        "leaf_arrangement": {
+          "type": "string",
+          "enum": [
+            "Alternate",
+            "Distichous",
+            "Opposite"
+          ],
+          "description": "Leaves on the stem (the leaf itself is described by the 'leaf' section)",
+          "default": "Alternate"
+        },
+        "leaf_size": {
+          "type": "number",
+          "description": "Scale of mature leaves relative to the leaf blade length",
+          "minimum": 0.1,
+          "maximum": 3.0,
+          "default": 1.0
+        },
+        "young_leaf_size": {
+          "type": "number",
+          "description": "Size of the youngest leaf relative to a mature one",
+          "minimum": 0.05,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "expansion_zone_cm": {
+          "type": "number",
+          "description": "Length behind the apex over which internodes and leaves expand",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 300.0,
+          "default": 40.0
+        },
+        "leaf_facing": {
+          "type": "number",
+          "description": "How strongly laminae turn away from the support, toward the light",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6
+        },
+        "basal_leaf_loss": {
+          "type": "number",
+          "description": "Fraction of the stem (from the base) that has shed its leaves",
+          "minimum": 0.0,
+          "maximum": 0.95,
+          "default": 0.0
+        },
+        "branch_probability": {
+          "type": "number",
+          "description": "Chance that a node bears a lateral shoot",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.1
+        },
+        "branch_length_cm": {
+          "type": "number",
+          "description": "Length of a lateral shoot from an old node, cm (shorter near the apex). Applies when: branch_probability > 0.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 600.0,
+          "default": 60.0,
+          "x-applies-when": "branch_probability > 0"
+        },
+        "branch_angle_deg": {
+          "type": "number",
+          "description": "Insertion angle from the stem Applies when: branch_probability > 0.",
+          "x-unit": "deg",
+          "minimum": 5.0,
+          "maximum": 90.0,
+          "default": 45.0,
+          "x-applies-when": "branch_probability > 0"
+        },
+        "branch_droop": {
+          "type": "number",
+          "description": "Gravity bending of unsupported lateral shoots Applies when: branch_probability > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.4,
+          "x-applies-when": "branch_probability > 0"
+        },
+        "tendril_mode": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Node",
+            "Leaf Tip"
+          ],
+          "description": "Tendrils",
+          "default": "None"
+        },
+        "tendril_length_cm": {
+          "type": "number",
+          "description": "Tendril length when straight, cm (Pisum 5-10, Cucumis 15-25, Vitis 10-20). Applies when: tendril_mode != 'None'.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 60.0,
+          "default": 15.0,
+          "x-applies-when": "tendril_mode != 'None'"
+        },
+        "tendril_branches": {
+          "type": "integer",
+          "description": "Simple (1) or branched (Vitis 2, Pisum 3-5) Applies when: tendril_mode != 'None'.",
+          "minimum": 1,
+          "maximum": 6,
+          "default": 1,
+          "x-applies-when": "tendril_mode != 'None'"
+        },
+        "tendril_coils": {
+          "type": "number",
+          "description": "Turns of a free tendril's coiled tip Applies when: tendril_mode != 'None' and tendril_reach < 1.",
+          "minimum": 0.0,
+          "maximum": 30.0,
+          "default": 5.0,
+          "x-applies-when": "tendril_mode != 'None' and tendril_reach < 1"
+        },
+        "tendril_coil_mm": {
+          "type": "number",
+          "description": "Coil radius Applies when: tendril_mode != 'None'.",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 20.0,
+          "default": 3.0,
+          "x-applies-when": "tendril_mode != 'None'"
+        },
+        "tendril_radius_mm": {
+          "type": "number",
+          "description": "Tendril thickness (radius), mm. Applies when: tendril_mode != 'None'.",
+          "x-unit": "mm",
+          "minimum": 0.1,
+          "maximum": 3.0,
+          "default": 0.6,
+          "x-applies-when": "tendril_mode != 'None'"
+        },
+        "tendril_reach": {
+          "type": "number",
+          "description": "Fraction of tendrils that have caught the support Applies when: tendril_mode != 'None'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6,
+          "x-applies-when": "tendril_mode != 'None'"
+        },
+        "aerial_roots": {
+          "type": "number",
+          "description": "Density of rootlets at the nodes",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "rootlet_length_cm": {
+          "type": "number",
+          "description": "Length of the nodal / adventitious rootlets, cm. Applies when: aerial_roots > 0.",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 30.0,
+          "default": 2.0,
+          "x-applies-when": "aerial_roots > 0"
+        },
+        "stem_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Stem colour",
+          "default": [
+            0.24,
+            0.42,
+            0.14
+          ]
+        },
+        "stem_color_old": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Lignified base Applies when: woodiness > 0.",
+          "default": [
+            0.38,
+            0.3,
+            0.2
+          ],
+          "x-applies-when": "woodiness > 0"
+        },
+        "woodiness": {
+          "type": "number",
+          "description": "Fraction of the stem, from the base, that is lignified",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "hairiness": {
+          "type": "number",
+          "description": "Pubescence (soft sheen)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.2
+        },
+        "fruit_count": {
+          "type": "integer",
+          "description": "Per stem",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0
+        },
+        "fruit_length_cm": {
+          "type": "number",
+          "description": "Along the fruit axis (stalk end to blossom end) Applies when: fruit_count > 0.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 120.0,
+          "default": 10.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_diameter_cm": {
+          "type": "number",
+          "description": "Largest fruit diameter, cm (pumpkin 25-40, cucumber 3-5, pea pod ~1). Applies when: fruit_count > 0.",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 100.0,
+          "default": 8.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_widest_position": {
+          "type": "number",
+          "description": "0 stalk end .. 1 blossom end (pear-shaped < 0.5 < club-shaped) Applies when: fruit_count > 0.",
+          "minimum": 0.15,
+          "maximum": 0.85,
+          "default": 0.5,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_neck": {
+          "type": "number",
+          "description": "Constriction near the stalk (bottle gourd) Applies when: fruit_count > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_ribs": {
+          "type": "integer",
+          "description": "Number of longitudinal ribs (pumpkins 8-12; 0 = smooth). Applies when: fruit_count > 0.",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_rib_depth": {
+          "type": "number",
+          "description": "Depth of the grooves between ribs relative to the radius, 0..0.4. Applies when: fruit_count > 0 and fruit_ribs > 0.",
+          "minimum": 0.0,
+          "maximum": 0.4,
+          "default": 0.1,
+          "x-applies-when": "fruit_count > 0 and fruit_ribs > 0"
+        },
+        "fruit_end_depression": {
+          "type": "number",
+          "description": "Sunken stalk and blossom ends (pumpkin) Applies when: fruit_count > 0.",
+          "minimum": 0.0,
+          "maximum": 0.6,
+          "default": 0.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_stalk_cm": {
+          "type": "number",
+          "description": "Fruit stalk (peduncle) length, cm. Applies when: fruit_count > 0.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 40.0,
+          "default": 5.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Main fruit colour (sRGB 0..1). Applies when: fruit_count > 0.",
+          "default": [
+            0.85,
+            0.45,
+            0.08
+          ],
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_stripe_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the longitudinal stripes and mottling (watermelon, squash). Applies when: fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0).",
+          "default": [
+            0.95,
+            0.75,
+            0.4
+          ],
+          "x-applies-when": "fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0)"
+        },
+        "fruit_stripes": {
+          "type": "number",
+          "description": "Contrast of longitudinal stripes Applies when: fruit_count > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_mottle": {
+          "type": "number",
+          "description": "Blotchy / netted colour variation Applies when: fruit_count > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.2,
+          "x-applies-when": "fruit_count > 0"
+        },
+        "fruit_gloss": {
+          "type": "number",
+          "description": "Fruit surface gloss, 0 matt (pumpkin) .. 1 glossy (aubergine-like). Applies when: fruit_count > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.4,
+          "x-applies-when": "fruit_count > 0"
+        }
+      },
+      "description": "Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the overall extent."
+    },
+    "VinePreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scientific_name": {
+          "type": "string",
+          "description": "Binomial name, e.g. 'Ipomoea purpurea'.",
+          "default": ""
+        },
+        "common_name": {
+          "type": "string",
+          "description": "Vernacular name(s).",
+          "default": ""
+        },
+        "family": {
+          "type": "string",
+          "description": "Botanical family, e.g. 'Convolvulaceae', 'Cucurbitaceae'.",
+          "default": ""
+        },
+        "biome": {
+          "type": "string",
+          "description": "Native range or habitat.",
+          "default": ""
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free text: distinctive features, sources of the values.",
+          "default": ""
+        },
+        "profile": {
+          "$ref": "#/$defs/VineProfile"
+        },
+        "leaf": {
+          "$ref": "#/$defs/LeafMorphologyProfile"
+        },
+        "venation": {
+          "$ref": "#/$defs/VenationProfile"
+        }
+      },
+      "description": "Trait values of a Vine preset (all optional when 'base' is given)."
     }
   }
 }

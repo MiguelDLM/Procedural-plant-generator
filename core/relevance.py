@@ -11,7 +11,7 @@ the JSON Schema / field reference ("x-applies-when"), and a perturbation test th
 non-applicable field and checks that the generated geometry stays identical.
 
 Sections: Tree -> architecture, roots, bark, leaf_morphology; Cactus / Rosette -> profile;
-Flower -> flower, infl. Enum fields compare by value (e.g. habit == 'Cladode').
+Flower -> flower, infl; Vine -> profile, leaf. Enum fields compare by value (e.g. habit == 'Cladode').
 """
 
 from __future__ import annotations
@@ -133,6 +133,30 @@ RULES: dict = {
                 "branches", "branch_start", "branch_length_ratio", "branch_angle_deg", "branch_umbels")},
         },
     },
+}
+
+_TENDRILS = ("tendril_mode != 'None'", "Only when the plant has tendrils")
+_FRUITS = ("fruit_count > 0", "Only when the plant bears fruits")
+RULES["Vine"] = {
+    "profile": {
+        **{f: ("mode == 'Twining'", "Only for twining stems") for f in (
+            "chirality", "coil_radius_cm", "coil_pitch_cm")},
+        "tip_hook": ("tip_length_cm > 0", "Only with a free shoot tip"),
+        **{f: ("branch_probability > 0", "Only when nodes bear lateral shoots") for f in (
+            "branch_length_cm", "branch_angle_deg", "branch_droop")},
+        **{f: _TENDRILS for f in ("tendril_length_cm", "tendril_branches", "tendril_coil_mm",
+                                  "tendril_radius_mm", "tendril_reach")},
+        "tendril_coils": ("tendril_mode != 'None' and tendril_reach < 1", "Only for free (uncaught) tendrils"),
+        "rootlet_length_cm": ("aerial_roots > 0", "Only with nodal / adventitious roots"),
+        "stem_color_old": ("woodiness > 0", "Only for a lignified stem base"),
+        **{f: _FRUITS for f in ("fruit_length_cm", "fruit_diameter_cm", "fruit_widest_position", "fruit_neck",
+                                "fruit_ribs", "fruit_end_depression", "fruit_stalk_cm", "fruit_color",
+                                "fruit_stripes", "fruit_mottle", "fruit_gloss")},
+        "fruit_rib_depth": ("fruit_count > 0 and fruit_ribs > 0", "Only for ribbed fruits"),
+        "fruit_stripe_color": ("fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0)",
+                               "Only for striped or mottled fruits"),
+    },
+    "leaf": dict(RULES["Tree"]["leaf_morphology"]),
 }
 
 

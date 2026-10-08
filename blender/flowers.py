@@ -25,7 +25,7 @@ try:
     from ..core.inflorescence import (InflorescenceProfile, InflorescenceEngine, FlowerSites, tree_flower_sites,
                                       surface_flower_sites, FlowerSiteMode)
     from ..core.flower_db import (FLOWER_CATALOG, FLOWER_RANGES, INFL_RANGES, TREE_FLOWERS, CACTUS_FLOWERS,
-                                  ROSETTE_FLOWERS)
+                                  ROSETTE_FLOWERS, VINE_FLOWERS)
     from ..core.mesh_engine import MeshData
     from .mesh_builder import populate_mesh
     from .materials import _srgb_to_linear, _set
@@ -34,7 +34,7 @@ except (ImportError, ValueError):
     from core.inflorescence import (InflorescenceProfile, InflorescenceEngine, FlowerSites, tree_flower_sites,
                                     surface_flower_sites, FlowerSiteMode)
     from core.flower_db import (FLOWER_CATALOG, FLOWER_RANGES, INFL_RANGES, TREE_FLOWERS, CACTUS_FLOWERS,
-                                ROSETTE_FLOWERS)
+                                ROSETTE_FLOWERS, VINE_FLOWERS)
     from core.mesh_engine import MeshData
     from blender.mesh_builder import populate_mesh
     from blender.materials import _srgb_to_linear, _set
@@ -159,6 +159,8 @@ def default_flower_for(props):
         return CACTUS_FLOWERS.get(props.cactus_species)
     if form == 'Rosette':
         return ROSETTE_FLOWERS.get(props.rosette_species)
+    if form == 'Vine':
+        return VINE_FLOWERS.get(props.vine_species)
     return None
 
 

@@ -30,7 +30,7 @@
 
 ### Growth forms
 
-A selector at the top of the panel switches between four generators that share materials, caching, the
+A selector at the top of the panel switches between five generators that share materials, caching, the
 trait-space arithmetic (blend / variation) and the UI:
 
 | Form | Model | Key parameters |
@@ -38,6 +38,8 @@ trait-space arithmetic (blend / variation) and the UI:
 | **Tree / Shrub** | Everything above. | — |
 | **Cactus / stem succulent** | Stems are surfaces of revolution around an axis: a generatrix (basal taper, body, superellipse apical dome, optional apical depression) gives columnar, barrel and globose habits. Ribs modulate the cross-section, r = ρ·(1 − depth·(1 − \|cos(mθ′/2)\|<sup>p</sup>)), with optional helical twist; rib numbers default to Fibonacci numbers, as measured in barrel cacti (Robberecht & Nobel 1983). Areoles sit on rib crests (offset by half a step on neighbouring ribs) or, for tuberculate species, on an equal-area spiral lattice at 137.5° (Vogel 1979, generalised from the disc to a surface of revolution); each raises a tubercle (ribs and tubercles as joined vs free podaria, Mauseth 2006). Radial and central spines (gravity curvature, terminal hooks), areolar and apical wool, saguaro/candelabra arms (rise relative to the trunk, outward lean, secondary arms on arms, `crown_fill` placing the branch columns on an area-uniform Vogel spiral over the crown disc so dense crowns have no hollow centre, collision-checked so branches never interpenetrate — e.g. *Pachycereus weberi*'s crown of dozens of branches on a ~2 m trunk), basal offsets, and Opuntia cladode chains in which every daughter pad is tested against the exact volume of all other pads. Weathered epidermis (Evans et al. 1994; Kiesling): paler rib crests and dust in the grooves, vertical streaks, soil splash, dark halos and drip streaks below the areoles (per-vertex, from the nearest areole), corky scars, and patchy epidermal browning — tan to red-orange *scaling* and dark *barking* — rising from the base, higher on the equator-facing side, with isolated crusts ahead of the front. Roots: shallow laterals, optional taproot or napiform storage tuber (peyote), sized from the stem's vascular core, with 90% of roots above a rooting depth (Cannon 1911; Snyman 2005). | habit, height, diameter, dome, ribs (count, depth, sharpness, twist), tubercles, areole spacing, spines, wool, arms, offsets, pads, colours, wax bloom, flecks |
 | **Rosette succulent** | Leaves on near-zero internodes at the golden divergence (or distichous), oldest outermost; elevation, size and curvature change with leaf age. Each leaf is a closed volume: bent midline, half-width profile from the lamina descriptors (aspect, widest point, base/apex angles), thickness profile, superellipse cross-section with adaxial channel and abaxial keel; terminal spine and hooked marginal teeth; blushed margins/tips, glaucous bloom, spots and tubercle bands. Clasping, swollen leaf bases and a furled central spike; the stem is a body of revolution (flared root crown, tapering insertion zone) with crescent leaf scars on the phyllotactic spiral, plus persistent withered leaves. Agave leaves carry bud imprints of the neighbouring leaf's teeth and outline, a horny margin and fine striations. Shallow fibrous roots sized by rosette diameter and rooting depth (Franco & Nobel 1990). | leaf count, elevation outer/inner, size gradient, leaf length/aspect/thickness, curvature, section, armature, offsets, colours |
+
+| **Vine / climber** | The stem grows along a **guide path**: a base shape (pole, arch, obelisk spiral, fence, wall, ground run) that can be converted into an editable Bézier curve, or **any curve object of the scene** (one stem per spline, starting at its first point; the vine regenerates while the curve is edited). Climbing modes (Gianoli 2015; Isnard & Silk 2009): *twining* stems coil around the guide as a helix of given radius, pitch and handedness (≈90 % of twiners are right-handed, Edwards et al. 2007; *Humulus* is left-handed); *tendril* climbers follow it and hold on with tendrils — a tendril that has caught the support coils with a **perversion** (handedness reversal) because both ends are fixed (Gerbode et al. 2012), free tendrils coil at the tip, tendrils are axillary, leaf-opposed or replace the terminal leaflets (Sousa-Baena et al. 2018); *clinging* root climbers are pressed to the guide (a wall: its plane is detected from the curve) by adventitious rootlets, with laterals spreading over the support and laminae facing away from it; *trailing* runners creep on the ground, root at the nodes and their fruits rest on the soil. Phytomers along the stem: internodes and leaves expand over a zone behind the apex, then a free searcher tip with an apical hook; lateral shoots droop under their weight. Leaves use the tree leaf engine (all its leaf and venation traits). Parametric fruits: length, diameter, widest point, neck (bottle gourd), ribs, sunken ends (pumpkin), stripes and mottling (watermelon). A *Growth* slider (animatable) sets how much of the guide is covered. | mode, handedness, coil radius/pitch, internode, leaf arrangement, tendrils, laterals, rootlets, fruits, guide shape / curve, growth |
 
 The 15 cactus and 11 rosette presets include several Mexican species (órgano, garambullo, cardón, candelabro, viejito,
 biznaga dorada, bonete de obispo, peyote, nopal, maguey, agave azul, *Echeveria*). Algae are out of scope.
@@ -80,6 +82,11 @@ preset has a default flower (catkins for Fagaceae, Betulaceae, Salicaceae and Ju
 The 50 flower presets each carry a floral formula. They include Mexican flowers such as dalia, cempasúchil,
 mirasol (*Cosmos*), nochebuena, cacaloxóchitl (*Plumeria*), manto de la virgen (*Ipomoea*), and the flowers
 of saguaro, nopal, cardón and other cacti, plus the maguey quiote.
+
+The 11 vine presets: *Ipomoea purpurea*, *Phaseolus coccineus* (ayocote), *Humulus lupulus*, *Wisteria
+sinensis*, *Pisum sativum*, *Cucumis sativus*, *Cucurbita pepo*, *Citrullus lanatus*, *Vitis vinifera*,
+*Hedera helix* and *Passiflora caerulea*. Alpha-mapped leaf cards overlap densely in vines; the add-on raises
+Cycles' transparent bounces to 32 when needed (dense foliage otherwise renders black).
 
 ### Forests and performance
 
@@ -225,4 +232,13 @@ The suite covers allometry, leaf outlines (non-rectangular, lobed sinuses, teeth
 - Cannon, W. A. (1911). *The Root Habits of Desert Plants.* Carnegie Institution of Washington, Publ. 131.
 - Snyman, H. A. (2005). A case study on in situ rooting profiles and water-use efficiency of cactus pears, *Opuntia ficus-indica* and *O. robusta*. *Journal of the Professional Association for Cactus Development* 7: 1–21.
 - Franco, A. C. & Nobel, P. S. (1990). Influences of root distribution and growth on predicted water uptake and interspecific competition. *Oecologia* 82: 151–157. doi:10.1007/BF00323528
+- Darwin, C. (1875). *The Movements and Habits of Climbing Plants.* John Murray.
+- Gianoli, E. (2015). The behavioural ecology of climbing plants. *AoB Plants* 7: plv013. doi:10.1093/aobpla/plv013
+- Isnard, S. & Silk, W. K. (2009). Moving with climbing plants from Charles Darwin's time into the 21st century. *American Journal of Botany* 96: 1205–1221.
+- Edwards, W., Moles, A. T. & Franks, P. (2007). The global trend in plant twining direction. *Global Ecology and Biogeography* 16: 795–800.
+- Gerbode, S. J., Puzey, J. R., McCormick, A. G. & Mahadevan, L. (2012). How the cucumber tendril coils and overwinds. *Science* 337: 1087–1091.
+- Sousa-Baena, M. S., Sinha, N. R., Hernandes-Lopes, J. & Lohmann, L. G. (2018). Convergence and divergence in the evolution of tendrils in angiosperms. *Annals of Botany* 122: 1–18.
+- Vecchiato, G. et al. (2023). A 2D model to study how secondary growth affects the self-supporting behaviour of climbing plants. *PLoS Computational Biology* 19: e1011538. doi:10.1371/journal.pcbi.1011538
+- Hädrich, T., Benes, B., Deussen, O. & Pirk, S. (2017). Interactive modeling and authoring of climbing plants. *Computer Graphics Forum* 36(2): 49–61. doi:10.1111/cgf.13106
+- Wang, W., Jüttler, B., Zheng, D. & Liu, Y. (2008). Computation of rotation minimizing frames. *ACM Transactions on Graphics* 27(1): 2.
 - Cooper, L. et al. (2018). The Planteome database. *Nucleic Acids Research* 46: D1168–D1180.

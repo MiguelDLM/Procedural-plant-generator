@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "procedural_plant_generator"
 version = "1.0.0"
 name = "Procedural Plant Generator"
-tagline = "Botanical trait-driven trees, succulents and flowers"
+tagline = "Botanical trait-driven trees, succulents, flowers and vines"
 maintainer = "Miguel Diaz de Leon-Munoz <migueldlm1307@gmail.com>"
 type = "add-on"
 

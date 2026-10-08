@@ -24,8 +24,10 @@ CASES = {
     "Rosette": ["agave_americana", "echeveria_elegans"],
     "Flower": ["helianthus_annuus", "rosa_canina", "magnolia_grandiflora", "tulipa_gesneriana"],
     "Tree": ["phoenix_canariensis", "pinus_sylvestris", "quercus_robur"],
+    "Vine": ["ipomoea_purpurea", "hedera_helix", "vitis_vinifera", "cucurbita_pepo"],
 }
-MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars")
+MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars", "fruit_stripes",
+                 "fruit_mottle", "fruit_gloss")
 
 
 def _signature(form: str, preset) -> list:
@@ -39,6 +41,12 @@ def _signature(form: str, preset) -> list:
         r = RosetteEngine(preset.profile).generate(seed=3, detail=0.3, with_roots=True)
         return [r.leaves.vertices, r.armature.vertices, r.stem.vertices,
                 r.roots.vertices if r.roots is not None else np.zeros(0)]
+    if form == "Vine":
+        from core.vine import VineEngine, guide_shape
+        shape = {"Twining": "Pole", "Tendril": "Arch", "Clinging": "Wall", "Trailing": "Ground"}
+        r = VineEngine(preset.profile, preset.leaf, preset.venation).generate(
+            guide_shape(shape[preset.profile.mode.value], 1.5, 1.5), seed=3, detail=0.5)
+        return [r.stem.vertices, r.tendrils.vertices, r.leaves.vertices, r.fruits.vertices, r.roots.vertices]
     if form == "Flower":
         from core.inflorescence import InflorescenceEngine
         r = InflorescenceEngine(preset.flower, preset.infl).generate(seed=3, detail=0.3, max_flowers=12)

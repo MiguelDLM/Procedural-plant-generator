@@ -28,11 +28,13 @@ try:
     from ..core.species_db import get_preset_names
     from ..core.succulent_db import GrowthForm, preset_items
     from ..core.flower_db import flower_items
+    from ..core.vine_db import vine_items
 except (ImportError, ValueError):
     from core import presets as P
     from core.species_db import get_preset_names
     from core.succulent_db import GrowthForm, preset_items
     from core.flower_db import flower_items
+    from core.vine_db import vine_items
 
 USER_IDS: dict = {form: set() for form in P.FORMS}     # Presets loaded from the personal library
 _ITEMS: dict = {}                                       # Keeps enum item strings alive (Blender requirement)
@@ -51,6 +53,8 @@ def _base_items(form: str) -> list:
         return get_preset_names()
     if form == "Flower":
         return flower_items()
+    if form == "Vine":
+        return vine_items()
     return preset_items(GrowthForm(form))
 
 
@@ -108,7 +112,7 @@ def load_library(report=print) -> int:
 
 def _species_prop(form: str) -> str:
     return {"Tree": "species_enum", "Cactus": "cactus_species", "Rosette": "rosette_species",
-            "Flower": "flower_species"}[form]
+            "Flower": "flower_species", "Vine": "vine_species"}[form]
 
 
 def current_preset(props):
@@ -128,6 +132,13 @@ def current_preset(props):
         obj = copy.deepcopy(CATALOGS[gf][key])
         obj.profile = profile_from_props(props, gf, key)
         return form, key, obj, (props.flower_species if props.show_flowers else None)
+    if form == "Vine":
+        from .vines import current_vine_preset
+        from ..core.vine_db import VINE_CATALOG
+        if props.vine_species not in VINE_CATALOG:
+            raise P.PresetError("No valid vine preset selected")
+        return form, props.vine_species, current_vine_preset(props), \
+            (props.flower_species if props.show_flowers else None)
     from .flowers import flower_from_props
     from ..core.flower_db import FLOWER_CATALOG
     if props.flower_species not in FLOWER_CATALOG:

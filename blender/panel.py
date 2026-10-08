@@ -30,6 +30,9 @@ try:
     from .preset_io import enum_items, item_number, draw_presets
     from ..core.relevance import applies, condition
     from .runtime import PROP_MAP
+    from ..core.vine_db import VINE_CATALOG
+    from .vines import vine_properties, LAYOUT as VINE_LAYOUT, SECTION as VINE_SECTION, section_values, \
+        write_vine_to_props
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -49,6 +52,9 @@ except (ImportError, ValueError):
     from blender.preset_io import enum_items, item_number, draw_presets
     from core.relevance import applies, condition
     from blender.runtime import PROP_MAP
+    from core.vine_db import VINE_CATALOG
+    from blender.vines import vine_properties, LAYOUT as VINE_LAYOUT, SECTION as VINE_SECTION, section_values, \
+        write_vine_to_props
 
 
 # -----------------------------------------------------------------------------
@@ -139,6 +145,8 @@ def on_form_change(self, context):
         apply_species_preset_to_props(self, self.species_enum, context)
     elif self.growth_form == 'Flower':
         on_flower_species(self, context)
+    elif self.growth_form == 'Vine':
+        on_vine_species(self, context)
     else:
         _sync_flowers(self)
         apply_succulent_preset(self, context)
@@ -150,6 +158,19 @@ def on_flower_species(self, context):
     set_updating(True)
     try:
         write_flower_to_props(self, self.flower_species)
+    finally:
+        set_updating(False)
+    if getattr(self, "auto_update", True):
+        schedule_update()
+
+
+def on_vine_species(self, context):
+    if is_updating():
+        return
+    _sync_flowers(self)
+    set_updating(True)
+    try:
+        write_vine_to_props(self, self.vine_species)
     finally:
         set_updating(False)
     if getattr(self, "auto_update", True):
@@ -415,7 +436,11 @@ if BLENDER_AVAILABLE:
             ('Rosette', "Rosette Succulent", "Agave, Aloe, Echeveria: thick leaves in a Fibonacci rosette",
              'MESH_CIRCLE', 2),
             ('Flower', "Flower / Inflorescence", "An isolated flower or inflorescence built from its floral diagram",
-             'FREEZE', 3)]),
+             'FREEZE', 3),
+            ('Vine', "Vine / Climber", "Twining, tendril, clinging or trailing plants grown along a guide path or "
+             "curve", 'CURVE_BEZCURVE', 4)]),
+        "vine_species": EnumProperty(name="Vine", items=enum_items("Vine"), default=item_number("ipomoea_purpurea"),
+                                     update=on_vine_species),
         "flower_species": EnumProperty(name="Flower", items=enum_items("Flower"), default=item_number("rosa_canina"),
                                        update=on_flower_species),
         "show_flowers": BoolProperty(name="Show Flowers", default=False, update=U,
@@ -448,6 +473,7 @@ if BLENDER_AVAILABLE:
     for _form in (GrowthForm.CACTUS, GrowthForm.ROSETTE):
         PPG_Properties.__annotations__.update(profile_properties(_form, U))
     PPG_Properties.__annotations__.update(flower_properties(U))
+    PPG_Properties.__annotations__.update(vine_properties(U))
     PPG_Properties.__annotations__.update(forest_properties())
 else:
     PPG_Properties = None
@@ -500,6 +526,13 @@ class PPG_PT_MainPanel(Panel):
             box.prop(props, "species_enum", text="")
             spec = get_species_preset(props.species_enum)
             family, habit, biome = spec.family, spec.growth_habit, spec.biome
+        elif props.growth_form == 'Vine':
+            box.prop(props, "vine_species", text="")
+            spec = VINE_CATALOG.get(props.vine_species)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
+            family, habit, biome = spec.family, props.vin_mode, spec.biome
         else:
             form = GrowthForm(props.growth_form)
             key = props.cactus_species if form == GrowthForm.CACTUS else props.rosette_species
@@ -705,7 +738,7 @@ class PPG_PT_Topology(_PPGSub, Panel):
     bl_label = "Topology & Shading"
     bl_idname = "PPG_PT_topology"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Vine')
 
     def draw(self, context):
         p = context.scene.ppg_properties
@@ -722,6 +755,8 @@ class PPG_PT_Topology(_PPGSub, Panel):
                 col.prop(p, "root_display_depth")
             if p.growth_form == 'Cactus':
                 col.prop(p, "spine_budget")
+            if p.growth_form == 'Vine':
+                col.prop(p, "show_leaves")
             col.prop(p, "assign_materials")
             return
         col.prop(p, "junction_quality")
@@ -766,7 +801,7 @@ class PPG_PT_Presets(_PPGSub, Panel):
     bl_label = "Presets (Import / Export)"
     bl_idname = "PPG_PT_presets"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Flower')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine')
 
     def draw(self, context):
         draw_presets(self.layout, context.scene.ppg_properties)
@@ -786,7 +821,7 @@ class PPG_PT_Flowers(_PPGSub, Panel):
     bl_label = "Flowers"
     bl_idname = "PPG_PT_flowers"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Flower')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine')
 
     def draw_header(self, context):
         p = context.scene.ppg_properties
@@ -840,9 +875,71 @@ def _flower_panel(index, title, prefix, names):
 
 FLOWER_PANELS = tuple(_flower_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(FLOWER_LAYOUT))
 
+
+class PPG_PT_VineGuide(_PPGSub, Panel):
+    bl_label = "Guide Path"
+    bl_idname = "PPG_PT_vine_guide"
+    forms = ('Vine',)
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        layout = self.layout
+        layout.row().prop(p, "vine_guide_source", expand=True)
+        col = layout.column(align=True)
+        if p.vine_guide_source == 'SHAPE':
+            col.prop(p, "vine_guide_shape")
+            col.prop(p, "vine_guide_height")
+            if p.vine_guide_shape != 'Pole':
+                col.prop(p, "vine_guide_width")
+            if p.vine_guide_shape == 'Spiral':
+                col.prop(p, "vine_guide_turns")
+            layout.operator("ppg.vine_make_curve", icon='CURVE_BEZCURVE')
+        else:
+            col.prop(p, "vine_curve", text="")
+            row = col.row(align=True)
+            row.operator("ppg.vine_use_selected", icon='EYEDROPPER')
+            row.operator("ppg.vine_edit_guide", icon='EDITMODE_HLT', text="Edit")
+            if p.vine_curve is None:
+                r = col.row()
+                r.active = False
+                r.label(text="Pick a curve: each spline grows one stem", icon='INFO')
+            else:
+                r = col.row()
+                r.active = False
+                r.label(text=f"{len(p.vine_curve.data.splines)} spline(s): stems start at the first point",
+                        icon='INFO')
+        col = layout.column(align=True)
+        col.prop(p, "vine_growth", slider=True)
+        col.prop(p, "vine_leaf_density", slider=True)
+        col.prop(p, "vine_flip_side")
+        col.prop(p, "seed")
+
+
+def _vine_panel(index, title, prefix, names):
+    section = VINE_SECTION[prefix]
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        draw_fields(col, p, "Vine", section, [(prefix + n, n) for n in names], section_values(p, prefix))
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        if p is None or p.growth_form != 'Vine':
+            return False
+        values = section_values(p, prefix)          # Hide sections where nothing applies (e.g. no fruits)
+        return any(applies("Vine", section, n, values) for n in names)
+    return type(f"PPG_PT_Vine_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_vine_{index}", "bl_options": {'DEFAULT_CLOSED'},
+        "forms": ('Vine',), "draw": draw, "poll": poll})
+
+
+VINE_PANELS = (PPG_PT_VineGuide,) + tuple(_vine_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(VINE_LAYOUT))
+
 SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTUS, GrowthForm.ROSETTE)
                          for i, (t, n) in enumerate(LAYOUT[f]))
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
-                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + \
+                 PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + \
                 (PPG_PT_Flowers,) + FLOWER_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)

@@ -95,6 +95,17 @@ class PPG_OT_ApplySpeciesPreset(Operator):
             schedule_update()
             self.report({'INFO'}, "Loaded flower preset")
             return {'FINISHED'}
+        if props.growth_form == 'Vine':
+            from .vines import write_vine_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_vine_to_props(props, props.vine_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded vine preset")
+            return {'FINISHED'}
         if props.growth_form != 'Tree':
             from .runtime import apply_succulent_preset
             apply_succulent_preset(props, context)
@@ -156,6 +167,19 @@ class PPG_OT_ExportTraits(Operator):
                     "family": sp.family, "floral_formula": sp.formula,
                     "flower": {x.name: plain(getattr(f, x.name)) for x in dc_fields(f)},
                     "inflorescence": {x.name: plain(getattr(ip, x.name)) for x in dc_fields(ip)}}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Vine':
+            from ..core import presets as P
+            from .vines import current_vine_preset
+            from ..core.vine_db import VINE_CATALOG
+            if props.vine_species not in VINE_CATALOG:
+                self.report({'ERROR'}, "No valid vine preset selected")
+                return {'CANCELLED'}
+            data = {"growth_form": "Vine", **P.to_plain(current_vine_preset(props))}
             target = bpy.path.abspath(self.filepath)
             with open(target, "w") as fh:
                 json.dump(data, fh, indent=2)

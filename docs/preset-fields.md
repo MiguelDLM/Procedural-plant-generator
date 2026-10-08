@@ -68,6 +68,21 @@ Trait values of a Flower preset (all optional when 'base' is given).
 | `flower` | object | | | | see [FlowerProfile](#flowerprofile) |
 | `infl` | object | | | | see [InflorescenceProfile](#inflorescenceprofile) |
 
+## VinePreset
+
+Trait values of a Vine preset (all optional when 'base' is given).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `scientific_name` | string |  |  |  | Binomial name, e.g. 'Ipomoea purpurea'. |
+| `common_name` | string |  |  |  | Vernacular name(s). |
+| `family` | string |  |  |  | Botanical family, e.g. 'Convolvulaceae', 'Cucurbitaceae'. |
+| `biome` | string |  |  |  | Native range or habitat. |
+| `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
+| `profile` | object | | | | see [VineProfile](#vineprofile) |
+| `leaf` | object | | | | see [LeafMorphologyProfile](#leafmorphologyprofile) |
+| `venation` | object | | | | see [VenationProfile](#venationprofile) |
+
 ## AllometricProfile
 
 Empirical scaling parameters for a plant or tree taxon.
@@ -486,4 +501,58 @@ InflorescenceProfile(kind: core.inflorescence.InflorescenceType = <Inflorescence
 | `stem_color` | colour (sRGB 0..1) |  |  | [0.3, 0.42, 0.18] | Colour of peduncle, rachis and pedicels, sRGB 0..1. |
 | `site_mode` | enum: `Terminal`, `Axillary` |  |  | Terminal | Where inflorescences go on a plant: Terminal (shoot tips, rosette centre) or Axillary (along shoots, leaf axils). |
 | `orientation` | number |  | 0.0 – 1.0 | 0.5 | On plants: 0 along the shoot .. 1 vertical (upright candles) |
+
+## VineProfile
+
+Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the overall extent.
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `mode` | enum: `Twining`, `Tendril`, `Clinging`, `Trailing` |  |  | Twining | How the stem uses its guide path: 'Twining' coils around it (the guide is the support), 'Tendril' follows it and grasps it with tendrils, 'Clinging' is pressed to it by rootlets (walls), 'Trailing' creeps along it on the ground. |
+| `chirality` | enum: `Right`, `Left` |  |  | Right | Handedness of the twining helix: 'Right' = counter-clockwise seen from above (about 90 % of twiners: Ipomoea, Phaseolus, Wisteria sinensis); 'Left' = clockwise (Humulus, Lonicera). Applies when: mode == 'Twining'. |
+| `coil_radius_cm` | number | cm | 0.2 – 30.0 | 1.5 | Helix radius around the guide (support radius + stem) Applies when: mode == 'Twining'. |
+| `coil_pitch_cm` | number | cm | 2.0 – 150.0 | 12.0 | Rise per helix turn along the guide Applies when: mode == 'Twining'. |
+| `wander_cm` | number | cm | 0.0 – 50.0 | 2.0 | Lateral meander of the stem around the guide |
+| `tip_length_cm` | number | cm | 0.0 – 300.0 | 25.0 | Free searcher tip beyond the reached part of the guide |
+| `tip_hook` | number |  | 0.0 – 1.0 | 0.5 | Apical hook / nutation curl of the free tip Applies when: tip_length_cm > 0. |
+| `stem_radius_mm` | number | mm | 0.3 – 200.0 | 2.5 | At the base |
+| `stem_taper` | number |  | 0.0 – 0.95 | 0.6 | Fraction of the radius lost toward the tip |
+| `internode_cm` | number | cm | 0.5 – 80.0 | 10.0 | Mature internode length |
+| `leaf_arrangement` | enum: `Alternate`, `Distichous`, `Opposite` |  |  | Alternate | Leaves on the stem (the leaf itself is described by the 'leaf' section) |
+| `leaf_size` | number |  | 0.1 – 3.0 | 1.0 | Scale of mature leaves relative to the leaf blade length |
+| `young_leaf_size` | number |  | 0.05 – 1.0 | 0.3 | Size of the youngest leaf relative to a mature one |
+| `expansion_zone_cm` | number | cm | 1.0 – 300.0 | 40.0 | Length behind the apex over which internodes and leaves expand |
+| `leaf_facing` | number |  | 0.0 – 1.0 | 0.6 | How strongly laminae turn away from the support, toward the light |
+| `basal_leaf_loss` | number |  | 0.0 – 0.95 | 0.0 | Fraction of the stem (from the base) that has shed its leaves |
+| `branch_probability` | number |  | 0.0 – 1.0 | 0.1 | Chance that a node bears a lateral shoot |
+| `branch_length_cm` | number | cm | 0.0 – 600.0 | 60.0 | Length of a lateral shoot from an old node, cm (shorter near the apex). Applies when: branch_probability > 0. |
+| `branch_angle_deg` | number | deg | 5.0 – 90.0 | 45.0 | Insertion angle from the stem Applies when: branch_probability > 0. |
+| `branch_droop` | number |  | 0.0 – 1.0 | 0.4 | Gravity bending of unsupported lateral shoots Applies when: branch_probability > 0. |
+| `tendril_mode` | enum: `None`, `Node`, `Leaf Tip` |  |  | None | Tendrils |
+| `tendril_length_cm` | number | cm | 1.0 – 60.0 | 15.0 | Tendril length when straight, cm (Pisum 5-10, Cucumis 15-25, Vitis 10-20). Applies when: tendril_mode != 'None'. |
+| `tendril_branches` | integer |  | 1 – 6 | 1 | Simple (1) or branched (Vitis 2, Pisum 3-5) Applies when: tendril_mode != 'None'. |
+| `tendril_coils` | number |  | 0.0 – 30.0 | 5.0 | Turns of a free tendril's coiled tip Applies when: tendril_mode != 'None' and tendril_reach < 1. |
+| `tendril_coil_mm` | number | mm | 0.5 – 20.0 | 3.0 | Coil radius Applies when: tendril_mode != 'None'. |
+| `tendril_radius_mm` | number | mm | 0.1 – 3.0 | 0.6 | Tendril thickness (radius), mm. Applies when: tendril_mode != 'None'. |
+| `tendril_reach` | number |  | 0.0 – 1.0 | 0.6 | Fraction of tendrils that have caught the support Applies when: tendril_mode != 'None'. |
+| `aerial_roots` | number |  | 0.0 – 1.0 | 0.0 | Density of rootlets at the nodes |
+| `rootlet_length_cm` | number | cm | 0.2 – 30.0 | 2.0 | Length of the nodal / adventitious rootlets, cm. Applies when: aerial_roots > 0. |
+| `stem_color` | colour (sRGB 0..1) |  |  | [0.24, 0.42, 0.14] | Stem colour |
+| `stem_color_old` | colour (sRGB 0..1) |  |  | [0.38, 0.3, 0.2] | Lignified base Applies when: woodiness > 0. |
+| `woodiness` | number |  | 0.0 – 1.0 | 0.0 | Fraction of the stem, from the base, that is lignified |
+| `hairiness` | number |  | 0.0 – 1.0 | 0.2 | Pubescence (soft sheen) |
+| `fruit_count` | integer |  | 0 – 100 | 0 | Per stem |
+| `fruit_length_cm` | number | cm | 0.5 – 120.0 | 10.0 | Along the fruit axis (stalk end to blossom end) Applies when: fruit_count > 0. |
+| `fruit_diameter_cm` | number | cm | 0.3 – 100.0 | 8.0 | Largest fruit diameter, cm (pumpkin 25-40, cucumber 3-5, pea pod ~1). Applies when: fruit_count > 0. |
+| `fruit_widest_position` | number |  | 0.15 – 0.85 | 0.5 | 0 stalk end .. 1 blossom end (pear-shaped < 0.5 < club-shaped) Applies when: fruit_count > 0. |
+| `fruit_neck` | number |  | 0.0 – 1.0 | 0.0 | Constriction near the stalk (bottle gourd) Applies when: fruit_count > 0. |
+| `fruit_ribs` | integer |  | 0 – 30 | 0 | Number of longitudinal ribs (pumpkins 8-12; 0 = smooth). Applies when: fruit_count > 0. |
+| `fruit_rib_depth` | number |  | 0.0 – 0.4 | 0.1 | Depth of the grooves between ribs relative to the radius, 0..0.4. Applies when: fruit_count > 0 and fruit_ribs > 0. |
+| `fruit_end_depression` | number |  | 0.0 – 0.6 | 0.0 | Sunken stalk and blossom ends (pumpkin) Applies when: fruit_count > 0. |
+| `fruit_stalk_cm` | number | cm | 0.0 – 40.0 | 5.0 | Fruit stalk (peduncle) length, cm. Applies when: fruit_count > 0. |
+| `fruit_color` | colour (sRGB 0..1) |  |  | [0.85, 0.45, 0.08] | Main fruit colour (sRGB 0..1). Applies when: fruit_count > 0. |
+| `fruit_stripe_color` | colour (sRGB 0..1) |  |  | [0.95, 0.75, 0.4] | Colour of the longitudinal stripes and mottling (watermelon, squash). Applies when: fruit_count > 0 and (fruit_stripes > 0 or fruit_mottle > 0). |
+| `fruit_stripes` | number |  | 0.0 – 1.0 | 0.0 | Contrast of longitudinal stripes Applies when: fruit_count > 0. |
+| `fruit_mottle` | number |  | 0.0 – 1.0 | 0.2 | Blotchy / netted colour variation Applies when: fruit_count > 0. |
+| `fruit_gloss` | number |  | 0.0 – 1.0 | 0.4 | Fruit surface gloss, 0 matt (pumpkin) .. 1 glossy (aubergine-like). Applies when: fruit_count > 0. |
 

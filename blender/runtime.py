@@ -433,6 +433,15 @@ def update_tree_geometry(context):
             traceback.print_exc()
             print(f"[PPG Error] Failed to update flower geometry: {e}")
         return
+    if getattr(props, "growth_form", 'Tree') == 'Vine':
+        try:
+            from .vines import update_vine_geometry
+            update_vine_geometry(context, props, find)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PPG Error] Failed to update vine geometry: {e}")
+        return
     if getattr(props, "growth_form", 'Tree') != 'Tree':
         try:
             from .succulents import update_succulent_geometry
@@ -481,6 +490,8 @@ def update_tree_geometry(context):
                 _assign(built["foliage"], leaf_mat)
                 _assign(built.get("leaf_card"), leaf_mat)
         _tree_flowers(context, built["root"], props, result)
+        from .vines import hide_vine_parts
+        hide_vine_parts(built["root"])
     except Exception as e:  # Keep the UI responsive; report in console
         import traceback
         traceback.print_exc()

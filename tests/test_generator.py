@@ -935,5 +935,83 @@ class TestRelevance(unittest.TestCase):
         self.assertNotIn("profile.rib_depth", inactive_fields("Cactus", saguaro))
 
 
+class TestVines(unittest.TestCase):
+    """Climbing and trailing plants grown along guide paths (core.vine)."""
+
+    def _gen(self, key, guides=None, **kw):
+        from core.vine import VineEngine, guide_shape
+        from core.vine_db import VINE_CATALOG
+        sp = VINE_CATALOG[key]
+        shape = {"Twining": "Pole", "Tendril": "Arch", "Clinging": "Wall", "Trailing": "Ground"}
+        g = guides if guides is not None else guide_shape(shape[sp.profile.mode.value], 2.0, 2.0)
+        return VineEngine(sp.profile, sp.leaf, sp.venation).generate(g, seed=4, detail=0.6, **kw)
+
+    def test_every_preset_generates_valid_meshes(self):
+        from core.vine_db import VINE_CATALOG
+        for key in VINE_CATALOG:
+            r = self._gen(key)
+            self.assertGreater(r.leaf_count, 5, key)
+            for m in (r.stem, r.tendrils, r.leaves, r.fruits, r.roots):
+                self.assertTrue(np.isfinite(m.vertices).all(), key)
+                if len(m.loop_vertex):
+                    self.assertLess(int(m.loop_vertex.max()), len(m.vertices), key)
+            sp = VINE_CATALOG[key].profile
+            if sp.tendril_mode.value != "None":
+                self.assertGreater(r.tendril_count, 0, key)
+            if sp.fruit_count:
+                self.assertGreater(r.fruit_count, 0, key)
+
+    def test_twining_handedness(self):
+        """Right-handed twiners turn counter-clockwise seen from above while climbing a vertical pole."""
+        import copy
+        from core.vine import VineEngine, guide_shape, Chirality
+        from core.vine_db import VINE_CATALOG
+        for chir, sign in ((Chirality.RIGHT, 1), (Chirality.LEFT, -1)):
+            sp = copy.deepcopy(VINE_CATALOG["ipomoea_purpurea"])
+            sp.profile.chirality = chir
+            sp.profile.tip_length_cm = 0.0
+            sp.profile.wander_cm = 0.0
+            eng = VineEngine(sp.profile, sp.leaf, sp.venation)
+            sh = eng._main_shoot(guide_shape("Pole", 2.0)[0], 1.0, np.random.default_rng(0), None)
+            ang = np.unwrap(np.arctan2(sh.P[:, 1], sh.P[:, 0]))
+            k = len(ang) // 4
+            self.assertEqual(np.sign(ang[-1] - ang[k]), sign)
+            turns = abs(ang[-1] - ang[k]) / (2 * np.pi)
+            expected = (sh.P[-1, 2] - sh.P[k, 2]) / (sp.profile.coil_pitch_cm * 0.01)
+            self.assertAlmostEqual(turns, expected, delta=0.3)
+
+    def test_growth_and_multiple_guides(self):
+        from core.vine import guide_shape
+        g = guide_shape("Pole", 2.0)
+        r0 = self._gen("ipomoea_purpurea", g, growth=0.3)
+        r1 = self._gen("ipomoea_purpurea", g, growth=1.0)
+        self.assertLess(r0.stats["stem_length_m"], r1.stats["stem_length_m"])
+        two = [g[0], g[0] + np.array([1.0, 0.0, 0.0])]
+        r2 = self._gen("ipomoea_purpurea", two)
+        self.assertEqual(r2.stem_count, 2)
+        self.assertGreater(r2.stem.vertices[:, 0].max(), 0.9)
+
+    def test_trailing_stays_on_the_ground(self):
+        r = self._gen("cucurbita_pepo")
+        # Runners and leaves lie low; only fruit stalks climb to the top of the (22 cm tall) pumpkins
+        self.assertLess(float(r.stem.vertices[:, 2].max()), 0.25)
+        self.assertLess(float(np.percentile(r.stem.vertices[:, 2], 90)), 0.05)
+        self.assertGreater(r.fruit_count, 0)
+        self.assertGreater(float(r.fruits.vertices[:, 2].min()), -0.05)
+
+    def test_inactive_vine_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for key in ("ipomoea_purpurea", "cucurbita_pepo"):
+            self.assertEqual(check("Vine", key, report=lambda m: None), [], key)
+
+    def test_vine_presets_roundtrip(self):
+        from core import presets as P
+        from core.vine_db import VINE_CATALOG
+        env = P.export_preset("Vine", "my_bean", VINE_CATALOG["phaseolus_coccineus"], base="phaseolus_coccineus")
+        form, pid, obj, warn, _ = P.load_preset(env)
+        self.assertEqual((form, pid, warn), ("Vine", "my_bean", []))
+        self.assertEqual(obj.profile.coil_pitch_cm, VINE_CATALOG["phaseolus_coccineus"].profile.coil_pitch_cm)
+
+
 if __name__ == "__main__":
     unittest.main()

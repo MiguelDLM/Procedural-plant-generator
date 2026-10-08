@@ -556,6 +556,78 @@ FLOWER_CATALOG = {
         petal_length_cm=0.8, petal_aspect=3.0, apex_angle_deg=60, opening_deg=0, reflex_deg=-10, cup=0.15,
         sepal_length_ratio=0.5, stamen_count=10, stamen_length_ratio=0.5, petal_color=(0.97, 0.95, 0.92),
         tip_color=(0.95, 0.90, 0.88), spots=0.6, spot_color=(0.75, 0.15, 0.15)),
+    # --- Climbers and trailing crops ----------------------------------------------------------------
+    "cucurbita_pepo": fl(
+        "Cucurbita pepo", "Squash / pumpkin flower (flor de calabaza)", "Cucurbitaceae",
+        "♂ K(5) C(5) A(3) | ♀ K(5) C(5) G(3) inf",
+        "Large golden campanulate corolla, five pointed lobes; solitary in the leaf axils, stamens fused in a "
+        "central column.",
+        inf(I.SOLITARY, peduncle_cm=8.0, stem_radius_mm=3.0, site_mode=AX, orientation=0.8),
+        tube_length_cm=4.0, tube_radius_cm=1.0, tube_flare=2.2, limb_fusion=0.6, petal_length_cm=5.0,
+        petal_aspect=1.1, widest_position=0.55, apex_angle_deg=70, apex_curvature=-0.2, opening_deg=40,
+        reflex_deg=-20, cup=0.2, undulation=0.25, sepal_length_ratio=0.15, sepal_aspect=6.0, stamen_count=3,
+        staminal_column=1.0, stamen_length_ratio=0.35, anther_size_mm=6.0, style_length_ratio=0.0,
+        petal_color=(0.98, 0.72, 0.08), tip_color=(0.97, 0.65, 0.05), eye_color=(0.95, 0.55, 0.05), eye_size=0.25,
+        anther_color=(0.98, 0.80, 0.20), stamen_color=(0.97, 0.80, 0.30), sheen=0.3),
+    "cucumis_sativus": fl(
+        "Cucumis sativus", "Cucumber flower (flor de pepino)", "Cucurbitaceae", "♂ K(5) C(5) A(3) | ♀ G(3) inf",
+        "Small yellow wheel-shaped corolla, deeply five-lobed; male flowers clustered, female flowers solitary.",
+        inf(I.UMBEL, flower_count=3, peduncle_cm=0.5, pedicel_cm=1.5, pedicel_angle_deg=45, site_mode=AX,
+            orientation=0.6, stem_radius_mm=0.8),
+        tube_length_cm=0.6, tube_radius_cm=0.25, tube_flare=2.0, limb_fusion=0.3, petal_length_cm=1.5,
+        petal_aspect=1.2, widest_position=0.5, apex_angle_deg=80, opening_deg=70, reflex_deg=-5, cup=0.1,
+        undulation=0.2, sepal_length_ratio=0.25, sepal_aspect=6.0, stamen_count=3, staminal_column=1.0,
+        stamen_length_ratio=0.3, anther_size_mm=2.5, style_length_ratio=0.0, petal_color=(0.98, 0.85, 0.20),
+        tip_color=(0.98, 0.82, 0.18), eye_color=(0.95, 0.75, 0.15), eye_size=0.2, anther_color=(0.95, 0.80, 0.25)),
+    "phaseolus_coccineus": fl(
+        "Phaseolus coccineus", "Runner bean (ayocote)", "Fabaceae", "↑ K(5) C1+2+(2) A(9)+1 G1",
+        "Scarlet papilionaceous flowers in long axillary racemes held above the leaves.",
+        inf(I.RACEME, flower_count=12, peduncle_cm=8.0, rachis_cm=10.0, pedicel_cm=0.8, pedicel_angle_deg=55,
+            droop=0.2, site_mode=AX, orientation=0.5, stem_radius_mm=1.2),
+        zygomorphy=1.0, lip_bias=1.0, petal_length_cm=1.6, petal_aspect=1.0, widest_position=0.6,
+        apex_angle_deg=160, apex_curvature=0.8, opening_deg=45, reflex_deg=10, cup=0.6, sepal_length_ratio=0.3,
+        hypanthium_cm=0.2, stamen_count=10, stamen_length_ratio=0.6, stamen_declination=0.8,
+        style_length_ratio=0.6, petal_color=(0.85, 0.10, 0.08), tip_color=(0.88, 0.12, 0.08),
+        eye_color=(0.90, 0.20, 0.10), eye_size=0.1),
+    "wisteria_sinensis": fl(
+        "Wisteria sinensis", "Chinese wisteria (glicinia)", "Fabaceae", "↑ K(5) C1+2+(2) A(9)+1 G1",
+        "Lilac papilionaceous flowers in long pendulous racemes that open almost simultaneously.",
+        inf(I.RACEME, flower_count=60, peduncle_cm=2.0, rachis_cm=25.0, pedicel_cm=1.5, pedicel_angle_deg=60,
+            droop=0.95, nodding=0.3, site_mode=AX, orientation=0.0, stem_radius_mm=1.5, maturation=0.2),
+        zygomorphy=1.0, lip_bias=1.0, petal_length_cm=1.2, petal_aspect=1.0, widest_position=0.6,
+        apex_angle_deg=160, apex_curvature=0.8, opening_deg=45, reflex_deg=15, cup=0.6, sepal_length_ratio=0.3,
+        hypanthium_cm=0.2, stamen_count=10, stamen_length_ratio=0.6, stamen_declination=0.8,
+        style_length_ratio=0.6, petal_color=(0.62, 0.52, 0.85), tip_color=(0.66, 0.56, 0.88),
+        eye_color=(0.95, 0.92, 0.55), eye_size=0.2),
+    "pisum_sativum": fl(
+        "Pisum sativum", "Garden pea (chícharo)", "Fabaceae", "↑ K(5) C1+2+(2) A(9)+1 G1",
+        "White papilionaceous flowers, one or two on axillary peduncles.",
+        inf(I.RACEME, flower_count=2, peduncle_cm=5.0, rachis_cm=1.0, pedicel_cm=1.0, pedicel_angle_deg=50,
+            site_mode=AX, orientation=0.5, stem_radius_mm=0.8),
+        zygomorphy=1.0, lip_bias=1.0, petal_length_cm=1.8, petal_aspect=1.0, widest_position=0.6,
+        apex_angle_deg=165, apex_curvature=0.8, opening_deg=40, reflex_deg=10, cup=0.6, sepal_length_ratio=0.45,
+        hypanthium_cm=0.2, stamen_count=10, stamen_length_ratio=0.6, stamen_declination=0.8,
+        style_length_ratio=0.6, petal_color=WHITE, tip_color=WHITE, eye_color=(0.90, 0.93, 0.80), eye_size=0.15),
+    "hedera_helix": fl(
+        "Hedera helix", "Ivy flowers (hiedra)", "Araliaceae", "K5 C5 A5 G(5) inf",
+        "Small yellow-green flowers in globose umbels on the mature, non-climbing shoots.",
+        inf(I.UMBEL, flower_count=20, peduncle_cm=3.0, pedicel_cm=1.2, pedicel_angle_deg=70, site_mode=TERM,
+            orientation=0.7, stem_radius_mm=0.8, stem_color=(0.40, 0.42, 0.25)),
+        petal_length_cm=0.3, petal_aspect=1.4, opening_deg=80, reflex_deg=-40, cup=0.0, sepal_length_ratio=0.0,
+        receptacle_radius_cm=0.15, receptacle_height_cm=0.15, stamen_count=5, stamen_length_ratio=1.2,
+        stamen_spread_deg=60, anther_size_mm=0.8, style_length_ratio=0.3, petal_color=(0.72, 0.75, 0.35),
+        tip_color=(0.70, 0.72, 0.32), anther_color=(0.90, 0.85, 0.40)),
+    "passiflora_caerulea": fl(
+        "Passiflora caerulea", "Blue passion flower (pasionaria)", "Passifloraceae", "K5 C5 corona A5 G(3)",
+        "Flat white perianth of ten tepals under a corona of blue, white and purple filaments; stamens and "
+        "styles raised on a central column. The corona is approximated by a dense ring of filaments.",
+        inf(I.SOLITARY, peduncle_cm=4.0, stem_radius_mm=1.2, site_mode=AX, orientation=0.7),
+        merosity=10, petal_length_cm=3.5, petal_aspect=2.6, widest_position=0.5, apex_angle_deg=60,
+        opening_deg=85, reflex_deg=-5, cup=0.0, sepal_length_ratio=0.0, stamen_count=120,
+        stamen_length_ratio=0.45, stamen_spread_deg=90, anther_size_mm=0.3, staminal_column=1.0,
+        style_length_ratio=0.5, carpels=3, stigma_size_mm=3.0, petal_color=(0.96, 0.96, 0.92),
+        tip_color=(0.92, 0.94, 0.90), stamen_color=(0.35, 0.40, 0.85), anther_color=(0.55, 0.20, 0.45),
+        pistil_color=(0.55, 0.65, 0.30)),
 }
 
 # Default flowers of the plant presets (None = no showy flowers: conifers, ginkgo, wind-pollinated without catkins)
@@ -581,6 +653,12 @@ CACTUS_FLOWERS = {
     "lophophora_williamsii": "lophophora_williamsii", "astrophytum_myriostigma": "echinocactus_grusonii",
     "opuntia_ficus_indica": "opuntia_ficus_indica", "opuntia_microdasys": "opuntia_microdasys",
     "euphorbia_ingens": "euphorbia_cyathia",
+}
+VINE_FLOWERS = {
+    "ipomoea_purpurea": "ipomoea_purpurea", "phaseolus_coccineus": "phaseolus_coccineus",
+    "humulus_lupulus": "catkin_amentum", "wisteria_sinensis": "wisteria_sinensis", "pisum_sativum": "pisum_sativum",
+    "cucumis_sativus": "cucumis_sativus", "cucurbita_pepo": "cucurbita_pepo", "citrullus_lanatus": "cucumis_sativus",
+    "hedera_helix": "hedera_helix", "passiflora_caerulea": "passiflora_caerulea",
 }
 ROSETTE_FLOWERS = {
     "echeveria_elegans": "echeveria", "echeveria_agavoides": "echeveria", "agave_americana": "agave_americana",
