@@ -108,6 +108,30 @@ of saguaro, nopal, cardón and other cacti, plus the maguey quiote.
 
 ---
 
+### Forests and performance
+
+Large scenes use instancing at two levels, so a forest of hundreds of trees costs little more than its
+handful of unique variants:
+
+- **Instanced leaves** (*Foliage › Instanced Leaves*, on by default): one leaf or leafy-shoot card is
+  instanced on every foliage point by a shared *PPG Instancer* Geometry Nodes group; per-leaf colour
+  jitter reaches the shader through an *Instancer* attribute. Same render, about a million fewer vertices
+  per broadleaf tree and faster live updates. Apply the modifier to get real geometry for export.
+- **Shared materials**: bark and leaf materials (and leaf textures) are keyed by their parameters and
+  reused by every plant that shares them.
+- **Forest panel**: list the species of the mix and how many unique variants each gets (its share of the
+  mix). *Build Variants* generates them with their own seed, intraspecific trait variation (trait-space
+  mutation) and stem-diameter spread, as collections inside *PPG Forest Library* (excluded from the view
+  layer, optionally marked as assets); variants of a species share its materials. *Scatter Forest* adds
+  the native **PPG Forest Scatter** node group to a *PPG_Forest* object: Poisson-disk points on the
+  selected mesh (or a new ground plane) with density in trees/ha and a minimum spacing, a slope limit,
+  random variant, Z rotation and scale, and a viewport display fraction (all trees render). Every input is
+  editable in the modifier panel, and the library collection can feed any other Geometry Nodes setup.
+  *Create Forest* does both in one click.
+
+Rendering: EEVEE is several times faster for previews and many trees; Cycles is needed for true bark
+displacement and gives better translucency on leaves, petals and succulent tissue.
+
 ## Species catalogue (37)
 
 | Group | Species |
