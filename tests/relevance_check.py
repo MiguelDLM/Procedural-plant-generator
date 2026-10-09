@@ -28,6 +28,7 @@ CASES = {
     "Fruit": ["malus_domestica", "vitis_vinifera", "solanum_lycopersicum", "citrullus_lanatus"],
     "Vegetable": ["daucus_carota", "solanum_tuberosum", "brassica_oleracea_italica"],
     "Grass": ["zea_mays", "triticum_aestivum", "lolium_perenne"],
+    "Orchid": ["phalaenopsis_hybrid", "paphiopedilum_insigne", "vanilla_planifolia", "oncidium_sphacelatum"],
 }
 MATERIAL_ONLY = ("_color", "equator_", "scars", "blush_tip", "guide_contrast", "stem_scars")
 
@@ -43,6 +44,11 @@ def _signature(form: str, preset) -> list:
         r = RosetteEngine(preset.profile).generate(seed=3, detail=0.3, with_roots=True)
         return [r.leaves.vertices, r.armature.vertices, r.stem.vertices,
                 r.roots.vertices if r.roots is not None else np.zeros(0)]
+    if form == "Orchid":
+        from core.orchid import OrchidEngine
+        r = OrchidEngine(preset.profile).generate(seed=3, detail=0.4)
+        return [r.leaves.vertices, r.stems.vertices, r.roots.vertices, r.flowers.vertices, r.spikes.vertices,
+                r.support.vertices]
     if form == "Grass":
         from core.grass import GrassEngine
         r = GrassEngine(preset.profile).generate(seed=3, detail=0.5)

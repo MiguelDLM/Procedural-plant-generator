@@ -657,7 +657,8 @@ def update_succulent_geometry(context, props, find_root):
         if c.name.endswith(("_Wood", "_Foliage", "_Roots", "_VineStem", "_Tendrils", "_VineLeaves", "_VineFruits",
                             "_VineRoots", "_Fruits", "_FruitProto", "_FruitBody", "_VegRoot", "_VegStems", "_VegHead",
                             "_VegLeaves", "_GrassLeaves", "_GrassCulms", "_GrassHeads", "_GrassEars",
-                            "_GrassRoots")) or "_GrassPatch" in c.name or "_GrassProto" in c.name:
+                            "_GrassRoots", "_OrchidLeaves", "_OrchidStems", "_OrchidRoots", "_OrchidFlowers",
+                            "_OrchidSpikes", "_OrchidSupport")) or "_GrassPatch" in c.name or "_GrassProto" in c.name:
             c.hide_viewport = c.hide_render = True
     mkey = _key(profile)
     if form == GrowthForm.CACTUS:

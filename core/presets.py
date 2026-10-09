@@ -7,7 +7,7 @@ A preset file ("PPG preset", format version 1) is a small envelope around the tr
       "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
       "format": "ppg-preset",
       "format_version": 1,
-      "growth_form": "Tree" | "Cactus" | "Rosette" | "Flower" | "Vine" | "Fruit" | "Vegetable" | "Grass",
+      "growth_form": "Tree" | "Cactus" | "Rosette" | "Flower" | "Vine" | "Fruit" | "Vegetable" | "Grass" | "Orchid",
       "id": "quercus_robur_old_growth",          # lower_snake_case, unique in the library
       "base": "quercus_robur",                   # optional: built-in or library preset to start from
       "default_flower": "rosa_canina",           # optional (Tree / Cactus / Rosette / Vine)
@@ -41,7 +41,7 @@ from typing import Any
 
 FORMAT = "ppg-preset"
 FORMAT_VERSION = 1
-FORMS = ("Tree", "Cactus", "Rosette", "Flower", "Vine", "Fruit", "Vegetable", "Grass")
+FORMS = ("Tree", "Cactus", "Rosette", "Flower", "Vine", "Fruit", "Vegetable", "Grass", "Orchid")
 SCHEMA_URL = ("https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/"
               "schemas/ppg-preset.schema.json")
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
@@ -93,6 +93,9 @@ def _catalog(form: str) -> dict:
     if form == "Grass":
         from .grass_db import GRASS_CATALOG
         return GRASS_CATALOG
+    if form == "Orchid":
+        from .orchid_db import ORCHID_CATALOG
+        return ORCHID_CATALOG
     raise ValueError(f"Unknown growth form {form!r}; expected one of {FORMS}")
 
 
@@ -143,6 +146,10 @@ def _template(form: str):
         from .grass_db import GrassPreset
         from .grass import GrassProfile
         return GrassPreset("", "", "", "", GrassProfile())
+    if form == "Orchid":
+        from .orchid_db import OrchidPreset
+        from .orchid import OrchidProfile
+        return OrchidPreset("", "", "", "", OrchidProfile())
     raise ValueError(form)
 
 
@@ -175,6 +182,9 @@ def _ranges(form: str) -> dict:
     elif form == "Grass":
         from .grass_db import GRASS_RANGES
         out = {f"profile.{k}": v for k, v in GRASS_RANGES.items()}
+    elif form == "Orchid":
+        from .orchid_db import ORCHID_RANGES
+        out = {f"profile.{k}": v for k, v in ORCHID_RANGES.items()}
     return out
 
 
@@ -537,9 +547,11 @@ def json_schema() -> dict:
         t = _template(form)
         name = {"Tree": "TreePreset", "Cactus": "CactusPreset", "Rosette": "RosettePreset",
                 "Flower": "FlowerPreset", "Vine": "VinePreset", "Fruit": "FruitPreset",
-                "Vegetable": "VegetablePreset", "Grass": "GrassPreset"}[form]
+                "Vegetable": "VegetablePreset", "Grass": "GrassPreset",
+                "Orchid": "OrchidPreset"}[form]
         sch = _class_schema(type(t), t, "", _ranges(form), defs, form, "")
-        sch["description"] = f"Trait values of a {form} preset (all optional when 'base' is given)."
+        art = "an" if form[0] in "AEIOU" else "a"
+        sch["description"] = f"Trait values of {art} {form} preset (all optional when 'base' is given)."
         defs[name] = sch
         forms[form] = name
     # Profile classes may be shared by name between forms only if identical; keep first definition
@@ -547,7 +559,7 @@ def json_schema() -> dict:
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": SCHEMA_URL,
         "title": "Procedural Plant Generator preset",
-        "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable, grass) or fruit described by measurable traits. "
+        "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable, grass, orchid) or fruit described by measurable traits. "
                        "See docs/PRESETS.md.",
         "type": "object",
         "required": ["format", "format_version", "growth_form", "id", "preset"],
@@ -584,7 +596,7 @@ def fields_reference_md() -> str:
            "Units: suffix `_m` metres, `_cm` centimetres, `_mm` millimetres, `_deg` degrees. Colours are sRGB "
            "triplets in 0..1. Ranges are the limits enforced on import (values outside are clamped).", ""]
     order = ["TreePreset", "CactusPreset", "RosettePreset", "FlowerPreset", "VinePreset", "FruitPreset",
-             "VegetablePreset", "GrassPreset"]
+             "VegetablePreset", "GrassPreset", "OrchidPreset"]
     order += [k for k in defs if k not in order]
     for name in order:
         d = defs[name]

@@ -204,6 +204,39 @@ RULES["Grass"] = {
     },
 }
 
+_SYM = ("habit == 'Sympodial'", "Only for sympodial orchids (growths along a rhizome)")
+_BULB = ("habit == 'Sympodial' and pseudobulb_cm > 0", "Only with pseudobulbs")
+_SIDE = ("side_lobes > 0", "Only for 3-lobed lips (side_lobes > 0)")
+_CAPS = ("fruit_set > 0", "Only when some flowers set capsules")
+RULES["Orchid"] = {
+    "profile": {
+        **{f: _SYM for f in ("growths", "rhizome_cm", "growth_angle_deg", "leafless_growths", "pseudobulb_cm")},
+        **{f: _BULB for f in ("pseudobulb_diameter_cm", "bulb_widest", "bulb_fullness", "bulb_flatten",
+                              "bulb_ridges", "sheath_cover")},
+        "bulb_lean_deg": _SYM,
+        "stem_length_cm": ("habit != 'Sympodial'", "Monopodial stem or climbing vine only"),
+        "internode_cm": ("habit != 'Sympodial' or leaf_placement == 'Along'", "Stems and canes with leaves along"),
+        **{f: ("habit == 'Climbing'", "Only for climbing orchids (support post)")
+           for f in ("support_height_m", "support_radius_cm")},
+        "leaf_placement": _SYM,
+        "aerial_share": ("habit != 'Climbing'", "Climbing orchids: one root per node"),
+        "infl_origin": ("habit == 'Sympodial'", "Monopodial and climbing orchids flower from the leaf axils"),
+        "branch_ratio": ("branches > 0", "Only for panicles"),
+        **{f: _CAPS for f in ("capsule_cm", "capsule_diameter_cm", "capsule_color")},
+        **{f: _SIDE for f in ("side_lobe_pos", "side_lobe_length", "side_lobe_erect_deg", "midlobe_width",
+                              "isthmus")},
+        "lip_roll_extent": ("lip_roll > 0", "Only for rolled lips"),
+        "lip_waves": ("lip_wave > 0", "Only with wavy lip margins"),
+        **{f: ("callus_mm > 0", "Only with a callus") for f in ("callus_ridges", "callus_pos")},
+        "spot_size_mm": ("spots > 0 or lip_spots > 0", "Only with spots"),
+        "spot_stretch": ("spots > 0 or lip_spots > 0", "Only with spots"),
+        "tip_color": ("tip_amount > 0", "Only with coloured tips"),
+        "mottle_color": ("leaf_mottle > 0", "Only with mottled leaves"),
+        "lateral_sepal_deg": ("synsepal < 0.85", "Lateral sepals fused into a synsepal"),
+    },
+}
+
+
 def condition(form: str, section: str, field: str):
     """(expression, note) of a field, or None when it always applies."""
     return RULES.get(form, {}).get(section, {}).get(field)

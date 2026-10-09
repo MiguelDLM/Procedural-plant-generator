@@ -32,6 +32,7 @@ try:
     from ..core.fruit_db import fruit_items
     from ..core.vegetable_db import vegetable_items
     from ..core.grass_db import grass_items
+    from ..core.orchid_db import orchid_items
 except (ImportError, ValueError):
     from core import presets as P
     from core.species_db import get_preset_names
@@ -41,6 +42,7 @@ except (ImportError, ValueError):
     from core.fruit_db import fruit_items
     from core.vegetable_db import vegetable_items
     from core.grass_db import grass_items
+    from core.orchid_db import orchid_items
 
 USER_IDS: dict = {form: set() for form in P.FORMS}     # Presets loaded from the personal library
 _ITEMS: dict = {}                                       # Keeps enum item strings alive (Blender requirement)
@@ -67,6 +69,8 @@ def _base_items(form: str) -> list:
         return vegetable_items()
     if form == "Grass":
         return grass_items()
+    if form == "Orchid":
+        return orchid_items()
     return preset_items(GrowthForm(form))
 
 
@@ -125,7 +129,8 @@ def load_library(report=print) -> int:
 def _species_prop(form: str) -> str:
     return {"Tree": "species_enum", "Cactus": "cactus_species", "Rosette": "rosette_species",
             "Flower": "flower_species", "Vine": "vine_species", "Fruit": "fruit_species",
-            "Vegetable": "vegetable_species", "Grass": "grass_species"}[form]
+            "Vegetable": "vegetable_species", "Grass": "grass_species",
+            "Orchid": "orchid_species"}[form]
 
 
 def current_preset(props):
@@ -151,6 +156,12 @@ def current_preset(props):
         if props.grass_species not in GRASS_CATALOG:
             raise P.PresetError("No valid grass preset selected")
         return form, props.grass_species, current_grass_preset(props), None
+    if form == "Orchid":
+        from .orchids import current_orchid_preset
+        from ..core.orchid_db import ORCHID_CATALOG
+        if props.orchid_species not in ORCHID_CATALOG:
+            raise P.PresetError("No valid orchid preset selected")
+        return form, props.orchid_species, current_orchid_preset(props), None
     if form == "Vegetable":
         from .vegetables import current_vegetable_preset
         from ..core.vegetable_db import VEGETABLE_CATALOG
