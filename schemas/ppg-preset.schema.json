@@ -1418,9 +1418,24 @@
           "maximum": 20,
           "default": 6,
           "x-applies-when": "system == 'Tuberous cluster'"
+        },
+        "drop_roots": {
+          "type": "integer",
+          "description": "Aerial roots dropping from the branches to the soil (Rhizophora, banyans)",
+          "minimum": 0,
+          "maximum": 40,
+          "default": 0
+        },
+        "pneumatophores": {
+          "type": "integer",
+          "description": "Pencil-like breathing roots per lateral, rising from the mud (Avicennia) Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster').",
+          "minimum": 0,
+          "maximum": 80,
+          "default": 0,
+          "x-applies-when": "system not in ('Fibrous', 'Tuberous', 'Tuberous cluster')"
         }
       },
-      "description": "RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03, deep_roots: float = 0.6, heart_roots: int = 7, fine_roots: float = 1.0, fine_orders: int = 2, stilt_height_dbh: float = 3.0, tuber_count: int = 6)"
+      "description": "RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03, deep_roots: float = 0.6, heart_roots: int = 7, fine_roots: float = 1.0, fine_orders: int = 2, stilt_height_dbh: float = 3.0, tuber_count: int = 6, drop_roots: int = 0, pneumatophores: int = 0)"
     },
     "TreePreset": {
       "type": "object",
@@ -3602,7 +3617,7 @@
           "type": "number",
           "description": "Rise per helix turn along the guide Applies when: mode == 'Twining'.",
           "x-unit": "cm",
-          "minimum": 2.0,
+          "minimum": 0.5,
           "maximum": 150.0,
           "default": 12.0,
           "x-applies-when": "mode == 'Twining'"
@@ -3797,6 +3812,18 @@
         "aerial_roots": {
           "type": "number",
           "description": "Density of rootlets at the nodes",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "leafless": {
+          "type": "boolean",
+          "description": "Leaves reduced to scales (dodder, Cuscuta)",
+          "default": false
+        },
+        "haustoria": {
+          "type": "number",
+          "description": "Parasites: haustoria pressed into the host at the coils (per node)",
           "minimum": 0.0,
           "maximum": 1.0,
           "default": 0.0
@@ -4326,6 +4353,7 @@
             "Taproot",
             "Tubers",
             "Tuberous roots",
+            "Bulb",
             "Head",
             "None"
           ],
@@ -4349,12 +4377,12 @@
         },
         "stem_radius_mm": {
           "type": "number",
-          "description": "Radius of the stems at the base, mm. Applies when: stem_height_cm > 0.",
+          "description": "Radius of the stems at the base, mm. Applies when: stem_height_cm > 0 or organ == 'Bulb'.",
           "x-unit": "mm",
           "minimum": 0.5,
           "maximum": 60.0,
           "default": 4.0,
-          "x-applies-when": "stem_height_cm > 0"
+          "x-applies-when": "stem_height_cm > 0 or organ == 'Bulb'"
         },
         "leaf_count": {
           "type": "integer",
@@ -4650,6 +4678,81 @@
           "maximum": 1.0,
           "default": 0.3,
           "x-applies-when": "organ in ('Tubers', 'Tuberous roots')"
+        },
+        "bulb_diameter_cm": {
+          "type": "number",
+          "description": "Bulb or corm Applies when: organ == 'Bulb'.",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 20.0,
+          "default": 7.0,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "bulb_shape": {
+          "type": "number",
+          "description": "Height / diameter (flat onions 0.6 .. globe 1 .. long 1.4) Applies when: organ == 'Bulb'.",
+          "minimum": 0.3,
+          "maximum": 2.0,
+          "default": 0.85,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "bulb_neck": {
+          "type": "number",
+          "description": "Neck tapering into the leaves, share of the diameter Applies when: organ == 'Bulb'.",
+          "minimum": 0.0,
+          "maximum": 1.5,
+          "default": 0.3,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "cloves": {
+          "type": "integer",
+          "description": "Garlic: cloves bulging under the tunic (0 = single bulb) Applies when: organ == 'Bulb'.",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 0,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "bulb_exposure": {
+          "type": "number",
+          "description": "Share of the bulb above the soil Applies when: organ == 'Bulb'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.35,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "bulb_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Dry outer tunic Applies when: organ == 'Bulb'.",
+          "default": [
+            0.7,
+            0.45,
+            0.2
+          ],
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "bulb_roots": {
+          "type": "integer",
+          "description": "Fibrous roots from the basal plate Applies when: organ == 'Bulb'.",
+          "minimum": 0,
+          "maximum": 200,
+          "default": 40,
+          "x-applies-when": "organ == 'Bulb'"
+        },
+        "contractile_roots": {
+          "type": "integer",
+          "description": "Thick, transversely wrinkled roots pulling the organ down Applies when: organ == 'Bulb'.",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 0,
+          "x-applies-when": "organ == 'Bulb'"
         },
         "head_type": {
           "type": "string",
@@ -5016,6 +5119,53 @@
           "minimum": 0.1,
           "maximum": 1.0,
           "default": 0.7
+        },
+        "ligule": {
+          "type": "string",
+          "enum": [
+            "Membrane",
+            "Hairs",
+            "None"
+          ],
+          "description": "Collar appendage on the inner face of the leaf",
+          "default": "Membrane"
+        },
+        "ligule_mm": {
+          "type": "number",
+          "description": "Ligule height Applies when: ligule != 'None'.",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 30.0,
+          "default": 2.0,
+          "x-applies-when": "ligule != 'None'"
+        },
+        "auricles": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Blunt",
+            "Claw",
+            "Clasping"
+          ],
+          "description": "Paired lobes at the collar",
+          "default": "None"
+        },
+        "auricle_mm": {
+          "type": "number",
+          "description": "Auricle length Applies when: auricles != 'None'.",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 15.0,
+          "default": 2.0,
+          "x-applies-when": "auricles != 'None'"
+        },
+        "root_primordia": {
+          "type": "number",
+          "description": "Relief of the root primordia rows in the root band (sugarcane) Applies when: growth_ring > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "growth_ring > 0"
         },
         "leaf_loss": {
           "type": "number",
@@ -5497,6 +5647,35 @@
           "default": 0.0,
           "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
         },
+        "mount": {
+          "type": "string",
+          "enum": [
+            "Ground",
+            "Pot",
+            "Branch"
+          ],
+          "description": "Ground, pot or branch (epiphyte) Applies when: habit != 'Climbing'.",
+          "default": "Ground",
+          "x-applies-when": "habit != 'Climbing'"
+        },
+        "pot_diameter_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 5.0,
+          "maximum": 60.0,
+          "default": 12.0,
+          "x-applies-when": "habit != 'Climbing' and mount == 'Pot'",
+          "description": "Applies when: habit != 'Climbing' and mount == 'Pot'."
+        },
+        "branch_diameter_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 2.0,
+          "maximum": 80.0,
+          "default": 10.0,
+          "x-applies-when": "habit != 'Climbing' and mount == 'Branch'",
+          "description": "Applies when: habit != 'Climbing' and mount == 'Branch'."
+        },
         "support_height_m": {
           "type": "number",
           "description": "Climbing: height of the post the vine climbs Applies when: habit == 'Climbing'.",
@@ -5812,7 +5991,7 @@
           "description": "Emergence angle from the vertical",
           "x-unit": "deg",
           "minimum": 0.0,
-          "maximum": 90.0,
+          "maximum": 180.0,
           "default": 30.0
         },
         "spike_flex": {
@@ -5859,6 +6038,13 @@
           "minimum": 0.0,
           "maximum": 1.0,
           "default": 0.7
+        },
+        "umbel": {
+          "type": "number",
+          "description": "1: all flowers from the tip of the scape in a fan (Bulbophyllum)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
         },
         "maturation": {
           "type": "number",
@@ -5994,7 +6180,7 @@
           "type": "number",
           "description": "Lateral / dorsal sepal size",
           "minimum": 0.3,
-          "maximum": 2.0,
+          "maximum": 15.0,
           "default": 1.0
         },
         "synsepal": {
@@ -6032,6 +6218,14 @@
           "description": "Wavy sepal margins, 0..1.",
           "minimum": 0.0,
           "maximum": 1.0,
+          "default": 0.0
+        },
+        "sepal_fringe_mm": {
+          "type": "number",
+          "description": "Fimbriate (fringed) margins of the dorsal sepal and petals",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 15.0,
           "default": 0.0
         },
         "petal_length_cm": {
@@ -6241,6 +6435,54 @@
           "minimum": 0.0,
           "maximum": 1.0,
           "default": 0.0
+        },
+        "lip_sac_extent": {
+          "type": "number",
+          "description": "Share of the lip inflated, from the base (Stanhopea hypochile ~0.4) Applies when: lip_sac > 0.",
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "default": 1.0,
+          "x-applies-when": "lip_sac > 0"
+        },
+        "lip_horns_mm": {
+          "type": "number",
+          "description": "Two horns from the middle of the lip (Stanhopea mesochile)",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 60.0,
+          "default": 0.0
+        },
+        "lip_flare": {
+          "type": "number",
+          "description": "Mid lobe spreading wider and facing forward (Cattleya)",
+          "minimum": 0.0,
+          "maximum": 1.5,
+          "default": 0.0
+        },
+        "spur_cm": {
+          "type": "number",
+          "description": "Nectar spur behind the lip base (Angraecum sesquipedale ~30)",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 45.0,
+          "default": 0.0
+        },
+        "spur_diameter_mm": {
+          "type": "number",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 15.0,
+          "default": 4.0,
+          "x-applies-when": "spur_cm > 0",
+          "description": "Applies when: spur_cm > 0."
+        },
+        "spur_curve": {
+          "type": "number",
+          "description": "0 straight back .. 1 hanging down Applies when: spur_cm > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6,
+          "x-applies-when": "spur_cm > 0"
         },
         "lip_wave": {
           "type": "number",

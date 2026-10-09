@@ -39,6 +39,8 @@ LAYOUT = [
     ("Storage Root", VEG, ["root_length_cm", "root_diameter_cm", "widest_position", "shoulder", "taper", "exposure",
                            "tail_cm", "rings", "rootlets", "rootlet_ranks", "root_color", "shoulder_color",
                            "shoulder_tint", "tip_color", "tip_tint"]),
+    ("Bulb / Corm", VEG, ["bulb_diameter_cm", "bulb_shape", "bulb_neck", "cloves", "bulb_exposure", "bulb_color",
+                          "bulb_roots", "contractile_roots"]),
     ("Tubers / Tuberous Roots", VEG, ["tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm", "stolon_length_cm",
                      "eyes", "eye_depth", "tuber_color", "tuber_dots"]),
     ("Head", VEG, ["head_type", "head_diameter_cm", "head_height_ratio", "head_levels", "florets", "floret_scale",
@@ -143,14 +145,15 @@ def root_material(name, p: VegetableProfile):
         n.outputs[0].default_value = _srgb_to_linear(c)
         return n.outputs[0]
     tubers = p.organ.value in ("Tubers", "Tuberous roots")
+    bulb = p.organ.value == "Bulb"
     t = _attr(nt, "veg_t", (-1400, 300)).outputs['Fac']
     above = _attr(nt, "veg_above", (-1400, 100)).outputs['Fac']
     ring = _attr(nt, "veg_ring", (-1400, -100)).outputs['Fac']
     part = _attr(nt, "veg_part", (-1400, -300)).outputs['Fac']
     tc = nt.nodes.new('ShaderNodeTexCoord')
     tc.location = (-1600, -500)
-    col = rgb(p.tuber_color if tubers else p.root_color, (-1000, 500))
-    if not tubers:
+    col = rgb(p.bulb_color if bulb else (p.tuber_color if tubers else p.root_color), (-1000, 500))
+    if not tubers and not bulb:
         col = _mix(nt, _math(nt, 'MULTIPLY', above, p.shoulder_tint, (-1100, 200)), col,
                    rgb(p.shoulder_color, (-1000, 300)), (-800, 400))
         tip = _math(nt, 'MULTIPLY', _math(nt, 'SUBTRACT', t, 0.55, (-1200, 0)), 2.5 * p.tip_tint, (-1050, 0))
@@ -216,6 +219,16 @@ def hide_vegetable_parts(root):
             c.hide_viewport = c.hide_render = True
 
 
+def _lift(props, prof) -> float:
+    """Height that raises the storage organ above the soil when Lift = 1."""
+    o = prof.organ.value
+    if o == "Taproot":
+        return props.veg_lift * prof.root_length_cm * 0.01
+    if o == "Bulb":
+        return props.veg_lift * prof.bulb_diameter_cm * 0.01 * prof.bulb_shape * (1 - prof.bulb_exposure)
+    return props.veg_lift * (prof.tuber_depth_cm + prof.tuber_length_cm) * 0.01
+
+
 def update_vegetable_geometry(context, props, find_root):
     from .succulents import _child
     from .runtime import _ensure_leaf_material
@@ -232,8 +245,7 @@ def update_vegetable_geometry(context, props, find_root):
     prof, leaf, ven = vegetable_from_props(props)
     res = VegetableEngine(prof, leaf, ven).generate(
         seed=props.seed, detail=props.succ_detail, leaf_density=1.0 if props.show_leaves else 0.0,
-        with_roots=props.show_roots, lift=props.veg_lift * prof.root_length_cm * 0.01
-        if prof.organ.value == "Taproot" else props.veg_lift * (prof.tuber_depth_cm + prof.tuber_length_cm) * 0.01)
+        with_roots=props.show_roots, lift=_lift(props, prof))
     mats = {}
     if props.assign_materials:
         def cached(suffix, k, make):

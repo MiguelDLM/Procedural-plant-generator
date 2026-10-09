@@ -952,7 +952,8 @@ class TestVines(unittest.TestCase):
         from core.vine_db import VINE_CATALOG
         for key in VINE_CATALOG:
             r = self._gen(key)
-            self.assertGreater(r.leaf_count, 5, key)
+            if not VINE_CATALOG[key].profile.leafless:      # Dodder has no leaves
+                self.assertGreater(r.leaf_count, 5, key)
             for m in (r.stem, r.tendrils, r.leaves, r.fruits, r.roots):
                 self.assertTrue(np.isfinite(m.vertices).all(), key)
                 if len(m.loop_vertex):

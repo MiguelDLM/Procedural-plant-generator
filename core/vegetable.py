@@ -15,6 +15,12 @@ Vegetables: storage roots, tubers and inflorescence heads, with their leaves.
   Belehu et al. 2004, Aust. J. Bot. 52: 403); several radiate from the base, each with a thin neck, a
   fusiform or cylindrical body and a thin tail, among fibrous roots (cassava 5-20 per plant, up to 80 x 10
   cm; sweet potato 3-10 cm thick). Fibrous roots carry laterals (core.root_architecture).
+- Bulbs and corms (onion, garlic; saffron crocus): a compressed stem, the basal plate, carries fleshy scale
+  leaves wrapped in dry tunics (tunicate bulb) or is itself swollen (corm); garlic bulbs are made of
+  cloves. Fibrous adventitious roots leave the rim of the basal plate; corms and many bulbs also form a
+  few thick contractile roots that shorten lengthwise and widen as their inner cortex cells expand radially,
+  wrinkling the root surface in transverse rings, and pull the organ deeper (Anderson 1977 and Cyr et al.
+  on Hyacinthus; Puetz 1996).
 - Heads (cauliflower, broccoli, Romanesco): the curd is an inflorescence whose meristems keep branching
   instead of making flowers, repeating the same spiral (golden-angle) arrangement at every scale (Azpeitia et
   al. 2021, Science 373: 192-197; Kieffer et al. 1998). Cauliflower: rounded meristem domes packed into a curd;
@@ -47,6 +53,7 @@ class StorageOrgan(str, Enum):
     TAPROOT = "Taproot"      # Carrot, radish, beet, turnip, parsnip
     TUBERS = "Tubers"        # Potato
     TUBEROUS_ROOTS = "Tuberous roots"   # Sweet potato, cassava, Dahlia: fasciculate storage roots
+    BULB = "Bulb"            # Onion, garlic (tunicate bulbs); saffron crocus (corm)
     HEAD = "Head"            # Cauliflower, broccoli, Romanesco
     NONE = "None"            # Leaves only
 
@@ -100,6 +107,16 @@ class VegetableProfile:
     eye_depth: float = 0.08
     tuber_color: tuple = (0.75, 0.60, 0.40)
     tuber_dots: float = 0.3
+
+    # Bulb or corm
+    bulb_diameter_cm: float = 7.0
+    bulb_shape: float = 0.85           # Height / diameter (flat onions 0.6 .. globe 1 .. long 1.4)
+    bulb_neck: float = 0.3             # Neck tapering into the leaves, share of the diameter
+    cloves: int = 0                    # Garlic: cloves bulging under the tunic (0 = single bulb)
+    bulb_exposure: float = 0.35        # Share of the bulb above the soil
+    bulb_color: tuple = (0.70, 0.45, 0.20)   # Dry outer tunic
+    bulb_roots: int = 40               # Fibrous roots from the basal plate
+    contractile_roots: int = 0         # Thick, transversely wrinkled roots pulling the organ down
 
     # Inflorescence head
     head_type: HeadType = HeadType.CURD
@@ -423,6 +440,83 @@ class VegetableEngine:
                 parts.append(tube(P, np.maximum(R, 2e-4), 3, {"veg_part": np.ones(len(P)), "veg_t": np.ones(len(P))}))
         return _merge(parts, ROOT_ATTRS)
 
+    # ----------------------------------------------------------------- bulbs
+    def bulb_height(self) -> float:
+        p = self.p
+        return p.bulb_diameter_cm * 0.01 * (p.bulb_shape + p.bulb_neck)
+
+    def bulb(self, rng, detail=1.0) -> tuple[MeshData, float]:
+        """Bulb or corm: body of revolution from the basal plate (flat bottom) through the widest point to a
+        neck; cloves bulge under the tunic (garlic). Fibrous roots from the rim of the basal plate, with
+        laterals, and thick contractile roots wrinkled in transverse rings. Returns (mesh, top height)."""
+        from .root_architecture import RootBranching, grow_root, lateral_roots
+        p = self.p
+        D = p.bulb_diameter_cm * 0.01
+        R = D / 2
+        Hb = D * p.bulb_shape
+        Hn = D * p.bulb_neck
+        H = Hb + Hn
+        z0 = -(1.0 - p.bulb_exposure) * Hb                      # Bottom (basal plate)
+        n = max(16, int(32 * detail))
+        t = np.linspace(0.0, 1.0, n)
+        z = z0 + H * t
+        tb = np.clip(t * H / max(Hb, 1e-6), 0, 1)               # Along the body
+        a = math.log(0.5) / math.log(0.42)
+        body = np.sin(np.pi * np.clip(tb ** a, 0, 1)) ** 0.55
+        body = np.maximum(body, 0.42 * (1 - _ss(0.0, 0.12, tb)))  # Flat basal plate
+        neck_r = max(p.stem_radius_mm * 0.001, 0.08 * R)
+        rho = R * body
+        rho = np.where(t * H > Hb * 0.85, np.maximum(rho, neck_r), rho)
+        rho[-1] = neck_r
+        rho[0] = 1e-4
+        cl = p.cloves
+
+        def radial(th):
+            th = np.asarray(th)
+            if cl <= 0:
+                return np.ones((n, len(th)))
+            # Cloves: lobes around the bulb, strongest at mid-height, with furrows between them
+            return 1.0 + 0.07 * np.cos(cl * th)[None, :] * np.sin(np.pi * tb)[:, None] ** 2
+        nth = max(16, int(28 * detail))
+        parts = [revolve(rho, z, nth, {"veg_t": t * 0.4, "veg_part": np.zeros(n), "veg_ring": np.zeros(n)},
+                         radial)]
+        plate_c = np.array([0.0, 0.0, z0 + 0.002])
+        r_plate, z_plate = 0.95 * rho[1], z[1]                     # Rim of the basal plate (first ring)
+        # Fibrous roots from the rim of the basal plate
+        fib = []
+        for k in range(max(0, p.bulb_roots)):
+            az = 2 * math.pi * k / max(p.bulb_roots, 1) + rng.normal(0, 0.15)
+            start = np.array([r_plate * math.cos(az), r_plate * math.sin(az), z_plate])
+            d = np.array([math.cos(az) * 0.6, math.sin(az) * 0.6, -1.0])
+            L = D * rng.uniform(1.5, 3.5)
+            P, Rr = grow_root(start, d, L, 0.0006, rng, gravitropism=0.15, tortuosity=0.4, surface=z_plate,
+                              taper=0.3)
+            P[0] = start
+            fib.append((P, Rr))
+        br = RootBranching(orders=1, interbranch_cm=1.2, insertion_deg=70, length_ratio=0.2, max_length_cm=4,
+                           radius_ratio=0.5, gravitropism=0.1, tortuosity=0.5, min_radius_mm=0.1,
+                           budget=int(300 * detail))
+        for P, Rr, *_ in fib + lateral_roots(fib, br, rng, surface=z0):
+            parts.append(tube(P, np.maximum(Rr, 1.5e-4), 3, {"veg_part": np.ones(len(P)), "veg_t": np.ones(len(P))}))
+        # Contractile roots: thick, nearly vertical, wrinkled in transverse rings where they contract
+        for k in range(max(0, p.contractile_roots)):
+            az = 2 * math.pi * (k + 0.5) / max(p.contractile_roots, 1) + rng.normal(0, 0.3)
+            start = plate_c + 0.2 * R * np.array([math.cos(az), math.sin(az), 0.0])
+            d = np.array([math.cos(az) * 0.25, math.sin(az) * 0.25, -1.0])
+            L = D * rng.uniform(1.5, 2.5)
+            P, _ = grow_root(start, d, L, 0.002, rng, gravitropism=0.3, tortuosity=0.15, surface=z0, taper=0.0)
+            s = arc_length(P)
+            # Resample finely so the rings (every ~2.5 mm) are resolved
+            ss = np.linspace(0, s[-1], max(12, int(s[-1] / 0.0008)))
+            Q = np.stack([np.interp(ss, s, P[:, c]) for c in range(3)], 1)
+            u = ss / max(ss[-1], 1e-9)
+            contracted = 1.0 - _ss(0.45, 0.8, u)                 # Upper, contracted part wrinkled
+            wr = 0.5 + 0.5 * np.cos(2 * math.pi * ss / 0.0025)
+            Rr = R * 0.06 * (1.0 + 0.25 * contracted) * (1.0 - 0.5 * u) * (1.0 - 0.18 * contracted * wr ** 3)
+            parts.append(tube(Q, np.maximum(Rr, 2e-4), 8, {"veg_part": np.ones(len(Q)), "veg_t": np.ones(len(Q)),
+                                                         "veg_ring": contracted * wr ** 3 * 0.3}))
+        return _merge(parts, ROOT_ATTRS), z0 + H
+
     # ----------------------------------------------------------------- heads
     def head(self, rng, center, detail=1.0, stem_top=None, stem_radius=0.01) -> MeshData:
         """Self-similar inflorescence head. A base dome (curd, buds) or cone (Romanesco) is displaced by nested
@@ -592,6 +686,11 @@ class VegetableEngine:
             root, crown = self.taproot(np.random.default_rng(seed + 1), detail)
         elif p.organ == StorageOrgan.TAPROOT:
             crown = p.exposure * p.root_length_cm * 0.01
+        elif p.organ == StorageOrgan.BULB:
+            root, crown = self.bulb(np.random.default_rng(seed + 1), detail)
+            if not with_roots:
+                root = MeshData.empty()
+            crown -= 0.004
         # Stems
         stems, bases, tops, stem_axes = [], [], [], []
         n_st = max(1, p.stem_count)

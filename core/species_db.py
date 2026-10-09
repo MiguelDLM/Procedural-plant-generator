@@ -596,6 +596,34 @@ SPECIES_CATALOG: dict[str, BotanicalSpeciesPreset] = {
                   feature_scale_m=0.05, relief=0.6),
         wood=(0.55, 9.0), lma=240, deciduous=False, notes="Fastigiate dark-green column of scale-leaf sprays."),
     # ------------------------------------------------------------------ Monocots
+    "rhizophora_mangle": species(
+        "Rhizophora mangle", "Red mangrove (mangle rojo)", "Rhizophoraceae", "Tropical Coast (mangrove)", "Tree",
+        dbh=0.25, height=10, crown_r=4.0, hmax=20, crown_depth=0.6, crown=C.SPHERICAL,
+        arch=dict(leaf_area_index=3.5, model=M.RAUH, phyllotaxis=P.DECUSSATE, apical_dominance=0.3,
+                  branch_angle_mean_deg=55, crookedness=0.35, branch_frequency_per_meter=2.0),
+        leaf=dict(archetype=A.ELLIPTIC, mean_leaf_angle_deg=45, margin_type=MT.ENTIRE, blade_length_cm=11,
+                  aspect_ratio=2.3, petiole_length_ratio=0.15, adaxial_color=(0.16, 0.32, 0.12),
+                  abaxial_color=(0.40, 0.48, 0.25), gloss=0.6),
+        vein=dict(pattern=V.BROCHIDODROMOUS, vla_mm_per_mm2=6.0, secondary_vein_pairs=10, vein_contrast=0.1),
+        bark=dict(pattern=BP.FISSURED, base_color=(0.42, 0.36, 0.30), secondary_color=(0.25, 0.20, 0.16),
+                  feature_scale_m=0.04, relief=0.4),
+        wood=(0.9, 15.0), lma=180, deciduous=False,
+        notes="Arching stilt roots (rhizophores) prop the trunk up to 10-33 % of its height and drop roots "
+              "hang from the branches into the mud (Mendez-Alonzo et al. 2015, Ann. Bot. 115: 833)."),
+    "avicennia_germinans": species(
+        "Avicennia germinans", "Black mangrove (mangle negro)", "Acanthaceae", "Tropical Coast (mangrove)", "Tree",
+        dbh=0.3, height=9, crown_r=4.0, hmax=20, crown_depth=0.65, crown=C.SPHERICAL,
+        arch=dict(leaf_area_index=3.0, model=M.RAUH, phyllotaxis=P.DECUSSATE, apical_dominance=0.25,
+                  branch_angle_mean_deg=50, crookedness=0.4, branch_frequency_per_meter=2.5),
+        leaf=dict(archetype=A.ELLIPTIC, mean_leaf_angle_deg=50, margin_type=MT.ENTIRE, blade_length_cm=8,
+                  aspect_ratio=2.8, petiole_length_ratio=0.12, adaxial_color=(0.20, 0.33, 0.16),
+                  abaxial_color=(0.62, 0.64, 0.58), gloss=0.4),
+        vein=dict(pattern=V.BROCHIDODROMOUS, vla_mm_per_mm2=6.0, secondary_vein_pairs=8, vein_contrast=0.1),
+        bark=dict(pattern=BP.FISSURED, base_color=(0.30, 0.26, 0.22), secondary_color=(0.16, 0.13, 0.10),
+                  feature_scale_m=0.03, relief=0.5),
+        wood=(0.85, 14.0), lma=170, deciduous=False,
+        notes="Shallow cable roots radiating from the trunk carry hundreds of pencil-like pneumatophores "
+              "rising 10-30 cm from the mud; leaves salt-crusted and pale beneath."),
     "phoenix_canariensis": species(
         "Phoenix canariensis", "Canary Island Date Palm", "Arecaceae", "Subtropical / Mediterranean", "Palm",
         dbh=0.8, height=15, crown_r=5.0, hmax=20, crown_depth=0.3, crown=C.SPHERICAL, buttress=(0.25, 15.0),
@@ -622,6 +650,8 @@ ROOT_SYSTEM_DEFAULTS = {
     RT.BUTTRESS: dict(taproot_share=0.05, plank=3.0, surface_exposure=0.6, buttress_height_dbh=1.5,
                       sinker_spacing_m=1.5),
     RT.FIBROUS: dict(taproot_share=0.0, fibrous_count=70, fibrous_radius_m=0.005),
+    RT.STILT: dict(taproot_share=0.0, lateral_count=10, plank=0.2, surface_exposure=0.1, sinker_spacing_m=0.8,
+                   buttress_height_dbh=0.3),
 }
 
 # (system, biome for Jackson et al. 1996 beta, max rooting depth m, lateral spread / crown radius, extras)
@@ -666,6 +696,10 @@ ROOT_TRAITS = {
                             {"plank": 1.6, "surface_exposure": 0.55, "buttress_height_dbh": 1.2}),
     "cupressus_sempervirens": (RT.TAPROOT, "sclerophyllous_shrubs", 3.0, 1.6, {}),
     "phoenix_canariensis": (RT.FIBROUS, "sclerophyllous_shrubs", 3.0, 0.6, {}),
+    "rhizophora_mangle": (RT.STILT, "tropical_evergreen", 1.2, 1.3,
+                          {"lateral_count": 14, "stilt_height_dbh": 7.0, "drop_roots": 6, "deep_roots": 0.4}),
+    "avicennia_germinans": (RT.PLATE, "tropical_evergreen", 1.0, 2.0,
+                            {"lateral_count": 10, "pneumatophores": 30, "surface_exposure": 0.0}),
 }
 
 for _key, (_system, _biome, _depth, _spread, _extra) in ROOT_TRAITS.items():
@@ -715,6 +749,8 @@ BARK_AGE = {
     "liriodendron_tulipifera": dict(onset_radius_cm=8.0, young_color=(0.50, 0.50, 0.42)),
     "liquidambar_styraciflua": dict(onset_radius_cm=3.0, young_color=(0.48, 0.42, 0.32)),
     "phoenix_canariensis": dict(onset_radius_cm=0.1),
+    "rhizophora_mangle": dict(onset_radius_cm=4.0, young_color=(0.50, 0.42, 0.32)),
+    "avicennia_germinans": dict(onset_radius_cm=4.0, young_color=(0.40, 0.36, 0.30)),
 }
 for _key, _kw in BARK_AGE.items():
     _b = SPECIES_CATALOG[_key].bark
@@ -765,6 +801,8 @@ BARK_TEXTURE = {
     "sequoiadendron_giganteum": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.55, moss=0.05, lichen=0.05),
     "taxodium_mucronatum": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.5, moss=0.3, lichen=0.1),
     "cupressus_sempervirens": dict(blockiness=0.2, segments=0.05, plate_tilt=0.1, warp=0.45, moss=0.1, lichen=0.15),
+    "rhizophora_mangle": dict(blockiness=0.3, segments=0.2, plate_tilt=0.1, warp=0.3, moss=0.05, lichen=0.3),
+    "avicennia_germinans": dict(blockiness=0.5, segments=0.4, plate_tilt=0.2, warp=0.3, moss=0.05, lichen=0.3),
     "phoenix_canariensis": dict(blockiness=0.5, segments=0.0, plate_tilt=0.3, warp=0.2, moss=0.05, lichen=0.05),
 }
 for _key, _kw in BARK_TEXTURE.items():

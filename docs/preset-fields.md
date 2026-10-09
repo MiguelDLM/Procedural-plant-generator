@@ -289,7 +289,7 @@ BarkProfile(pattern: core.bark.BarkPattern = <BarkPattern.FISSURED: 'Fissured'>,
 
 ## RootProfile
 
-RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03, deep_roots: float = 0.6, heart_roots: int = 7, fine_roots: float = 1.0, fine_orders: int = 2, stilt_height_dbh: float = 3.0, tuber_count: int = 6)
+RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03, deep_roots: float = 0.6, heart_roots: int = 7, fine_roots: float = 1.0, fine_orders: int = 2, stilt_height_dbh: float = 3.0, tuber_count: int = 6, drop_roots: int = 0, pneumatophores: int = 0)
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
@@ -318,6 +318,8 @@ RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>,
 | `fine_orders` | integer |  | 0 – 3 | 2 | Orders of fine laterals Applies when: fine_roots > 0. |
 | `stilt_height_dbh` | number |  | 0.5 – 10.0 | 3.0 | Height on the stem of the highest stilt roots (x DBH) Applies when: system == 'Stilt'. |
 | `tuber_count` | integer |  | 1 – 20 | 6 | Storage roots of a tuberous cluster Applies when: system == 'Tuberous cluster'. |
+| `drop_roots` | integer |  | 0 – 40 | 0 | Aerial roots dropping from the branches to the soil (Rhizophora, banyans) |
+| `pneumatophores` | integer |  | 0 – 80 | 0 | Pencil-like breathing roots per lateral, rising from the mud (Avicennia) Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
 
 ## CactusProfile
 
@@ -569,7 +571,7 @@ Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the 
 | `mode` | enum: `Twining`, `Tendril`, `Clinging`, `Trailing` |  |  | Twining | How the stem uses its guide path: 'Twining' coils around it (the guide is the support), 'Tendril' follows it and grasps it with tendrils, 'Clinging' is pressed to it by rootlets (walls), 'Trailing' creeps along it on the ground. |
 | `chirality` | enum: `Right`, `Left` |  |  | Right | Handedness of the twining helix: 'Right' = counter-clockwise seen from above (about 90 % of twiners: Ipomoea, Phaseolus, Wisteria sinensis); 'Left' = clockwise (Humulus, Lonicera). Applies when: mode == 'Twining'. |
 | `coil_radius_cm` | number | cm | 0.2 – 30.0 | 1.5 | Helix radius around the guide (support radius + stem) Applies when: mode == 'Twining'. |
-| `coil_pitch_cm` | number | cm | 2.0 – 150.0 | 12.0 | Rise per helix turn along the guide Applies when: mode == 'Twining'. |
+| `coil_pitch_cm` | number | cm | 0.5 – 150.0 | 12.0 | Rise per helix turn along the guide Applies when: mode == 'Twining'. |
 | `wander_cm` | number | cm | 0.0 – 50.0 | 2.0 | Lateral meander of the stem around the guide |
 | `tip_length_cm` | number | cm | 0.0 – 300.0 | 25.0 | Free searcher tip beyond the reached part of the guide |
 | `tip_hook` | number |  | 0.0 – 1.0 | 0.5 | Apical hook / nutation curl of the free tip Applies when: tip_length_cm > 0. |
@@ -594,6 +596,8 @@ Habit of a climbing or trailing plant. Lengths are absolute; the guide sets the 
 | `tendril_radius_mm` | number | mm | 0.1 – 3.0 | 0.6 | Tendril thickness (radius), mm. Applies when: tendril_mode != 'None'. |
 | `tendril_reach` | number |  | 0.0 – 1.0 | 0.6 | Fraction of tendrils that have caught the support Applies when: tendril_mode != 'None'. |
 | `aerial_roots` | number |  | 0.0 – 1.0 | 0.0 | Density of rootlets at the nodes |
+| `leafless` | boolean |  |  | false | Leaves reduced to scales (dodder, Cuscuta) |
+| `haustoria` | number |  | 0.0 – 1.0 | 0.0 | Parasites: haustoria pressed into the host at the coils (per node) |
 | `rootlet_length_cm` | number | cm | 0.2 – 30.0 | 2.0 | Length of the nodal / adventitious rootlets, cm. Applies when: aerial_roots > 0. |
 | `stem_color` | colour (sRGB 0..1) |  |  | [0.24, 0.42, 0.14] | Stem colour |
 | `stem_color_old` | colour (sRGB 0..1) |  |  | [0.38, 0.3, 0.2] | Lignified base Applies when: woodiness > 0. |
@@ -653,10 +657,10 @@ Habit and storage organ of a vegetable. Sizes in cm unless noted.
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
-| `organ` | enum: `Taproot`, `Tubers`, `Tuberous roots`, `Head`, `None` |  |  | Taproot | Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Tuberous roots' (sweet potato, cassava: fasciculate storage roots), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only). |
+| `organ` | enum: `Taproot`, `Tubers`, `Tuberous roots`, `Bulb`, `Head`, `None` |  |  | Taproot | Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Tuberous roots' (sweet potato, cassava: fasciculate storage roots), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only). |
 | `stem_count` | integer |  | 1 – 12 | 1 | Erect stems (potato 3-6); 1 for rosettes |
 | `stem_height_cm` | number | cm | 0.0 – 300.0 | 0.0 | 0 = basal rosette |
-| `stem_radius_mm` | number | mm | 0.5 – 60.0 | 4.0 | Radius of the stems at the base, mm. Applies when: stem_height_cm > 0. |
+| `stem_radius_mm` | number | mm | 0.5 – 60.0 | 4.0 | Radius of the stems at the base, mm. Applies when: stem_height_cm > 0 or organ == 'Bulb'. |
 | `leaf_count` | integer |  | 0 – 60 | 10 | Per stem |
 | `leaf_size` | number |  | 0.1 – 3.0 | 1.0 | Scale of the leaves relative to the leaf blade length |
 | `elevation_outer_deg` | number | deg | -10.0 – 90.0 | 40.0 | Oldest (outer / lower) leaves |
@@ -687,6 +691,14 @@ Habit and storage organ of a vegetable. Sizes in cm unless noted.
 | `eye_depth` | number |  | 0.0 – 0.4 | 0.08 | Depth of the eye dimples relative to the radius. Applies when: organ == 'Tubers'. |
 | `tuber_color` | colour (sRGB 0..1) |  |  | [0.75, 0.6, 0.4] | Tuber skin colour (sRGB 0..1). Applies when: organ in ('Tubers', 'Tuberous roots'). |
 | `tuber_dots` | number |  | 0.0 – 1.0 | 0.3 | Density of the lenticel dots on the tuber skin. Applies when: organ in ('Tubers', 'Tuberous roots'). |
+| `bulb_diameter_cm` | number | cm | 0.5 – 20.0 | 7.0 | Bulb or corm Applies when: organ == 'Bulb'. |
+| `bulb_shape` | number |  | 0.3 – 2.0 | 0.85 | Height / diameter (flat onions 0.6 .. globe 1 .. long 1.4) Applies when: organ == 'Bulb'. |
+| `bulb_neck` | number |  | 0.0 – 1.5 | 0.3 | Neck tapering into the leaves, share of the diameter Applies when: organ == 'Bulb'. |
+| `cloves` | integer |  | 0 – 30 | 0 | Garlic: cloves bulging under the tunic (0 = single bulb) Applies when: organ == 'Bulb'. |
+| `bulb_exposure` | number |  | 0.0 – 1.0 | 0.35 | Share of the bulb above the soil Applies when: organ == 'Bulb'. |
+| `bulb_color` | colour (sRGB 0..1) |  |  | [0.7, 0.45, 0.2] | Dry outer tunic Applies when: organ == 'Bulb'. |
+| `bulb_roots` | integer |  | 0 – 200 | 40 | Fibrous roots from the basal plate Applies when: organ == 'Bulb'. |
+| `contractile_roots` | integer |  | 0 – 12 | 0 | Thick, transversely wrinkled roots pulling the organ down Applies when: organ == 'Bulb'. |
 | `head_type` | enum: `Curd`, `Buds`, `Cones` |  |  | Curd | 'Curd' (cauliflower: packed meristem domes), 'Buds' (broccoli: flower-bud clusters on branches) or 'Cones' (Romanesco: self-similar cones). Applies when: organ == 'Head'. |
 | `head_diameter_cm` | number | cm | 2.0 – 50.0 | 16.0 | Diameter of the head, cm. Applies when: organ == 'Head'. |
 | `head_height_ratio` | number |  | 0.1 – 1.5 | 0.45 | Dome height / diameter (Romanesco ~0.9: a cone) Applies when: organ == 'Head'. |
@@ -731,6 +743,11 @@ Habit of a grass. Lengths in cm unless noted (culm height in m).
 | `leaf_fold` | number |  | 0.0 – 1.0 | 0.3 | V-fold along the midrib |
 | `margin_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy margins (maize) |
 | `sheath_fraction` | number |  | 0.1 – 1.0 | 0.7 | Share of the internode wrapped by the sheath |
+| `ligule` | enum: `Membrane`, `Hairs`, `None` |  |  | Membrane | Collar appendage on the inner face of the leaf |
+| `ligule_mm` | number | mm | 0.0 – 30.0 | 2.0 | Ligule height Applies when: ligule != 'None'. |
+| `auricles` | enum: `None`, `Blunt`, `Claw`, `Clasping` |  |  | None | Paired lobes at the collar |
+| `auricle_mm` | number | mm | 0.0 – 15.0 | 2.0 | Auricle length Applies when: auricles != 'None'. |
+| `root_primordia` | number |  | 0.0 – 1.0 | 0.0 | Relief of the root primordia rows in the root band (sugarcane) Applies when: growth_ring > 0. |
 | `leaf_loss` | number |  | 0.0 – 0.9 | 0.0 | Share of the nodes, from the base, whose leaves have died and fallen |
 | `leaf_color` | colour (sRGB 0..1) |  |  | [0.2, 0.42, 0.12] | Blade colour (sRGB 0..1). |
 | `midrib_color` | colour (sRGB 0..1) |  |  | [0.55, 0.65, 0.4] | Colour of the midrib (pale in maize and sorghum). |
@@ -784,6 +801,9 @@ Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unles
 | `bulb_ridges` | integer |  | 0 – 12 | 0 | Longitudinal ridges and furrows (sulcate pseudobulbs) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
 | `bulb_lean_deg` | number | deg | 0.0 – 60.0 | 10.0 | Lean of the growths away from the rhizome axis Applies when: habit == 'Sympodial'. |
 | `sheath_cover` | number |  | 0.0 – 1.0 | 0.0 | Share of the pseudobulb covered by papery sheaths, from the base Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `mount` | enum: `Ground`, `Pot`, `Branch` |  |  | Ground | Ground, pot or branch (epiphyte) Applies when: habit != 'Climbing'. |
+| `pot_diameter_cm` | number | cm | 5.0 – 60.0 | 12.0 | Applies when: habit != 'Climbing' and mount == 'Pot'. |
+| `branch_diameter_cm` | number | cm | 2.0 – 80.0 | 10.0 | Applies when: habit != 'Climbing' and mount == 'Branch'. |
 | `support_height_m` | number | m | 0.3 – 4.0 | 1.5 | Climbing: height of the post the vine climbs Applies when: habit == 'Climbing'. |
 | `support_radius_cm` | number | cm | 1.0 – 30.0 | 5.0 | Applies when: habit == 'Climbing'. |
 | `stem_color` | colour (sRGB 0..1) |  |  | [0.38, 0.48, 0.2] | Colour of stems, canes, pseudobulbs and rhizome (sRGB 0..1). |
@@ -816,13 +836,14 @@ Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unles
 | `peduncle_cm` | number | cm | 0.0 – 150.0 | 25.0 | Stalk below the first flower |
 | `rachis_cm` | number | cm | 0.0 – 150.0 | 25.0 | Flower-bearing part |
 | `spike_radius_mm` | number | mm | 0.5 – 8.0 | 2.5 | Radius of the inflorescence axis at its base, mm. |
-| `spike_angle_deg` | number | deg | 0.0 – 90.0 | 30.0 | Emergence angle from the vertical |
+| `spike_angle_deg` | number | deg | 0.0 – 180.0 | 30.0 | Emergence angle from the vertical |
 | `spike_flex` | number |  | 0.0 – 1.0 | 0.5 | 0 stiff, erect .. 1 pendent under the weight of the flowers |
 | `branches` | integer |  | 0 – 30 | 0 | Lateral branches (panicle: Oncidium) |
 | `branch_ratio` | number |  | 0.05 – 1.0 | 0.4 | Branch length relative to the rachis Applies when: branches > 0. |
 | `divergence_deg` | number | deg | 0.0 – 180.0 | 180.0 | Between successive flowers (180 two-ranked, 137.5 spiral) |
 | `pedicel_cm` | number | cm | 0.2 – 15.0 | 4.0 | Pedicel and ovary |
 | `flower_facing` | number |  | 0.0 – 1.0 | 0.7 | 0 facing away from the axis .. 1 all turned to the light |
+| `umbel` | number |  | 0.0 – 1.0 | 0.0 | 1: all flowers from the tip of the scape in a fan (Bulbophyllum) |
 | `maturation` | number |  | 0.0 – 1.0 | 0.3 | Acropetal opening: share of buds at the tip |
 | `bract_mm` | number | mm | 0.0 – 40.0 | 4.0 | Floral and peduncle bracts |
 | `spike_color` | colour (sRGB 0..1) |  |  | [0.25, 0.35, 0.18] | Colour of peduncle, rachis, pedicels and ovaries (sRGB 0..1). |
@@ -837,12 +858,13 @@ Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unles
 | `sepal_widest` | number |  | 0.1 – 0.9 | 0.5 | Position of the widest point of the sepals, 0 base .. 1 tip. |
 | `sepal_apex_deg` | number | deg | 10.0 – 179.0 | 110.0 | Angle at the sepal apex, degrees (small = acuminate, 180 = rounded). |
 | `lateral_sepal_deg` | number | deg | -90.0 – 90.0 | 35.0 | Lateral sepals below the horizontal Applies when: synsepal < 0.85. |
-| `lateral_sepal_scale` | number |  | 0.3 – 2.0 | 1.0 | Lateral / dorsal sepal size |
+| `lateral_sepal_scale` | number |  | 0.3 – 15.0 | 1.0 | Lateral / dorsal sepal size |
 | `synsepal` | number |  | 0.0 – 1.0 | 0.0 | Lateral sepals joined behind the lip (Paphiopedilum: 1) |
 | `sepal_cup` | number |  | -0.5 – 1.0 | 0.15 | Transverse concavity of the sepals (negative: margins recurved). |
 | `sepal_reflex_deg` | number | deg | -90.0 – 120.0 | 10.0 | Bending back along the sepal |
 | `sepal_twist_deg` | number | deg | 0.0 – 720.0 | 0.0 | Twist along the sepals, degrees (Prosthechea: twisted, hanging). |
 | `sepal_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy sepal margins, 0..1. |
+| `sepal_fringe_mm` | number | mm | 0.0 – 15.0 | 0.0 | Fimbriate (fringed) margins of the dorsal sepal and petals |
 | `petal_length_cm` | number | cm | 0.2 – 90.0 | 5.0 | Length of the lateral petals, cm. |
 | `petal_width_cm` | number | cm | 0.05 – 10.0 | 4.0 | Width of the lateral petals, cm. |
 | `petal_widest` | number |  | 0.1 – 0.9 | 0.6 | Position of the widest point of the petals, 0 base .. 1 tip. |
@@ -870,6 +892,12 @@ Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unles
 | `lip_roll` | number |  | 0.0 – 1.2 | 0.0 | 0 flat .. 1 rolled into a tube around the column |
 | `lip_roll_extent` | number |  | 0.05 – 1.0 | 0.5 | Share of the lip that is rolled, from the base Applies when: lip_roll > 0. |
 | `lip_sac` | number |  | 0.0 – 1.0 | 0.0 | Inflated pouch (Paphiopedilum slipper) |
+| `lip_sac_extent` | number |  | 0.1 – 1.0 | 1.0 | Share of the lip inflated, from the base (Stanhopea hypochile ~0.4) Applies when: lip_sac > 0. |
+| `lip_horns_mm` | number | mm | 0.0 – 60.0 | 0.0 | Two horns from the middle of the lip (Stanhopea mesochile) |
+| `lip_flare` | number |  | 0.0 – 1.5 | 0.0 | Mid lobe spreading wider and facing forward (Cattleya) |
+| `spur_cm` | number | cm | 0.0 – 45.0 | 0.0 | Nectar spur behind the lip base (Angraecum sesquipedale ~30) |
+| `spur_diameter_mm` | number | mm | 0.5 – 15.0 | 4.0 | Applies when: spur_cm > 0. |
+| `spur_curve` | number |  | 0.0 – 1.0 | 0.6 | 0 straight back .. 1 hanging down Applies when: spur_cm > 0. |
 | `lip_wave` | number |  | 0.0 – 1.5 | 0.0 | Undulate / crisped margin |
 | `lip_waves` | number |  | 1.0 – 12.0 | 4.0 | Waves along the margin Applies when: lip_wave > 0. |
 | `callus_mm` | number | mm | 0.0 – 10.0 | 0.0 | Height of the callus (pad or ridges) on the lip disc |

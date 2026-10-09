@@ -43,7 +43,7 @@ RULES: dict = {
             **{f: _WOODY_ROOTS for f in (
                 "lateral_count", "spread_crown_ratio", "max_depth_m", "beta", "taproot_share", "zrt_dbh_ratio",
                 "sinker_spacing_m", "branch_spacing_m", "surface_exposure", "plank", "buttress_height_dbh",
-                "tortuosity", "knees", "deep_roots")},
+                "tortuosity", "knees", "deep_roots", "pneumatophores")},
             **{f: _FIBROUS_ROOTS for f in ("fibrous_count", "fibrous_radius_m", "fibrous_spread_m")},
             **{f: _STORAGE_ROOTS for f in ("tuber_length_m", "tuber_radius_m")},
             "tuber_count": ("system == 'Tuberous cluster'", "Only for a tuberous cluster"),
@@ -176,6 +176,7 @@ _ROOT = ("organ == 'Taproot'", "Only for storage roots")
 _TUBER = ("organ in ('Tubers', 'Tuberous roots')", "Only for tubers and tuberous roots")
 _POTATO = ("organ == 'Tubers'", "Only for stem tubers (potato)")
 _HEADR = ("organ == 'Head'", "Only for inflorescence heads")
+_BULB = ("organ == 'Bulb'", "Only for bulbs and corms")
 RULES["Vegetable"] = {
     "profile": {
         **{f: _ROOT for f in ("root_length_cm", "root_diameter_cm", "widest_position", "shoulder", "taper",
@@ -184,10 +185,12 @@ RULES["Vegetable"] = {
         **{f: _TUBER for f in ("tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm",
                                "tuber_color", "tuber_dots")},
         **{f: _POTATO for f in ("stolon_length_cm", "eyes", "eye_depth")},
+        **{f: _BULB for f in ("bulb_diameter_cm", "bulb_shape", "bulb_neck", "cloves", "bulb_exposure",
+                              "bulb_color", "bulb_roots", "contractile_roots")},
         **{f: _HEADR for f in ("head_type", "head_diameter_cm", "head_height_ratio", "head_levels", "florets",
                                "floret_scale", "head_color", "branch_color", "head_wrap")},
         "bud_size_mm": ("organ == 'Head' and head_type == 'Buds'", "Only for broccoli-type heads"),
-        "stem_radius_mm": ("stem_height_cm > 0", "Only for a visible stem"),
+        "stem_radius_mm": ("stem_height_cm > 0 or organ == 'Bulb'", "Only for a visible stem or a bulb neck"),
         "stem_color": ("stem_height_cm > 0", "Only for a visible stem"),
         "rootlet_ranks": ("organ == 'Taproot' and rootlets > 0", "Only with rootlets"),
     },
@@ -205,6 +208,9 @@ RULES["Grass"] = {
         "awn_cm": ("head in ('Spike', 'Panicle', 'One-sided')", "Only for awned spikelets"),
         "awn_color": ("head != 'None' and (awn_cm > 0 or head == 'Plume')", "Only with awns or plume hairs"),
         "ears": ("head == 'Maize'", "Only for maize"),
+        "ligule_mm": ("ligule != 'None'", "Only with a ligule"),
+        "auricle_mm": ("auricles != 'None'", "Only with auricles"),
+        "root_primordia": ("growth_ring > 0", "Only with a growth ring and root band (sugarcane)"),
         **{f: _EAR for f in ("ear_node", "ear_length_cm", "ear_diameter_cm", "kernel_rows", "husk", "silk_cm",
                              "kernel_color", "silk_color")},
     },
@@ -239,6 +245,11 @@ RULES["Orchid"] = {
         "tip_color": ("tip_amount > 0", "Only with coloured tips"),
         "mottle_color": ("leaf_mottle > 0", "Only with mottled leaves"),
         "lateral_sepal_deg": ("synsepal < 0.85", "Lateral sepals fused into a synsepal"),
+        "mount": ("habit != 'Climbing'", "Climbing orchids grow on their post"),
+        "pot_diameter_cm": ("habit != 'Climbing' and mount == 'Pot'", "Only in a pot"),
+        "branch_diameter_cm": ("habit != 'Climbing' and mount == 'Branch'", "Only on a branch"),
+        "lip_sac_extent": ("lip_sac > 0", "Only for pouched lips"),
+        **{f: ("spur_cm > 0", "Only with a spur") for f in ("spur_diameter_mm", "spur_curve")},
     },
 }
 

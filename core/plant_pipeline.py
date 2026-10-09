@@ -113,6 +113,9 @@ class BotanicalPlantPipeline:
                 dbh_m, cr, collar_r, al.pipe_exponent_delta, seed=seed,
                 display_depth_m=root_display_depth_m, azimuths=azimuths)
             fine_root_graph = root_eng.fine_roots(root_graph, seed=seed, display_depth_m=root_display_depth_m)
+            if rp.drop_roots > 0:                       # Aerial roots from the branches (thin-tube mesh)
+                for a in root_eng.drop_roots(skeleton, h, cr, seed=seed).axes:
+                    fine_root_graph.add_axis(a)
 
         if shoot_leaves > 0 and self.supports_shoot_cards():
             self.leaf_morphology = LeafMorphologyEngine(

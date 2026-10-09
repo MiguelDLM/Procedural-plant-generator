@@ -112,6 +112,8 @@ class RootProfile:
     fine_orders: int = 2              # Orders of fine laterals
     stilt_height_dbh: float = 3.0     # Height on the stem of the highest stilt roots (x DBH)
     tuber_count: int = 6              # Storage roots of a tuberous cluster
+    drop_roots: int = 0               # Aerial roots dropping from the branches to the soil (Rhizophora, banyans)
+    pneumatophores: int = 0           # Pencil-like breathing roots per lateral, rising from the mud (Avicennia)
 
 
 def sample_depth(beta: float, u: np.ndarray | float) -> np.ndarray:
@@ -299,6 +301,8 @@ class RootSystemEngine:
                           zrt, dbh, rng, order + 1, start=pts[j] - np.array([0.0, 0.0, 0.85 * half_height[j]]))
         if prof.knees > 0 and order == 1:
             self._knees(graph, aid, rng)
+        if prof.pneumatophores > 0 and order == 1:
+            self._pneumatophores(graph, aid, rng)
         return aid
 
     def _sinkers(self, graph, aid, rng, dense_end=False, min_dist=0.0):
@@ -463,6 +467,59 @@ class RootSystemEngine:
             p = np.column_stack([np.full(6, base[0]), np.full(6, base[1]), base[2] + (h - base[2]) * t])
             r = np.maximum(self.MIN_RADIUS, float(axis.radii[j]) * 1.4 * (1.0 - 0.75 * t ** 1.5))
             graph.add_axis(Axis(p, r, 2, aid, j, 0.0))
+
+    def _pneumatophores(self, graph, aid, rng):
+        """Pencil-like pneumatophores: first-order laterals of the horizontal cable roots growing straight up
+        (negatively gravitropic), ~0.5-0.7 cm thick, 10-30 cm above the mud (Avicennia)."""
+        axis = graph.axes[aid]
+        s = axis.arc_length
+        for _ in range(self.profile.pneumatophores):
+            f = rng.uniform(0.15, 0.95)
+            j = max(1, min(len(s) - 2, int(np.searchsorted(s, f * s[-1]))))
+            base = axis.positions[j] + rng.normal(0, 0.05, 3) * np.array([1, 1, 0])
+            h = rng.uniform(0.1, 0.3)
+            t = np.linspace(0.0, 1.0, 6)
+            p = np.column_stack([base[0] + rng.normal(0, 0.01) * t, base[1] + rng.normal(0, 0.01) * t,
+                                 base[2] + (h - base[2]) * t])
+            r = np.maximum(self.MIN_RADIUS, rng.uniform(0.0025, 0.0035) * (1.0 - 0.6 * t ** 2))
+            graph.add_axis(Axis(p, r, 3, aid, j, 0.0))
+
+    def drop_roots(self, skeleton: BranchingGraph, total_height: float, crown_radius: float,
+                   seed: int = 42) -> BranchingGraph:
+        """Aerial roots that leave the lower branches, hang down to the soil and anchor there, thickening
+        into props (Rhizophora drop roots; banyan figs)."""
+        out = BranchingGraph()
+        n = int(self.profile.drop_roots)
+        if n <= 0:
+            return out
+        rng = np.random.default_rng(seed + 811)
+        cands = []
+        for a in skeleton.axes:
+            if a.order < 1 or a.order > 2:
+                continue
+            P = a.positions
+            dist = np.hypot(P[:, 0], P[:, 1])
+            ok = np.nonzero((P[:, 2] > 0.2 * total_height) & (P[:, 2] < 0.75 * total_height) &
+                            (dist > 0.2 * crown_radius))[0]
+            cands += [(P[i], float(a.radii[i])) for i in ok[::3]]
+        if not cands:
+            return out
+        for k in rng.choice(len(cands), size=min(n, len(cands)), replace=False):
+            top, rb = cands[k]
+            m = max(6, int(top[2] / 0.25))
+            t = np.linspace(0.0, 1.0, m + 1)
+            sway = rng.normal(0, 0.03, (m + 1, 2)).cumsum(0) * t[:, None]
+            p = np.column_stack([top[0] + sway[:, 0], top[1] + sway[:, 1], top[2] - (top[2] + 0.15) * t])
+            r = np.clip(rb * 0.5, 0.008, 0.05) * (0.6 + 0.4 * t)          # Thicker where it props
+            aid = out.add_axis(Axis(p, r, 1, -1, -1, 0.0))
+            for _ in range(int(rng.integers(2, 4))):                    # Anchors into the soil
+                az = rng.uniform(0, 2 * math.pi)
+                L = rng.uniform(0.3, 0.8)
+                u = np.linspace(0.0, 1.0, 6)
+                q = np.column_stack([p[-1, 0] + math.cos(az) * L * u, p[-1, 1] + math.sin(az) * L * u,
+                                     p[-1, 2] - 0.4 * L * u])
+                out.add_axis(Axis(q, np.maximum(self.MIN_RADIUS, r[-1] * 0.6 * (1 - 0.6 * u)), 2, aid, m, az))
+        return out
 
     def _fibrous(self, graph, R, rng):
         """Monocot root system: adventitious roots of constant girth from the stem-base root zone."""

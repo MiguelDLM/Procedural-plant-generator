@@ -124,6 +124,8 @@ TRAITS: list[TraitSpec] = [
     TraitSpec("roots.fine_orders", 0, 3, integer=True, cv=0.0),
     TraitSpec("roots.stilt_height_dbh", 0.5, 10.0, cv=0.06),
     TraitSpec("roots.tuber_count", 1, 20, integer=True, cv=0.0),
+    TraitSpec("roots.drop_roots", 0, 40, integer=True, cv=0.0),
+    TraitSpec("roots.pneumatophores", 0, 80, integer=True, cv=0.0),
     # Mechanics
     TraitSpec("biomechanics.wood_density_g_cm3", 0.15, 1.25, cv=0.05),
     TraitSpec("biomechanics.youngs_modulus_gpa", 3.0, 22.0, cv=0.05),

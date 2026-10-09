@@ -52,6 +52,16 @@ def vine(sci, common, family, biome, notes, leaf=None, vein=None, **kw) -> VineP
 PALMATE_VEINS = dict(pattern=V.ACTINODROMOUS, vla_mm_per_mm2=6.5, secondary_vein_pairs=5, divergence_angle_deg=45)
 
 VINE_CATALOG: dict[str, VinePreset] = {
+    "cuscuta_campestris": vine(
+        "Cuscuta campestris", "Field dodder (cuscuta, fideíllo)", "Convolvulaceae", "Americas; weed worldwide",
+        "Leafless, rootless parasitic twiner: thread-like orange stems 0.4-0.6 mm thick coil tightly around "
+        "the host and press haustoria into it; loose coils while searching, tight ones with many haustoria "
+        "once attached (UF/IFAS EP556; Teixeira-Costa 2021).",
+        leaf=dict(archetype=A.LANCEOLATE, blade_length_cm=0.3, aspect_ratio=2.0),
+        mode=M.TWINING, chirality=C.LEFT, coil_radius_cm=0.6, coil_pitch_cm=1.5, wander_cm=0.3,
+        stem_radius_mm=0.35, stem_taper=0.2, internode_cm=1.5, tip_length_cm=12.0, tip_hook=0.8,
+        branch_probability=0.25, branch_length_cm=25.0, branch_angle_deg=40.0, branch_droop=0.3, leafless=True,
+        haustoria=0.7, stem_color=(0.95, 0.62, 0.15), stem_color_old=(0.85, 0.55, 0.18), hairiness=0.0),
     "ipomoea_purpurea": vine(
         "Ipomoea purpurea", "Morning glory (manto de la virgen)", "Convolvulaceae", "Mexico; cultivated worldwide",
         "Annual right-handed twiner; heart-shaped entire leaves on long petioles; hairy stems.",
@@ -182,7 +192,8 @@ VINE_CATALOG: dict[str, VinePreset] = {
 }
 
 VINE_RANGES = {
-    "coil_radius_cm": (0.2, 30.0), "coil_pitch_cm": (2.0, 150.0), "wander_cm": (0.0, 50.0),
+    "haustoria": (0.0, 1.0),
+    "coil_radius_cm": (0.2, 30.0), "coil_pitch_cm": (0.5, 150.0), "wander_cm": (0.0, 50.0),
     "tip_length_cm": (0.0, 300.0), "tip_hook": (0.0, 1.0), "stem_radius_mm": (0.3, 200.0),
     "stem_taper": (0.0, 0.95), "internode_cm": (0.5, 80.0), "leaf_size": (0.1, 3.0),
     "young_leaf_size": (0.05, 1.0), "expansion_zone_cm": (1.0, 300.0), "leaf_facing": (0.0, 1.0),

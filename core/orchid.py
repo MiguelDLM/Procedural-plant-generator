@@ -58,7 +58,7 @@ GOLDEN = math.radians(137.50776)
 ATTRS = ("orc_part", "orc_u", "orc_v", "orc_s", "orc_t", "orc_rand")
 # orc_part codes (material): organ identity
 (LEAF, STEM, ROOT, SEPAL, PETAL, LIP, COLUMN, ANTHER, CALLUS, BRACT, SPIKE, BUD, SUPPORT, CAPSULE,
- STIGMA) = range(15)
+ STIGMA, POT, SUBSTRATE) = range(17)
 LIGHT = np.array([0.0, -1.0, 0.0])          # Flowers turn toward the front of the scene (-Y)
 BEND_GAIN = 14.0                            # Scales spike_flex to the bending compliance of the axis
 
@@ -67,6 +67,12 @@ class OrchidHabit(str, Enum):
     MONOPODIAL = "Monopodial"    # One stem growing from its apex (Phalaenopsis, Vanda)
     SYMPODIAL = "Sympodial"      # Successive growths along a rhizome (Cattleya, Dendrobium, Oncidium, Paphiopedilum)
     CLIMBING = "Climbing"        # Long monopodial vine on a support, rooting at the nodes (Vanilla)
+
+
+class OrchidMount(str, Enum):
+    GROUND = "Ground"            # Terrestrial or on a flat substrate
+    POT = "Pot"                  # In a pot of bark: substrate roots inside, aerial roots over the rim
+    BRANCH = "Branch"            # Epiphyte on a bough: roots press against the bark and wrap around it
 
 
 class LeafPlacement(str, Enum):
@@ -102,6 +108,9 @@ class OrchidProfile:
     bulb_ridges: int = 0                 # Longitudinal ridges and furrows (sulcate pseudobulbs)
     bulb_lean_deg: float = 10.0          # Lean of the growths away from the rhizome axis
     sheath_cover: float = 0.0            # Share of the pseudobulb covered by papery sheaths, from the base
+    mount: OrchidMount = OrchidMount.GROUND   # Ground, pot or branch (epiphyte)
+    pot_diameter_cm: float = 12.0
+    branch_diameter_cm: float = 10.0
     support_height_m: float = 1.5        # Climbing: height of the post the vine climbs
     support_radius_cm: float = 5.0
     stem_color: tuple = (0.38, 0.48, 0.20)
@@ -147,6 +156,7 @@ class OrchidProfile:
     divergence_deg: float = 180.0        # Between successive flowers (180 two-ranked, 137.5 spiral)
     pedicel_cm: float = 4.0              # Pedicel and ovary
     flower_facing: float = 0.7           # 0 facing away from the axis .. 1 all turned to the light
+    umbel: float = 0.0                   # 1: all flowers from the tip of the scape in a fan (Bulbophyllum)
     maturation: float = 0.3              # Acropetal opening: share of buds at the tip
     bract_mm: float = 4.0                # Floral and peduncle bracts
     spike_color: tuple = (0.25, 0.35, 0.18)
@@ -169,6 +179,7 @@ class OrchidProfile:
     sepal_reflex_deg: float = 10.0       # Bending back along the sepal
     sepal_twist_deg: float = 0.0
     sepal_wave: float = 0.0
+    sepal_fringe_mm: float = 0.0         # Fimbriate (fringed) margins of the dorsal sepal and petals
     petal_length_cm: float = 5.0
     petal_width_cm: float = 4.0
     petal_widest: float = 0.6
@@ -198,6 +209,12 @@ class OrchidProfile:
     lip_roll: float = 0.0                # 0 flat .. 1 rolled into a tube around the column
     lip_roll_extent: float = 0.5         # Share of the lip that is rolled, from the base
     lip_sac: float = 0.0                 # Inflated pouch (Paphiopedilum slipper)
+    lip_sac_extent: float = 1.0          # Share of the lip inflated, from the base (Stanhopea hypochile ~0.4)
+    lip_horns_mm: float = 0.0            # Two horns from the middle of the lip (Stanhopea mesochile)
+    lip_flare: float = 0.0               # Mid lobe spreading wider and facing forward (Cattleya)
+    spur_cm: float = 0.0                 # Nectar spur behind the lip base (Angraecum sesquipedale ~30)
+    spur_diameter_mm: float = 4.0
+    spur_curve: float = 0.6              # 0 straight back .. 1 hanging down
     lip_wave: float = 0.0                # Undulate / crisped margin
     lip_waves: float = 4.0               # Waves along the margin
     callus_mm: float = 0.0               # Height of the callus (pad or ridges) on the lip disc
@@ -366,6 +383,23 @@ def _ring(th, N, B):
     return np.cos(th)[None, :, None] * N[:, None, :] + np.sin(th)[None, :, None] * B[:, None, :]
 
 
+def _quads(A, B, width, part) -> MeshData:
+    """Thin flat strips (one quad each) from A to B: hairs, fringes."""
+    if len(A) == 0:
+        return MeshData.empty()
+    d = B - A
+    d = d / np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-12)
+    w = np.cross(d, UP)
+    small = np.linalg.norm(w, axis=1) < 1e-6
+    w[small] = np.cross(d[small], [1.0, 0.0, 0.0])
+    w = w / np.maximum(np.linalg.norm(w, axis=1, keepdims=True), 1e-12) * width * 0.5
+    n = len(A)
+    V = np.stack([A - w, A + w, B + w * 0.3, B - w * 0.3], 1).reshape(-1, 3)
+    uv = np.tile(np.array([[0, 0], [1, 0], [1, 1], [0, 1]], np.float32), (n, 1))
+    return MeshData(V.astype(np.float32), np.arange(4 * n, dtype=np.int32), np.arange(n, dtype=np.int32) * 4,
+                    np.full(n, 4, np.int32), uv, _attrs(4 * n, part, u=np.tile([0.9, 0.9, 1.0, 1.0], n)))
+
+
 def _bezier(p0, p1, p2, p3, n):
     t = np.linspace(0, 1, n)[:, None]
     return (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3
@@ -386,6 +420,9 @@ class OrchidEngine:
         self.p = profile or OrchidProfile()
         p = self.p
         self._sepal = _shape(p.sepal_length_cm / max(p.sepal_width_cm, 1e-3), p.sepal_widest, p.sepal_apex_deg)
+        ls = max(p.lateral_sepal_scale, 1e-3)
+        self._synsepal = _shape(p.sepal_length_cm * ls / max(p.sepal_width_cm * min(ls, 1.2) * 1.5, 1e-3),
+                                0.15, 20.0)                     # Long tapering tail (Bulbophyllum)
         self._petal = _shape(p.petal_length_cm / max(p.petal_width_cm, 1e-3), p.petal_widest, p.petal_apex_deg)
         mid_len = p.lip_length_cm * (1.0 - (p.side_lobe_pos if p.side_lobes > 0 else 0.0))
         mid_w = p.lip_width_cm * (p.midlobe_width if p.side_lobes > 0 else 1.0)
@@ -395,7 +432,7 @@ class OrchidEngine:
 
     # ================================================================= flower
     def tepal(self, origin, out, fwd, L, W, shape, claw, cup, forward_deg, reflex_deg, twist_deg, wave, part,
-              rng, detail, mirror=1.0) -> MeshData:
+              rng, detail, mirror=1.0, fringe_mm=0.0) -> MeshData:
         """Sepal or petal: blade leaving `origin` along `out` (in the floral plane), raised toward the front
         `fwd` by forward_deg, bending back by reflex_deg; parabolic cupping toward the front, twist and wavy
         margins. `mirror` (+1/-1) makes left and right organs symmetric."""
@@ -425,7 +462,20 @@ class OrchidEngine:
             a = math.radians(twist_deg) * mirror * u[:, None]
             X, Z = X * np.cos(a) - Z * np.sin(a), X * np.sin(a) + Z * np.cos(a)
         P = M[:, None, :] + X[..., None] * lat + Z[..., None] * N[:, None, :]
-        return _grid(P, part, u[:, None], v[None, :], u[:, None] * L, X, rng.random())
+        blade = _grid(P, part, u[:, None], v[None, :], u[:, None] * L, X, rng.random())
+        if fringe_mm <= 0:
+            return blade
+        # Fimbriate margins: fringes leaving both margins outward (Bulbophyllum sect. Cirrhopetalum)
+        A, B = [], []
+        for col, inner in ((0, 1), (-1, -2)):
+            for j in range(1, nu - 1):
+                if u[j] < 0.15:
+                    continue
+                for _ in range(2):
+                    out_d = _unit(P[j, col] - P[j, inner] + rng.normal(0, 0.2, 3) * np.linalg.norm(P[j, col] - P[j, inner]))
+                    A.append(P[j, col])
+                    B.append(P[j, col] + out_d * fringe_mm * 0.001 * rng.uniform(0.5, 1.0))
+        return _merge([blade, _quads(np.array(A), np.array(B), 0.0003, part)])
 
     def _lip_outline(self, t):
         """Half-width of the lip (fraction of half the lip width) along it: smooth union of the claw, the
@@ -459,11 +509,18 @@ class OrchidEngine:
         lat = _unit(np.cross(fwd, down))
         hwf, clawf, midf = self._lip_outline(t)
         hw = 0.5 * Wl * hwf
+        t_mid = p.side_lobe_pos if p.side_lobes > 0 else min(p.lip_roll_extent, 0.6)
+        if p.lip_flare > 0:                                       # Mid lobe spreading wide (Cattleya)
+            hw = hw * (1.0 + 0.6 * p.lip_flare * _smooth(t, t_mid, 1.0))
         hw = np.maximum(hw, 0.0008)
+        sac_x = p.lip_sac_extent
+        sac_w = 1.0 - _smooth(t, sac_x - 0.1, sac_x + 0.1) if sac_x < 1.0 else np.ones_like(t)
         # Midline in the (fwd, down) plane: projects forward under the column, then deflexes downward
         tf = np.linspace(0, 1, 48)
         a = math.radians(p.lip_angle_deg) + math.radians(p.lip_deflex_deg) * _smooth(tf, 0.2, 1.0) ** 1.2
-        if p.lip_sac > 0:                                         # Pouch: toe curves forward and up
+        if p.lip_flare > 0:                                       # ...and turning to face forward
+            a = a - math.radians(p.lip_deflex_deg) * 0.6 * p.lip_flare * _smooth(tf, 0.55, 1.0)
+        if p.lip_sac > 0 and sac_x >= 0.9:                        # Pouch: toe curves forward and up
             a = a - p.lip_sac * math.radians(70) * _smooth(tf, 0.55, 1.0)
         dirs = np.cos(a)[:, None] * fwd + np.sin(a)[:, None] * down
         mid = origin + np.concatenate([[np.zeros(3)], np.cumsum((dirs[:-1] + dirs[1:]) * 0.5 * L / 47, axis=0)])
@@ -476,7 +533,7 @@ class OrchidEngine:
             np.full_like(t, math.pi * p.lip_roll)
         if p.lip_sac > 0:
             # Pouch: margins incurved over a mouth near the base, overlapping toward the closed toe
-            roll = roll + math.pi * p.lip_sac * (0.7 + 0.45 * _smooth(t, 0.15, 0.65))
+            roll = roll + math.pi * p.lip_sac * (0.7 + 0.45 * _smooth(t, 0.15, 0.65)) * sac_w
         # `lip_width_cm` is the apparent width: a rolled lamina must be wider (arc of total angle 2*roll)
         rl = np.clip(roll, 1e-3, None)
         hw = hw * np.where(rl < math.pi / 2, rl / np.sin(rl), rl)
@@ -498,7 +555,9 @@ class OrchidEngine:
         Y = np.concatenate([Yh[:, :0:-1], Yh], 1)
         v = np.concatenate([-vh[:0:-1], vh])
         if p.lip_sac > 0:                                          # Inflated floor of the pouch
-            Y = Y - p.lip_sac * 0.9 * hw[:, None] * (1 - v[None, :] ** 2) * np.sin(math.pi * t[:, None]) ** 0.7
+            prof = np.sin(math.pi * np.clip(t / max(sac_x, 0.05), 0, 1))[:, None] ** 0.7 if sac_x < 1.0 else \
+                np.sin(math.pi * t[:, None]) ** 0.7
+            Y = Y - p.lip_sac * 0.9 * hw[:, None] * (1 - v[None, :] ** 2) * prof
         part = np.full(X.shape, float(LIP))
         if p.callus_mm > 0:
             ch = p.callus_mm * 0.001 * scale
@@ -521,6 +580,17 @@ class OrchidEngine:
         uu = np.repeat(t[:, None], len(v), 1)
         parts = [_grid(P, part, uu, v[None, :], uu * L, X, rng.random())]
         apex = P[-1, len(v) // 2]
+        if p.lip_horns_mm > 0:                                     # Two horns from the mesochile (Stanhopea)
+            k = int(np.argmin(np.abs(t - min(sac_x + 0.05, 0.9))))
+            for sgn in (-1, 1):
+                q = P[k, len(v) // 2 + sgn * max(1, nh // 2)]
+                d = _unit(dirs[min(int(len(dirs) * t[k]), len(dirs) - 1)] + nin[-1] * 0.5 + lat * sgn * 0.3)
+                pts = [q]
+                lh = p.lip_horns_mm * 0.001 * scale
+                for i in range(8):
+                    d = _unit(_rotate(d, lat * sgn, 0.08))
+                    pts.append(pts[-1] + d * lh / 8)
+                parts.append(_tube(pts, np.linspace(0.0015, 0.0005, 9) * scale, LIP, 6))
         if p.cirrhi_mm > 0:                                        # Two filiform appendages at the apex
             j = len(v) // 2
             for sgn in (-1, 1):
@@ -597,11 +667,13 @@ class OrchidEngine:
         sep = dict(cup=p.sepal_cup, forward_deg=f0, reflex_deg=p.sepal_reflex_deg * o, twist_deg=p.sepal_twist_deg,
                    wave=p.sepal_wave, part=SEPAL, rng=rng, detail=detail)
         parts.append(self.tepal(center - fwd * 0.001 * s + out_dir(90) * r0, out_dir(90), fwd, Ls, Ws, self._sepal,
-                                0.0, mirror=1.0, **sep))
+                                0.0, mirror=1.0, fringe_mm=p.sepal_fringe_mm * s / max(scale, 1e-6), **sep))
         ls = p.lateral_sepal_scale
         if p.synsepal >= 0.85:
             d = out_dir(270)
-            parts.append(self.tepal(center - fwd * 0.0015 * s + d * r0, d, fwd, Ls * ls, Ws * ls * 1.5, self._sepal,
+            # Fused lateral sepals: the length scales, the width stays about 1.5 sepals wide
+            parts.append(self.tepal(center - fwd * 0.0015 * s + d * r0, d, fwd, Ls * ls, Ws * min(ls, 1.2) * 1.5,
+                                    self._synsepal if ls > 2 else self._sepal,
                                     0.0, mirror=1.0, **sep))
         else:
             for sgn, base_psi in ((1, -p.lateral_sepal_deg), (-1, 180 + p.lateral_sepal_deg)):
@@ -615,12 +687,22 @@ class OrchidEngine:
             d = out_dir(psi)
             parts.append(self.tepal(center + fwd * 0.0005 * s + d * r0, d, fwd, Lp, Wp, self._petal, p.petal_claw,
                                     p.petal_cup, f0 + 4, p.petal_reflex_deg * o, p.petal_twist_deg, p.petal_wave,
-                                    PETAL, rng, detail, mirror=sgn))
+                                    PETAL, rng, detail, mirror=sgn, fringe_mm=p.sepal_fringe_mm * 0.7))
         # Column along the floral axis, lip below it
         col_base = center + fwd * 0.001 * s
         parts.append(self.column(col_base, fwd, down, rng, detail, s))
         lip, _ = self.labellum(col_base + down * rc * 0.9, down, fwd, rng, detail, s)
         parts.append(lip)
+        if p.spur_cm > 0:                  # Nectar spur behind the lip base, hanging (Angraecum)
+            Ls = p.spur_cm * 0.01 * s
+            d = _unit(-fwd * 0.8 + down * 0.6)
+            pts = [col_base + down * rc * 0.9 - fwd * rc * 0.3]
+            n = max(8, int(20 * detail))
+            for i in range(n):
+                d = _unit(d - UP * p.spur_curve * 1.5 / n)            # Bends down under its weight
+                pts.append(pts[-1] + d * Ls / n)
+            R = p.spur_diameter_mm * 0.0005 * s * np.linspace(1.0, 0.35, n + 1)
+            parts.append(_tube(np.array(pts), R, LIP, max(5, int(8 * detail))))
         return _merge(parts), twist
 
     # ================================================================= inflorescence
@@ -636,6 +718,8 @@ class OrchidEngine:
         s = np.linspace(0, length, n + 1)
         ds = length / n
         grav = th0 * (0.3 + 0.7 * np.exp(-s / 0.06))         # Toward the gravitropic set-point angle
+        if th0 > math.pi / 2:                                # Pendent (positively gravitropic: Stanhopea)
+            grav = th0 + (math.pi - th0) * (1 - np.exp(-s / 0.06))
         ped = min(p.peduncle_cm * 0.01, length * 0.95)
         sk = ped + (length - ped) * (np.arange(n_flowers) + 0.5) / max(n_flowers, 1) if length > ped else \
             np.full(n_flowers, length)
@@ -693,12 +777,20 @@ class OrchidEngine:
         open_until = 1.0 - p.maturation
         twists = []
         side0 = _perp(T[0])
+        fan0 = _proj(LIGHT, T[-1])
+        if not np.any(fan0):
+            fan0 = _perp(T[-1])
         for k in range(nf):
             z = sk[k] if k < len(sk) else s[-1]
+            if p.umbel > 0:                                         # All from the tip, spread in a fan
+                z = s[-1]
             i = min(int(np.searchsorted(s, z)), len(P) - 1)
             x = np.array([np.interp(z, s, P[:, q]) for q in range(3)])
             t_dir = T[i]
             side = _proj(_rotate(side0, t_dir, k * math.radians(p.divergence_deg)), t_dir)
+            if p.umbel > 0:
+                fan = math.pi * 0.9 * p.umbel
+                side = _rotate(fan0, t_dir, -fan / 2 + fan * k / max(nf - 1, 1))
             if not np.any(side):
                 side = _perp(t_dir)
             pos = k / max(nf - 1, 1)
@@ -862,15 +954,15 @@ class OrchidEngine:
         steps = max(6, int(length / 0.012 * min(detail, 1.0)))
         d = _unit(d0)
         pts = [np.asarray(start, float)]
+        free = [False]
         for i in range(steps):
             noise = rng.normal(0, 1, 3) * 0.35 * p.root_wander
             pull = np.array([0.0, 0.0, -0.06]) if aerial else np.array([0.0, 0.0, -0.45])
+            if free[0]:                                            # Hanging in the air: drapes down
+                pull = np.array([0.0, 0.0, -0.35])
             d = _unit(d + noise * 0.5 + pull)
             nxt = pts[-1] + d * length / steps
-            if aerial and nxt[2] < r:                              # Creeps over the substrate surface
-                nxt[2] = r + 0.0005
-                d[2] = abs(d[2]) * 0.3
-                d = _unit(d)
+            nxt, d = self._contain(nxt, d, aerial, r, free)
             pts.append(nxt)
         P = np.array(pts)
         u = np.linspace(0, 1, len(P))
@@ -881,6 +973,85 @@ class OrchidEngine:
             out += self.root(P[k], _unit(np.cross(d0, UP) * rng.choice([-1, 1]) + rng.normal(0, 0.3, 3)),
                              length * 0.35, rng, detail * 0.8, aerial, r * 0.7)
         return out
+
+    def _contain(self, x, d, aerial, r, free):
+        """Keeps a root on or in its support. Ground: aerial roots creep over the surface. Pot: substrate roots
+        stay inside the pot, aerial roots creep over the bark, cross the rim and hang outside. Branch: velamen
+        roots press against the bark and wrap around the bough (Zotz 2016), never entering it."""
+        p = self.p
+        mount = p.mount if p.habit != OrchidHabit.CLIMBING else OrchidMount.GROUND
+        if mount == OrchidMount.GROUND:
+            if aerial and x[2] < r:
+                x[2] = r + 0.0005
+                d[2] = abs(d[2]) * 0.3
+                d = _unit(d)
+            return x, d
+        if mount == OrchidMount.POT:
+            Ro = p.pot_diameter_cm * 0.005
+            Hp = Ro * 1.7
+            Ri = Ro * 0.92 - r
+            rh = math.hypot(x[0], x[1])
+            rim = 0.01
+            if not aerial and not free[0]:
+                if rh > Ri:                                       # Turns along the pot wall
+                    x[:2] *= Ri / rh
+                    d[:2] -= 1.2 * (x[:2] / max(rh, 1e-9)) * max(d[:2] @ (x[:2] / max(rh, 1e-9)), 0)
+                x[2] = min(max(x[2], -Hp + r + 0.005), -r)
+                return x, _unit(d)
+            if rh < Ri + r:                                       # On the bark surface inside the pot
+                if x[2] < r:
+                    x[2] = r + 0.0005
+                    d[2] = abs(d[2]) * 0.3
+            elif rh < Ro * 1.08 + r and x[2] < rim + r:           # Over the rim
+                x[2] = rim + r + 0.001
+                d[2] = abs(d[2]) * 0.2
+            else:
+                free[0] = True
+                wall = Ro * (0.8 + 0.2 * np.clip((x[2] + Hp) / Hp, 0, 1)) * 1.04 + r
+                if rh < wall:                                     # Slides down the outside of the pot
+                    x[:2] *= wall / max(rh, 1e-9)
+                if x[2] < -Hp + r:                                # ...and rests on the table under it
+                    x[2] = -Hp + r
+                    d[2] = abs(d[2]) * 0.1
+            return x, _unit(d)
+        # Branch: bough along X, top surface at z = 0
+        Rb = p.branch_diameter_cm * 0.005
+        c = np.array([x[0], 0.0, -Rb])
+        q = x - c
+        dist = math.hypot(q[1], q[2])
+        cling = (not aerial) or dist < Rb + r * 3
+        if cling and not free[0]:
+            nrm = np.array([0.0, q[1], q[2]]) / max(dist, 1e-9)
+            x = c + nrm * (Rb + r)
+            d = _unit(d - nrm * (d @ nrm))                        # Tangent to the bark
+            return x, d
+        free[0] = True
+        if dist < Rb + r:
+            nrm = np.array([0.0, q[1], q[2]]) / max(dist, 1e-9)
+            x = c + nrm * (Rb + r)
+        return x, d
+
+    def mount_mesh(self, spread) -> MeshData:
+        """Pot (terracotta, bark substrate) or bough (bark) under the plant."""
+        p = self.p
+        if p.habit == OrchidHabit.CLIMBING or p.mount == OrchidMount.GROUND:
+            return MeshData.empty()
+        if p.mount == OrchidMount.POT:
+            Ro = p.pot_diameter_cm * 0.005
+            Hp = Ro * 1.7
+            # Profile: bottom centre, outer wall (tapering), rim, inner wall down to the substrate
+            rho = np.array([1e-4, Ro * 0.78, Ro * 0.80, Ro * 1.0, Ro * 1.08, Ro * 1.08, Ro * 0.94, Ro * 0.92, 1e-4])
+            z = np.array([-Hp, -Hp, -Hp + 0.005, -0.01, -0.01, 0.012, 0.012, -0.002, -0.002])
+            n = len(rho)
+            pot = revolve(rho, z, 40, {"orc_part": np.where(np.arange(n) >= n - 2, float(SUBSTRATE), float(POT)),
+                                       "orc_u": np.linspace(0, 1, n)})
+            return pot
+        Rb = p.branch_diameter_cm * 0.005
+        L = max(0.6, spread * 1.6)
+        t = np.linspace(-L / 2, L / 2, 24)
+        P = np.stack([t, 0.02 * np.sin(t * 3.1), -Rb + 0.01 * np.sin(t * 5.3)], 1)
+        R = Rb * (1.0 + 0.06 * np.sin(t * 7.0) - 0.15 * (t + L / 2) / L)
+        return _tube(P, R, SUPPORT, 16, cap=True)
 
     # ================================================================= plants
     def _leaves_along(self, C, s, nodes_s, rng, detail, az0, sizes=1.0, plane=None, outward=None):
@@ -1143,6 +1314,10 @@ class OrchidEngine:
             parts = self.sympodial(rng, detail)
         leaves, stems, roots, flowers, spikes, support = parts
         flowers = [f for f in flowers if f is not None]
+        if p.habit != OrchidHabit.CLIMBING and p.mount != OrchidMount.GROUND:
+            pts = [m.vertices for m in leaves if len(m.vertices)]
+            spread = float(np.abs(np.concatenate(pts)[:, :2]).max()) * 2 if pts else 0.4
+            support = list(support) + [self.mount_mesh(spread)]
         res = OrchidResult(_merge(leaves), _merge(stems), _merge(roots) if with_roots else MeshData.empty(),
                            _merge(flowers), _merge(spikes), _merge(support),
                            {"leaves": len(leaves), "flowers": len(flowers)})

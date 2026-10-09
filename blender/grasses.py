@@ -12,19 +12,19 @@ import numpy as np
 
 try:
     import bpy
-    from bpy.props import BoolProperty, FloatProperty, IntProperty
+    from bpy.props import BoolProperty, FloatProperty, IntProperty, PointerProperty
     BLENDER_AVAILABLE = True
 except ImportError:
     BLENDER_AVAILABLE = False
 
 try:
-    from ..core.grass import GrassEngine, GrassProfile, patch_points
+    from ..core.grass import GrassEngine, GrassProfile, patch_points, surface_points
     from ..core.grass_db import GRASS_CATALOG, GRASS_RANGES
     from ..core.mesh_engine import MeshData
     from .flowers import _props_for, _instancer_nodes, _euler_xyz
     from .mesh_builder import populate_mesh
 except (ImportError, ValueError):
-    from core.grass import GrassEngine, GrassProfile, patch_points
+    from core.grass import GrassEngine, GrassProfile, patch_points, surface_points
     from core.grass_db import GRASS_CATALOG, GRASS_RANGES
     from core.mesh_engine import MeshData
     from blender.flowers import _props_for, _instancer_nodes, _euler_xyz
@@ -37,9 +37,10 @@ LAYOUT = [
                         "culm_height_m", "culm_radius_mm", "nodes", "internode_gradient", "basal_leaves",
                         "culm_color"]),
     ("Nodes & Internodes", ["node_swell", "growth_ring", "internode_barrel", "bud_groove", "bud_size_mm",
-                            "zigzag_deg", "wax_band", "node_color"]),
+                            "zigzag_deg", "wax_band", "root_primordia", "node_color"]),
     ("Leaves", ["leaf_length_cm", "leaf_width_cm", "leaf_peak", "leaf_angle_deg", "leaf_droop", "leaf_twist_deg",
-                "leaf_fold", "margin_wave", "sheath_fraction", "leaf_loss", "leaf_color", "midrib_color",
+                "leaf_fold", "margin_wave", "sheath_fraction", "leaf_loss", "ligule", "ligule_mm", "auricles",
+                "auricle_mm", "leaf_color", "midrib_color",
                 "tip_dryness"]),
     ("Inflorescence", ["head", "head_length_cm", "head_width_cm", "peduncle_cm", "spikelets", "spikelet_mm",
                        "awn_cm", "branches", "branch_angle_deg", "nod", "head_color", "awn_color"]),
@@ -61,6 +62,15 @@ def grass_properties(update) -> dict:
         "grass_patch_variants": IntProperty(name="Variants", default=4, min=1, max=8, update=update),
         "grass_patch_spacing": FloatProperty(name="Min Spacing (cm)", default=3.0, min=0.0, max=200.0, update=update),
         "grass_patch_scale_var": FloatProperty(name="Size Variation", default=0.25, min=0.0, max=0.9, update=update),
+        "grass_patch_surface": PointerProperty(
+            name="Terrain", type=bpy.types.Object, update=update, poll=lambda self, o: o.type == 'MESH',
+            description="Mesh to grow the patch on (empty = flat square of Patch Size)"),
+        "grass_patch_align": FloatProperty(name="Follow Slope", default=0.15, min=0.0, max=1.0, update=update,
+                                           description="0 tufts stay vertical (gravitropism) .. 1 perpendicular "
+                                                       "to the terrain"),
+        "grass_patch_max_slope": FloatProperty(name="Max Slope", default=math.radians(60), min=0.0,
+                                               max=math.radians(90), subtype='ANGLE', update=update,
+                                               description="No tufts on steeper faces (rock, cliffs)"),
     })
     return out
 
@@ -157,7 +167,7 @@ def grass_material(name, p: GrassProfile):
     # Other organs
     for k, c, loc in ((1, mix_c(p.culm_color), -600), (2, mix_c(p.head_color), -450), (3, p.awn_color, -300),
                       (4, p.kernel_color, -150), (5, mix_c((0.55, 0.68, 0.40)), 0), (6, p.silk_color, 150),
-                      (7, (0.85, 0.80, 0.68), 300)):
+                      (7, (0.85, 0.80, 0.68), 300), (8, (0.88, 0.90, 0.78), 450), (9, mix_c(p.culm_color), 600)):
         col = _mix(nt, is_part(k, (loc - 500, -700 - k * 40)), col, rgb(c, (loc, 650)), (loc, 400 - k * 20))
     # Culm nodes (grass_node: signed distance to the nearest node in culm radii; far elsewhere)
     nd = _attr(nt, "grass_node", (-1800, -1300)).outputs['Fac']
@@ -171,12 +181,47 @@ def grass_material(name, p: GrassProfile):
                      (loc[0] + 150, loc[1] - 80))
         m = _math(nt, 'MULTIPLY', rise, fall, (loc[0] + 300, loc[1]))
         return _math(nt, 'MULTIPLY', m, amount, (loc[0] + 450, loc[1]))
+    nid = _attr(nt, "grass_nid", (-1800, -1900)).outputs['Fac']
+    vary = _math(nt, 'ADD', 0.55, _math(nt, 'MULTIPLY', nid, 0.9, (-1650, -1900)), (-1500, -1900))
     wax = band(-1.8, -0.2, 0.35, 0.45 * p.wax_band, (-1500, -1300))              # Waxy bloom below the node
+    wax = _math(nt, 'MULTIPLY', wax, vary, (-1300, -1300))                      # ...varying from node to node
     col = _mix(nt, wax, col, rgb((0.74, 0.76, 0.70), (-1100, -1150)), (450, 250))
     ring = band(-0.15, 1.2, 0.15, 0.45, (-1500, -1500))                           # Node ring and root band
+    ring = _math(nt, 'MULTIPLY', ring, _math(nt, 'ADD', 0.7, _math(nt, 'MULTIPLY', nid, 0.6, (-1650, -2050)),
+                                             (-1500, -2050)), (-1300, -1500))
     col = _mix(nt, ring, col, rgb(mix_c(p.node_color), (-1100, -1350)), (500, 220))
     gr = band(0.8, 1.0, 0.05, 0.55 * p.growth_ring, (-1500, -1700))               # Growth ring line
     col = _mix(nt, gr, col, (0.22, 0.20, 0.10, 1.0), (550, 200))
+    # Root primordia (sugarcane): two staggered rows of dots in the root band, upper row irregular
+    # (Artschwager & Brandes 1958); drawn as bump and slight darkening
+    if p.root_primordia > 0 and p.growth_ring > 0:
+        culm = is_part(1, (-1500, -2300))
+        dots = None
+        for row, (dr, off) in enumerate(((0.32, 0.0), (0.58, 0.5))):
+            band_r = _math(nt, 'EXPONENT', _math(nt, 'MULTIPLY', _math(nt, 'POWER', _math(
+                nt, 'SUBTRACT', nd, dr, (-1500, -2450 - 200 * row)), 2.0, (-1350, -2450 - 200 * row)),
+                -1.0 / 0.0035, (-1200, -2450 - 200 * row)), None, (-1050, -2450 - 200 * row))
+            ang = _math(nt, 'MULTIPLY', _math(nt, 'ADD', v, off / 28.0, (-1500, -2550 - 200 * row)),
+                        2 * math.pi * 28, (-1350, -2550 - 200 * row))
+            dot = _math(nt, 'POWER', _math(nt, 'ADD', 0.5, _math(nt, 'MULTIPLY', _math(
+                nt, 'COSINE', ang, None, (-1200, -2550 - 200 * row)), 0.5, (-1050, -2550 - 200 * row)),
+                (-900, -2550 - 200 * row)), 3.0, (-750, -2550 - 200 * row))
+            if row == 1:                                   # Upper row incomplete, varying per node
+                gate = _math(nt, 'GREATER_THAN', _math(nt, 'SINE', _math(nt, 'ADD', _math(
+                    nt, 'MULTIPLY', v, 18.85, (-1500, -2900)), _math(nt, 'MULTIPLY', nid, 17.0, (-1500, -3000)),
+                    (-1350, -2950)), None, (-1200, -2950)), -0.1, (-1050, -2950))
+                dot = _math(nt, 'MULTIPLY', dot, gate, (-600, -2750))
+            d1 = _math(nt, 'MULTIPLY', dot, band_r, (-600, -2450 - 200 * row))
+            dots = d1 if dots is None else _math(nt, 'ADD', dots, d1, (-450, -2500))
+        dots = _math(nt, 'MULTIPLY', dots, culm, (-300, -2500))
+        col = _mix(nt, _math(nt, 'MULTIPLY', dots, 0.35 * p.root_primordia, (-150, -2500)), col,
+                   rgb((0.45, 0.40, 0.25), (-150, -2350)), (580, 180))
+        bump = nt.nodes.new('ShaderNodeBump')
+        bump.location = (300, -2500)
+        bump.inputs['Strength'].default_value = 0.6 * p.root_primordia
+        bump.inputs['Distance'].default_value = 0.0006
+        nt.links.new(dots, bump.inputs['Height'])
+        nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
     # Kernels: per-kernel brightness variation
     tc = nt.nodes.new('ShaderNodeTexCoord')
     tc.location = (-800, -1000)
@@ -195,6 +240,45 @@ def hide_grass_parts(root):
     for c in root.children:
         if c.name.endswith(SUFFIXES) or "_GrassPatch" in c.name or "_GrassProto" in c.name:
             c.hide_viewport = c.hide_render = True
+
+
+def _terrain_points(context, terrain, root, props):
+    """Tuft positions on a terrain mesh, in the plant root's space."""
+    dg = context.evaluated_depsgraph_get()
+    ev = terrain.evaluated_get(dg)
+    me = ev.to_mesh()
+    try:
+        me.calc_loop_triangles()
+        nv = len(me.vertices)
+        co = np.empty(nv * 3, np.float32)
+        me.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        tri = np.empty(len(me.loop_triangles) * 3, np.int32)
+        me.loop_triangles.foreach_get("vertices", tri)
+    finally:
+        ev.to_mesh_clear()
+    M = np.array(root.matrix_world.inverted() @ terrain.matrix_world)
+    W = co @ M[:3, :3].T + M[:3, 3]
+    pts, nrm = surface_points(W[tri.reshape(-1, 3)], props.grass_patch_density, props.seed,
+                              props.grass_patch_spacing * 0.01, math.degrees(props.grass_patch_max_slope))
+    return pts, nrm
+
+
+def _tilts(normals, align):
+    """Rotations taking +Z toward the blend of vertical and the terrain normal."""
+    out = []
+    for nv in normals:
+        t = np.array([0.0, 0.0, 1.0]) * (1 - align) + nv * align
+        t = t / max(np.linalg.norm(t), 1e-9)
+        ax = np.cross([0.0, 0.0, 1.0], t)
+        s, c = np.linalg.norm(ax), t[2]
+        if s < 1e-8:
+            out.append(np.eye(3))
+            continue
+        k = ax / s
+        K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+        out.append(np.eye(3) + s * K + (1 - c) * K @ K)
+    return np.array(out).reshape(-1, 3, 3)
 
 
 def update_grass_geometry(context, props, find_root):
@@ -224,8 +308,13 @@ def update_grass_geometry(context, props, find_root):
     else:
         # Lawn / meadow: tuft variants (own seeds) instanced over the patch
         nvar = max(1, props.grass_patch_variants)
-        pts = patch_points(props.grass_patch_size, props.grass_patch_density, props.seed,
-                           props.grass_patch_spacing * 0.01)
+        terrain = getattr(props, "grass_patch_surface", None)
+        nrm = None
+        if terrain is not None and terrain.type == 'MESH':
+            pts, nrm = _terrain_points(context, terrain, root, props)
+        else:
+            pts = patch_points(props.grass_patch_size, props.grass_patch_density, props.seed,
+                               props.grass_patch_spacing * 0.01)
         rng = np.random.default_rng(props.seed + 31)
         which = rng.integers(nvar, size=len(pts))
         for i in range(nvar):
@@ -241,6 +330,8 @@ def update_grass_geometry(context, props, find_root):
             n = len(sel)
             yaw = rng.uniform(0, 2 * math.pi, n)
             R = np.array([[[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]] for a in yaw])
+            if nrm is not None and n:
+                R = np.einsum("nij,njk->nik", _tilts(nrm[which == i], props.grass_patch_align), R)
             scale = 1.0 + props.grass_patch_scale_var * rng.uniform(-1, 1, n)
             populate_mesh(obj.data, MeshData(
                 sel.astype(np.float32), np.zeros(0, np.int32), np.zeros(0, np.int32), np.zeros(0, np.int32),

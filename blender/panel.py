@@ -27,6 +27,8 @@ try:
     from .flowers import flower_properties, LAYOUT as FLOWER_LAYOUT, write_flower_to_props, sync_flowers_to_plant
     from .runtime import set_updating
     from .forest import forest_properties, draw_forest_panel
+    from .wind import wind_properties
+    from .guests import guest_properties
     from .preset_io import enum_items, item_number, draw_presets
     from ..core.relevance import applies, condition
     from .runtime import PROP_MAP
@@ -58,6 +60,8 @@ except (ImportError, ValueError):
                                  sync_flowers_to_plant)
     from blender.runtime import set_updating
     from blender.forest import forest_properties, draw_forest_panel
+    from blender.wind import wind_properties
+    from blender.guests import guest_properties
     from blender.preset_io import enum_items, item_number, draw_presets
     from core.relevance import applies, condition
     from blender.runtime import PROP_MAP
@@ -493,6 +497,8 @@ if BLENDER_AVAILABLE:
         root_fine_orders: I("Fine Root Orders", 2, 0, 3, "Branching orders of the fine laterals")
         root_stilt_height: F("Stilt Height (xDBH)", 3.0, 0.5, 10.0, "Height of the highest prop roots")
         root_tubers: I("Storage Roots", 6, 1, 20, "Storage roots of a tuberous cluster")
+        root_drop: I("Drop Roots", 0, 0, 40, "Aerial roots dropping from the branches (mangroves, banyans)")
+        root_pneumatophores: I("Pneumatophores", 0, 0, 80, "Pencil-like breathing roots per lateral (Avicennia)")
 
         # Topology
         radial_resolution: I("Trunk Sides", 12, 4, 32)
@@ -589,6 +595,8 @@ if BLENDER_AVAILABLE:
     PPG_Properties.__annotations__.update(GR.grass_properties(U))
     PPG_Properties.__annotations__.update(OR.orchid_properties(U))
     PPG_Properties.__annotations__.update(forest_properties())
+    PPG_Properties.__annotations__.update(wind_properties(U))
+    PPG_Properties.__annotations__.update(guest_properties(U))
 else:
     PPG_Properties = None
 
@@ -864,7 +872,8 @@ class PPG_PT_Roots(_PPGSub, Panel):
         draw_tree_fields(col, p, ("root_laterals", "root_spread", "root_max_depth", "root_beta",
                                   "root_taproot_share", "root_zrt", "root_sinker_spacing", "root_exposure",
                                   "root_plank", "root_buttress_height", "root_knees", "root_deep", "root_heart",
-                                  "root_stilt_height", "root_tubers", "root_fine", "root_fine_orders"))
+                                  "root_stilt_height", "root_tubers", "root_drop", "root_pneumatophores",
+                                  "root_fine", "root_fine_orders"))
 
 
 class PPG_PT_Bark(_PPGSub, Panel):
@@ -880,6 +889,46 @@ class PPG_PT_Bark(_PPGSub, Panel):
                                   "bark_segments", "bark_plate_tilt", "bark_warp", "bark_moss", "bark_lichen"))
         for name in ("bark_displacement",):
             col.prop(p, name)
+
+
+class PPG_PT_Guests(_PPGSub, Panel):
+    bl_label = "Mistletoe & Epiphytes"
+    bl_idname = "PPG_PT_guests"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree',)
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.prop(p, "guest_mistletoe")
+        sub = col.column(align=True)
+        sub.active = p.guest_mistletoe > 0
+        sub.prop(p, "mistletoe_species", text="")
+        sub.prop(p, "mistletoe_age")
+        col.separator()
+        col.prop(p, "guest_epiphytes")
+        sub = col.column(align=True)
+        sub.active = p.guest_epiphytes > 0
+        sub.prop(p, "epiphyte_species", text="")
+        sub.prop(p, "epiphyte_scale")
+
+
+class PPG_PT_Wind(_PPGSub, Panel):
+    bl_label = "Wind"
+    bl_idname = "PPG_PT_wind"
+    bl_options = {'DEFAULT_CLOSED'}
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit', 'Vegetable', 'Grass', 'Orchid')
+
+    def draw_header(self, context):
+        self.layout.prop(context.scene.ppg_properties, "wind", text="")
+
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        col.active = p.wind
+        for name in ("wind_speed", "wind_direction", "wind_gusts", "wind_flutter", "wind_stiffness"):
+            col.prop(p, name)
+        self.layout.label(text="Plays with the timeline (scene time)", icon='TIME')
 
 
 class PPG_PT_Topology(_PPGSub, Panel):
@@ -1167,8 +1216,10 @@ class PPG_PT_GrassPatch(_PPGSub, Panel):
         p = context.scene.ppg_properties
         col = self.layout.column(align=True)
         col.active = p.grass_patch
-        for name in ("grass_patch_size", "grass_patch_density", "grass_patch_spacing", "grass_patch_variants",
-                     "grass_patch_scale_var"):
+        col.prop(p, "grass_patch_surface")
+        for name in (("grass_patch_align", "grass_patch_max_slope") if p.grass_patch_surface else
+                     ("grass_patch_size",)) + ("grass_patch_density", "grass_patch_spacing", "grass_patch_variants",
+                                               "grass_patch_scale_var"):
             col.prop(p, name)
 
 
@@ -1222,4 +1273,4 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
                  PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + VEG_PANELS + GRASS_PANELS + \
                 ORCHID_PANELS + \
-                (PPG_PT_Flowers,) + FLOWER_PANELS + FRUIT_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)
+                (PPG_PT_Flowers,) + FLOWER_PANELS + FRUIT_PANELS + (PPG_PT_Forest, PPG_PT_Guests, PPG_PT_Presets, PPG_PT_Wind, PPG_PT_Topology)

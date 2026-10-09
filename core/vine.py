@@ -115,6 +115,8 @@ class VineProfile:
 
     # Nodal / adventitious roots
     aerial_roots: float = 0.0          # Density of rootlets at the nodes
+    leafless: bool = False             # Leaves reduced to scales (dodder, Cuscuta)
+    haustoria: float = 0.0             # Parasites: haustoria pressed into the host at the coils (per node)
     rootlet_length_cm: float = 2.0
 
     # Stem colour
@@ -573,7 +575,9 @@ class VineEngine:
                 young = float(_smoothstep(0.0, zone, dist))
                 theta0 = k * div + (0.0 if sh.main else 1.0)
                 thetas = [theta0, theta0 + math.pi] if p.leaf_arrangement == LeafArrangement.OPPOSITE else [theta0]
-                lost = (s0 / max(L, 1e-9)) < p.basal_leaf_loss * (0.7 + 0.6 * rng_leaf.random())
+                lost = (s0 / max(L, 1e-9)) < p.basal_leaf_loss * (0.7 + 0.6 * rng_leaf.random()) or p.leafless
+                if p.haustoria > 0 and dist > zone * 0.3 and rng_leaf.random() < p.haustoria:
+                    stems.extend(self._haustorium(x, T, r_here, G))
                 leaf_tip = None
                 for th in thetas:
                     rdir = math.cos(th) * N + math.sin(th) * B
@@ -664,6 +668,25 @@ class VineEngine:
             stats={"stem_length_m": float(sum(sh.s[-1] for sh, _, _ in all_shoots))})
 
     # ----------------------------------------------------------------- organs
+    def _haustorium(self, x, T, r, G):
+        """Haustorium of a parasitic twiner (Cuscuta): a peg leaving the inner side of a tight coil and
+        pressed into the host, ending in a small pad (Teixeira-Costa 2021; hypertrophied host tissue)."""
+        if G is None or len(G) < 2:
+            return []
+        i = int(np.argmin(((G - x) ** 2).sum(1)))
+        to = G[i] - x
+        to = to - (to @ T) * T
+        d = float(np.linalg.norm(to))
+        if d < 1e-4:
+            return []
+        u = to / d
+        reach = max(0.0015, d - self.p.coil_radius_cm * 0.01 * 0.55)    # Host surface ~ just inside the coil
+        a = x + u * r * 0.6
+        b = a + u * min(reach, 0.006)
+        P = np.linspace(a, b, 4)
+        R = np.array([r * 0.9, r * 0.8, r * 1.2, r * 1.6])                 # Swelling at the host contact
+        return [tube(P, R, 5, {"age": np.zeros(4), "woody": np.zeros(4)})]
+
     def _leaf_frame(self, T, rdir, out, trailing, roll):
         """Leaf axis (petiole -> apex) and adaxial normal. Petioles leave the stem at the petiole angle; the
         lamina then turns away from the support and toward the light by `leaf_facing`."""

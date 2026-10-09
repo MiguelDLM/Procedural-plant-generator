@@ -106,10 +106,33 @@ Wen et al. (2021) and the tillering rules of Evers et al. (2005):
 - **Roots**: fibrous crown roots and maize brace (prop) roots. **Ripeness** turns the plant straw-gold and
   makes heavy heads nod.
 - **Lawn / Meadow**: several tuft variants scattered over a patch (tufts per m², minimum spacing, size
-  variation) with Geometry Nodes instancing.
+  variation) with Geometry Nodes instancing, on a flat square or on any **terrain mesh** (area-weighted
+  Poisson-disk sampling as in Deussen et al. 1998; maximum slope; tufts upright or following the slope).
+- **Collar**: ligule (membrane or fringe of hairs) and auricles (blunt and hairy in wheat, clasping in barley,
+  claw-like in ryegrass and rice, none in oats and maize), after extension identification keys.
+- **Sugarcane nodes** (Artschwager & Brandes 1958): root band with two staggered rows of root primordia (upper
+  row irregular, drawn as bump), growth ring swollen on one side, and wax band, node ring and swelling that
+  vary from node to node.
 
 Presets: maize, bread wheat, barley, oats, rice, sorghum, sugarcane, perennial ryegrass (lawn), blue grama
 (navajita), fountain grass, pampas grass.
+
+### Wind
+
+A **Wind** panel (all forms) adds a Geometry Nodes modifier animated by the scene time to every visible part
+of the plant. The plant leans with the deflection shape of a cantilever under a uniform load, sways at its
+first-mode frequency (f ∝ H^-0.5 from elastic similarity: ~0.6 Hz for a 20 m tree, 2–3 Hz for a cereal;
+McMahon 1973, de Langre 2008) with a deflection growing as v^1.3 (reconfiguration, Vogel 1989); gusts travel
+with the wind and leaves, blades and petals flutter at a higher frequency (main and detail bending of Sousa
+2008, GPU Gems 3 ch. 16). Speed, direction, gusts, flutter and stiffness are scene settings.
+
+### Mistletoe and epiphytes on trees
+
+Trees can carry guests (panel **Mistletoe & Epiphytes**): mistletoe clumps (*Viscum album*, *Phoradendron*)
+on sunlit young branches of the outer crown, with pseudo-dichotomous decussate forks, paired leathery leaves,
+berries and a spindle-shaped swelling of the host branch around the haustorium; and epiphytic orchids on the
+upper side of the main branches (Johansson zones 3–4), each grown as mounted on a bough of the host's
+diameter so its velamen roots wrap the real bark.
 
 ### Root systems of every growth form
 
@@ -125,6 +148,12 @@ measured by Schenk & Jackson (2002) for >1300 plants: lateral spread / depth ≈
 - **Vegetables**: storage taproots (conical carrot, napiform turnip, fusiform radish), potato stem tubers, and
   the new **tuberous roots** (sweet potato, cassava): several swollen adventitious roots radiating from the
   base of the cutting, each with neck, spindle body and tail, among fibrous roots.
+- **Bulbs and corms** (onion, garlic, saffron crocus): basal plate with fibrous roots and thick **contractile
+  roots** wrinkled in transverse rings (Anderson 1977 on *Hyacinthus*).
+- **Mangroves**: red mangrove stilt roots propping the trunk up to 10–33 % of its height plus drop roots from
+  the branches (Méndez-Alonzo et al. 2015); black mangrove cable roots with pencil-like pneumatophores.
+- **Parasites**: dodder (*Cuscuta*), a leafless orange twiner pressing haustoria into its host at the coils;
+  mistletoes on trees (see below).
 - **Orchids and vines**: aerial velamen roots and clinging rootlets.
 
 ### Orchids
@@ -154,9 +183,18 @@ described in floras and plant patents:
   backbulbs) and leaves at the apex, in a basal fan or along canes; or a climbing vine on a post with one
   clinging root per node opposite the leaf (Vanilla). Thick aerial roots with velamen and a green tip.
 
-Presets (measurements from USPTO plant patents, Flora of China, POWO, Flora of North America): moth orchid
-(*Phalaenopsis*), *Cattleya labiata*, *Dendrobium nobile*, *Paphiopedilum insigne*, *Oncidium sphacelatum*,
-*Cymbidium* hybrids, *Prosthechea cochleata* (clamshell orchid) and *Vanilla planifolia*.
+- **More floral forms**: a nectar **spur** (*Angraecum sesquipedale*, ~33 cm), a lip divided into a pouched
+  hypochile, a horned mesochile and an epichile (*Stanhopea*), a flaring frilled mid lobe (*Cattleya*),
+  umbels with long fused lateral sepals and fringed (fimbriate) sepals (*Bulbophyllum* sect. *Cirrhopetalum*),
+  and pendent inflorescences that grow down through the substrate.
+- **Mounting**: on the ground, in a **pot** of bark (substrate roots inside, aerial roots over the rim and
+  down the outside) or on a **branch** as an epiphyte (velamen roots pressed to the bark, wrapping it; Zotz
+  2016).
+
+Presets (measurements from USPTO plant patents, Flora of China, POWO, Flora of North America, Kew, RHS):
+moth orchid (*Phalaenopsis*), *Cattleya labiata*, *Dendrobium nobile*, *Paphiopedilum insigne*, *Oncidium
+sphacelatum*, *Cymbidium* hybrids, *Prosthechea cochleata* (clamshell orchid), *Vanilla planifolia*,
+*Angraecum sesquipedale* (Darwin's orchid), *Stanhopea tigrina* and *Bulbophyllum rothschildianum*.
 
 ### Vegetables: root crops, tubers and heads
 

@@ -1,5 +1,6 @@
 """
-Vegetable presets: root crops, potato, tuberous roots (sweet potato, cassava) and brassica heads.
+Vegetable presets: root crops, potato, tuberous roots (sweet potato, cassava), bulbs (onion, garlic), the saffron
+crocus corm and brassica heads.
 
 Sizes are typical market sizes of common cultivars (cm); leaf traits use the tree leaf descriptors.
 Storage roots after Esau (1940, carrot anatomy) and crop descriptions; brassica heads after Kieffer,
@@ -139,6 +140,38 @@ VEGETABLE_CATALOG: dict[str, VegetablePreset] = {
         leaf_size=1.2, elevation_outer_deg=20, elevation_inner_deg=60, tuber_count=7, tuber_length_cm=45.0,
         tuber_diameter_cm=7.0, tuber_depth_cm=25.0, tuber_color=(0.45, 0.32, 0.20), tuber_dots=0.2,
         stem_color=(0.55, 0.50, 0.42)),
+    "allium_cepa": veg(
+        "Allium cepa", "Onion (cebolla)", "Amaryllidaceae",
+        "Tunicate bulb of fleshy leaf bases in dry golden-brown tunics, partly above the soil; hollow upright "
+        "leaves; a tuft of fibrous roots from the basal plate.",
+        leaf=dict(archetype=A.LINEAR, margin_type=MT.ENTIRE, blade_length_cm=40.0, aspect_ratio=30.0,
+                  petiole_length_ratio=0.0, adaxial_color=(0.28, 0.45, 0.30)),
+        vein=dict(pattern=V.PARALLELODROMOUS, secondary_vein_pairs=0),
+        organ=O.BULB, stem_count=1, stem_height_cm=0.0, stem_radius_mm=8.0, leaf_count=8, leaf_size=1.0,
+        elevation_outer_deg=60, elevation_inner_deg=85, bulb_diameter_cm=7.5, bulb_shape=0.8, bulb_neck=0.3,
+        bulb_exposure=0.45, bulb_color=(0.72, 0.45, 0.18), bulb_roots=60, contractile_roots=0,
+        stem_color=(0.45, 0.55, 0.30)),
+    "allium_sativum": veg(
+        "Allium sativum", "Garlic (ajo)", "Amaryllidaceae",
+        "Compound bulb of 8-15 cloves bulging under white papery tunics; flat linear leaves; fibrous roots.",
+        leaf=dict(archetype=A.LINEAR, margin_type=MT.ENTIRE, blade_length_cm=30.0, aspect_ratio=15.0,
+                  petiole_length_ratio=0.0, adaxial_color=(0.30, 0.48, 0.28)),
+        vein=dict(pattern=V.PARALLELODROMOUS, secondary_vein_pairs=0),
+        organ=O.BULB, stem_count=1, stem_height_cm=0.0, stem_radius_mm=6.0, leaf_count=8, leaf_size=1.0,
+        elevation_outer_deg=55, elevation_inner_deg=80, bulb_diameter_cm=5.0, bulb_shape=0.85, bulb_neck=0.35,
+        cloves=10, bulb_exposure=0.1, bulb_color=(0.93, 0.90, 0.84), bulb_roots=50, contractile_roots=0,
+        stem_color=(0.45, 0.55, 0.30)),
+    "crocus_sativus": veg(
+        "Crocus sativus", "Saffron crocus (azafrán)", "Iridaceae",
+        "Flattened corm 3-5 cm in a fibrous netted tunic; narrow grass-like leaves; fibrous roots and thick "
+        "contractile roots that pull the corm down.",
+        leaf=dict(archetype=A.LINEAR, margin_type=MT.ENTIRE, blade_length_cm=25.0, aspect_ratio=70.0,
+                  petiole_length_ratio=0.0, adaxial_color=(0.22, 0.40, 0.18)),
+        vein=dict(pattern=V.PARALLELODROMOUS, secondary_vein_pairs=0),
+        organ=O.BULB, stem_count=1, stem_height_cm=0.0, stem_radius_mm=3.0, leaf_count=9, leaf_size=1.0,
+        elevation_outer_deg=55, elevation_inner_deg=85, bulb_diameter_cm=4.0, bulb_shape=0.7, bulb_neck=0.2,
+        bulb_exposure=0.0, bulb_color=(0.55, 0.42, 0.28), bulb_roots=30, contractile_roots=4,
+        stem_color=(0.40, 0.50, 0.30)),
     "brassica_oleracea_botrytis": veg(
         "Brassica oleracea var. botrytis", "Cauliflower (coliflor)", "Brassicaceae",
         "White curd of packed meristem domes in golden-angle spirals, wrapped by large glaucous leaves.",
@@ -172,7 +205,9 @@ VEGETABLE_RANGES = {
     "widest_position": (0.02, 0.9), "shoulder": (0.05, 1.5), "taper": (0.1, 3.0), "exposure": (0.0, 0.9),
     "tail_cm": (0.0, 40.0), "rings": (0.0, 1.0), "rootlets": (0.0, 1.0), "rootlet_ranks": (1, 8),
     "shoulder_tint": (0.0, 1.0), "tip_tint": (0.0, 1.0), "tuber_count": (0, 40), "tuber_length_cm": (0.5, 100.0),
-    "tuber_diameter_cm": (0.5, 20.0), "tuber_depth_cm": (1.0, 50.0), "stolon_length_cm": (0.0, 80.0),
+    "tuber_diameter_cm": (0.5, 20.0), "bulb_diameter_cm": (0.5, 20.0), "bulb_shape": (0.3, 2.0),
+    "bulb_neck": (0.0, 1.5), "cloves": (0, 30), "bulb_exposure": (0.0, 1.0), "bulb_roots": (0, 200),
+    "contractile_roots": (0, 12), "tuber_depth_cm": (1.0, 50.0), "stolon_length_cm": (0.0, 80.0),
     "eyes": (0, 30), "eye_depth": (0.0, 0.4), "tuber_dots": (0.0, 1.0), "head_diameter_cm": (2.0, 50.0),
     "head_height_ratio": (0.1, 1.5), "head_levels": (1, 4), "florets": (3, 89), "floret_scale": (0.1, 0.7),
     "bud_size_mm": (0.5, 6.0),

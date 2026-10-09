@@ -150,6 +150,8 @@ PROP_MAP: list[tuple[str, str]] = [
     ("root_fine_orders", "roots.fine_orders"),
     ("root_stilt_height", "roots.stilt_height_dbh"),
     ("root_tubers", "roots.tuber_count"),
+    ("root_drop", "roots.drop_roots"),
+    ("root_pneumatophores", "roots.pneumatophores"),
 ]
 
 _IS_UPDATING = False
@@ -423,7 +425,20 @@ def _tree_flowers(context, root, props, result):
 
 
 def update_tree_geometry(context):
-    """Regenerates the active plant in place (no bpy.ops, safe inside update callbacks)."""
+    """Regenerates the active plant in place (no bpy.ops, safe inside update callbacks), then applies the
+    scene wind to the generated plants."""
+    _update_geometry(context)
+    props = getattr(context.scene, "ppg_properties", None) if BLENDER_AVAILABLE else None
+    if props is not None:
+        try:
+            from .wind import apply_wind_to_scene
+            apply_wind_to_scene(context, props)
+        except Exception as e:
+            print(f"[PPG Error] Failed to apply wind: {e}")
+
+
+def _update_geometry(context):
+    """Regenerates the active plant in place."""
     if not BLENDER_AVAILABLE:
         return
     props = getattr(context.scene, "ppg_properties", None)
@@ -533,6 +548,13 @@ def update_tree_geometry(context):
                 _assign(built["foliage"], leaf_mat)
                 _assign(built.get("leaf_card"), leaf_mat)
         _tree_flowers(context, built["root"], props, result)
+        try:
+            from .guests import update_tree_guests
+            update_tree_guests(context, built["root"], props, result)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PPG Error] Failed to place mistletoes / epiphytes: {e}")
         from .vines import hide_vine_parts
         from .fruits import update_fruits_on_plant, tree_fruit_positions, hide_fruits
         from .vegetables import hide_vegetable_parts
