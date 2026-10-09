@@ -45,7 +45,7 @@ LAYOUT = [
                        "awn_cm", "branches", "branch_angle_deg", "nod", "head_color", "awn_color"]),
     ("Maize Ears", ["ears", "ear_node", "ear_length_cm", "ear_diameter_cm", "kernel_rows", "husk", "silk_cm",
                     "kernel_color", "silk_color"]),
-    ("Roots & Ripeness", ["crown_roots", "root_length_cm", "brace_roots", "ripeness"]),
+    ("Roots & Ripeness", ["crown_roots", "root_length_cm", "brace_roots", "fine_roots", "ripeness"]),
 ]
 
 

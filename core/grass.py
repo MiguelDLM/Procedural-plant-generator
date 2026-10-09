@@ -120,6 +120,7 @@ class GrassProfile:
     crown_roots: int = 12
     root_length_cm: float = 25.0
     brace_roots: int = 0                # Prop roots from the lowest nodes (maize)
+    fine_roots: float = 1.0             # Density of the lateral roots on the crown roots
     ripeness: float = 0.0               # 0 green .. 1 golden, ripe
 
 
@@ -696,18 +697,29 @@ class GrassEngine:
     def roots(self, rng, culm_paths, detail) -> MeshData:
         p = self.p
         parts = []
+        from .root_architecture import RootBranching, grow_root, lateral_roots
+        # Fibrous (fasciculate) system: crown (nodal) roots of similar girth leaving the base at steep
+        # angles, the earliest (seminal) ones steepest; lateral roots densely spaced (CRootBox cereal
+        # parameters: inter-branch distance ~1 cm, laterals much thinner and shorter)
+        crown = []
         for k in range(p.crown_roots):
             a = k * GOLDEN
-            d = _unit(np.array([math.cos(a), math.sin(a), -1.4 + rng.normal(0, 0.3)]))
-            pts = [np.array([0.0, 0.0, 0.005])]
+            dip = math.radians(rng.uniform(35, 80) if k >= 3 else rng.uniform(65, 85))
+            d = np.array([math.cos(a) * math.cos(dip), math.sin(a) * math.cos(dip), -math.sin(dip)])
             ln = p.root_length_cm * 0.01 * rng.uniform(0.6, 1.1)
-            for _ in range(8):
-                d = _unit(d + rng.normal(0, 0.25, 3) - 0.15 * UP)
-                d[2] = min(d[2], -0.2)
-                d = _unit(d)
-                pts.append(pts[-1] + d * ln / 8)
-            parts.append(tube(np.array(pts), np.linspace(p.culm_radius_mm * 0.0004 + 0.0003, 0.0003, 9), 4,
-                              _attrs(9, 7)))
+            r0 = p.culm_radius_mm * 0.0004 + 0.0003
+            P, R = grow_root(np.array([0.0, 0.0, 0.005]), d, ln, r0, rng, gravitropism=0.2, tortuosity=0.35,
+                             surface=0.004, taper=0.3)
+            P[0] = (0.0, 0.0, 0.005)
+            crown.append((P, R))
+            parts.append(tube(P, R, 4, _attrs(len(P), 7)))
+        if p.fine_roots > 0 and detail >= 0.4:
+            br = RootBranching(orders=2 if detail >= 0.8 else 1, interbranch_cm=1.5 / p.fine_roots ** 0.5,
+                               basal_zone=0.1, apical_zone_cm=3.0, insertion_deg=70.0, length_ratio=0.25,
+                               max_length_cm=12.0, radius_ratio=0.5, gravitropism=0.06, tortuosity=0.5,
+                               min_radius_mm=0.08, budget=int(500 * p.fine_roots * detail))
+            for P, R, *_ in lateral_roots(crown, br, rng, surface=0.004):
+                parts.append(tube(P, np.maximum(R, 6e-5), 3, _attrs(len(P), 7)))
         # Brace roots from the two lowest above-ground nodes of the main culm, arching into the soil
         if p.brace_roots > 0 and culm_paths:
             C = culm_paths[0]

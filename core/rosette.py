@@ -108,6 +108,7 @@ class RosetteProfile:
     root_spread_ratio: float = 1.0  # Reach relative to rosette diameter
     root_depth_m: float = 0.2
     root_radius_mm: float = 1.5
+    fine_roots: float = 1.0         # Density of fine lateral roots on the fibrous roots
 
 
 @dataclass
@@ -154,7 +155,8 @@ class RosetteEngine:
             from .succulent_roots import succulent_roots
             roots = succulent_roots(p.root_system, p.stem_radius_m, max(0.05, p.root_spread_ratio * diam),
                                     p.root_depth_m, p.root_count, core_ratio=0.9,
-                                    root_radius_mm=p.root_radius_mm, display_depth_m=root_display_depth, seed=seed)
+                                    root_radius_mm=p.root_radius_mm, display_depth_m=root_display_depth, seed=seed,
+                                    fine_roots=p.fine_roots, rain_roots=False)
         def pack(lst):
             if not lst:
                 return np.zeros((0, 3)), np.zeros((0, 3))

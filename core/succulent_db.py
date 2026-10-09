@@ -324,7 +324,7 @@ CACTUS_RANGES = {
     "arm_height_min": (0.05, 0.95), "arm_height_max": (0.05, 1.0), "arm_radius_ratio": (0.1, 1.0),
     "arm_reach_m": (0.05, 4.0), "arm_length_ratio": (0.1, 5.0), "arm_lean_deg": (0.0, 30.0), "arm_branching": (0.0, 3.0), "browning_height_m": (0.0, 6.0), "equator_bias": (0.0, 1.0), "equator_azimuth_deg": (0.0, 360.0), "scars": (0.0, 1.0), "areole_stain": (0.0, 1.0), "crest_light": (0.0, 1.0), "groove_dust": (0.0, 1.0), "streaks": (0.0, 1.0), "crown_fill": (0.0, 1.0), "offsets": (0, 20), "offset_scale": (0.2, 1.0),
     "pad_length_cm": (3.0, 80.0), "pad_width_ratio": (0.2, 1.2), "pad_thickness_ratio": (0.02, 0.3),
-    "pad_levels": (1, 8), "pad_branching": (0.0, 4.0), "root_count": (1, 40), "root_spread_ratio": (0.1, 5.0), "root_depth_m": (0.02, 2.0), "taproot_share": (0.0, 0.8), "taproot_depth_m": (0.05, 3.0), "root_core_ratio": (0.05, 0.6), "tuber_length_cm": (1.0, 60.0), "tuber_radius_ratio": (0.1, 1.5), "glaucous": (0.0, 1.0), "flecks": (0.0, 1.0),
+    "pad_levels": (1, 8), "pad_branching": (0.0, 4.0), "root_count": (1, 40), "root_spread_ratio": (0.1, 5.0), "root_depth_m": (0.02, 2.0), "taproot_share": (0.0, 0.8), "taproot_depth_m": (0.05, 3.0), "root_core_ratio": (0.05, 0.6), "fine_roots": (0.0, 3.0), "tuber_length_cm": (1.0, 60.0), "tuber_radius_ratio": (0.1, 1.5), "glaucous": (0.0, 1.0), "flecks": (0.0, 1.0),
 }
 
 ROSETTE_RANGES = {
@@ -338,7 +338,7 @@ ROSETTE_RANGES = {
     "teeth_count": (0, 60), "teeth_size_cm": (0.0, 3.0), "teeth_hook": (-1.0, 1.5), "offsets": (0, 20),
     "offset_scale": (0.1, 1.0), "blush_amount": (0.0, 1.0), "glaucous": (0.0, 1.0), "spots": (0.0, 1.0),
     "bands": (0.0, 1.0), "base_width": (0.0, 1.6), "clasp": (0.0, 1.0), "base_swell": (0.0, 4.0), "furl": (0.0, 1.0), "blush_tip": (0.0, 1.0), "margin_band": (0.0, 1.0), "striation": (0.0, 1.0), "imprints": (0.0, 1.0), "dead_leaves": (0, 40), "stem_scars": (0.0, 1.0), "scar_spacing_mm": (1.0, 30.0), "root_count": (1, 150), "root_spread_ratio": (0.1, 4.0),
-    "root_depth_m": (0.02, 2.0), "root_radius_mm": (0.2, 10.0),
+    "root_depth_m": (0.02, 2.0), "root_radius_mm": (0.2, 10.0), "fine_roots": (0.0, 3.0),
 }
 
 RANGES = {GrowthForm.CACTUS: CACTUS_RANGES, GrowthForm.ROSETTE: ROSETTE_RANGES}

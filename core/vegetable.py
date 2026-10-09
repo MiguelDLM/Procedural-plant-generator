@@ -10,6 +10,11 @@ Vegetables: storage roots, tubers and inflorescence heads, with their leaves.
 - Tubers (potato): stolons grow from the underground nodes of the stems and swell at the tip into tubers
   (Solanum tuberosum); the eyes (axillary buds in the axils of scale leaves) sit on a spiral of about 2/5 and
   crowd toward the apical "rose" end, opposite the stolon ("heel") end.
+- Tuberous roots (sweet potato, cassava; Dahlia): storage roots are true roots without buds, swollen
+  adventitious roots from the nodes of the planted cutting or stem base (Ipomoea: preformed root primordia,
+  Belehu et al. 2004, Aust. J. Bot. 52: 403); several radiate from the base, each with a thin neck, a
+  fusiform or cylindrical body and a thin tail, among fibrous roots (cassava 5-20 per plant, up to 80 x 10
+  cm; sweet potato 3-10 cm thick). Fibrous roots carry laterals (core.root_architecture).
 - Heads (cauliflower, broccoli, Romanesco): the curd is an inflorescence whose meristems keep branching
   instead of making flowers, repeating the same spiral (golden-angle) arrangement at every scale (Azpeitia et
   al. 2021, Science 373: 192-197; Kieffer et al. 1998). Cauliflower: rounded meristem domes packed into a curd;
@@ -41,6 +46,7 @@ GOLDEN = math.radians(137.50776)
 class StorageOrgan(str, Enum):
     TAPROOT = "Taproot"      # Carrot, radish, beet, turnip, parsnip
     TUBERS = "Tubers"        # Potato
+    TUBEROUS_ROOTS = "Tuberous roots"   # Sweet potato, cassava, Dahlia: fasciculate storage roots
     HEAD = "Head"            # Cauliflower, broccoli, Romanesco
     NONE = "None"            # Leaves only
 
@@ -163,6 +169,19 @@ def revolve(rho, z, nth, attrs=None, radial=None) -> MeshData:
 
 
 ROOT_ATTRS = ("veg_t", "veg_above", "veg_ring", "veg_part")   # veg_part: 0 body, 1 rootlet / stolon
+
+
+def _grid_tube(V, attrs) -> MeshData:
+    """Closed tube from rings V (n, m+1, 3) (last column repeats the first); per-ring attributes."""
+    n, m1 = V.shape[:2]
+    j, i = np.meshgrid(np.arange(n - 1), np.arange(m1 - 1), indexing="ij")
+    i0 = (j * m1 + i).ravel()
+    quads = np.stack([i0, i0 + 1, i0 + m1 + 1, i0 + m1], axis=1)
+    lv = quads.reshape(-1).astype(np.int32)
+    uv = np.stack([np.tile(np.linspace(0, 1, m1), n), np.repeat(np.linspace(0, 1, n), m1)], 1)
+    return MeshData(V.reshape(-1, 3).astype(np.float32), lv, np.arange(len(quads), dtype=np.int32) * 4,
+                    np.full(len(quads), 4, np.int32), uv[lv].astype(np.float32),
+                    {k: np.repeat(np.asarray(a, np.float32)[:, None], m1, 1).reshape(-1) for k, a in attrs.items()})
 
 
 def _merge(parts, names) -> MeshData:
@@ -346,6 +365,62 @@ class VegetableEngine:
                         radial)
             axis = _unit(d + rng.normal(0, 0.2, 3))
             parts.append(_place(m, _rotation_to(axis, rng.uniform(0, 6.28)), P[-1] - axis * 0.004))
+        return _merge(parts, ROOT_ATTRS)
+
+    # ----------------------------------------------------------------- tuberous roots
+    def tuberous_roots(self, rng, stem_bases, detail=1.0) -> MeshData:
+        """Fasciculate storage roots: from the stem base they radiate downward and outward, each with a neck,
+        a swollen spindle (widest ~40 % along, irregular), a thin tail; fibrous roots with laterals between."""
+        from .root_architecture import RootBranching, grow_root, lateral_roots
+        p = self.p
+        parts = []
+        L0 = p.tuber_length_cm * 0.01
+        D0 = p.tuber_diameter_cm * 0.01
+        depth = p.tuber_depth_cm * 0.01
+        r_st = p.stem_radius_mm * 0.001
+        # Base of the planted cutting, joined to every stem by a short underground stem
+        base = np.mean(np.asarray(stem_bases, float), axis=0) - UP * 0.03
+        for b in stem_bases:
+            parts.append(tube(np.linspace(base, np.asarray(b) + UP * 0.004, 5), np.full(5, r_st * 0.9), 6,
+                              {"veg_part": np.zeros(5), "veg_t": np.zeros(5)}))
+        nth = max(10, int(16 * detail))
+        fibrous = []
+        for k in range(max(1, p.tuber_count)):
+            a = 2 * math.pi * k / max(p.tuber_count, 1) + rng.normal(0, 0.35)
+            # Radiating obliquely: the body ends near the planting depth
+            dip = math.atan2(depth, max(L0 * 0.85, 1e-3)) * rng.uniform(0.7, 1.25)
+            d = np.array([math.cos(a) * math.cos(dip), math.sin(a) * math.cos(dip), -math.sin(dip)])
+            sc = rng.uniform(0.7, 1.2)
+            L = L0 * sc
+            P, _ = grow_root(base, d, L, D0 * 0.5, rng, gravitropism=0.04, tortuosity=0.15, surface=-0.005)
+            P[0] = base
+            s = arc_length(P)
+            t = s / max(s[-1], 1e-9)
+            # Neck (thin, from the stem), spindle body, tail
+            body = np.sin(np.pi * np.clip((t - 0.06) / 0.86, 0, 1)) ** 0.7
+            body = body * (1.0 + 0.25 * np.sin(np.pi * np.clip(t / 0.4, 0, 1)) ** 2 - 0.2 * t)
+            R = np.maximum(0.5 * D0 * sc ** 0.5 * body, r_st * 0.3 * (1 - t) + 0.0008)
+            lumps = rng.normal(0, 1, 4)
+            T, N, B = frames(P)
+            th = np.linspace(0, 2 * math.pi, nth + 1)
+            ring = 1.0 + 0.06 * (lumps[0] * np.cos(th[None, :] + lumps[1] + 4 * t[:, None]) +
+                                 lumps[2] * np.cos(2 * th[None, :] + lumps[3] - 3 * t[:, None]))
+            V = P[:, None, :] + (R[:, None] * ring)[..., None] * (np.cos(th)[None, :, None] * N[:, None, :] +
+                                                                   np.sin(th)[None, :, None] * B[:, None, :])
+            parts.append(_grid_tube(V, {"veg_t": t, "veg_part": np.zeros(len(t)), "veg_ring": np.zeros(len(t))}))
+            fibrous.append((P[int(len(P) * 0.85):], np.full(len(P) - int(len(P) * 0.85), 0.0008)))
+        # Fibrous roots from the stem base, and laterals on them and on the tails
+        for k in range(max(4, p.tuber_count * 2)):
+            a = rng.uniform(0, 2 * math.pi)
+            d = np.array([math.cos(a), math.sin(a), -rng.uniform(0.5, 2.0)])
+            P, R = grow_root(base, d, L0 * rng.uniform(0.6, 1.3), 0.0012, rng, 0.2, 0.35, surface=-0.003)
+            fibrous.append((P, R))
+        br = RootBranching(orders=1, interbranch_cm=2.0, insertion_deg=70, length_ratio=0.3, max_length_cm=10,
+                           radius_ratio=0.5, gravitropism=0.1, tortuosity=0.5, min_radius_mm=0.15,
+                           budget=int(250 * detail))
+        for P, R, *_ in fibrous + lateral_roots(fibrous, br, rng, surface=-0.003):
+            if len(P) >= 2:
+                parts.append(tube(P, np.maximum(R, 2e-4), 3, {"veg_part": np.ones(len(P)), "veg_t": np.ones(len(P))}))
         return _merge(parts, ROOT_ATTRS)
 
     # ----------------------------------------------------------------- heads
@@ -552,6 +627,8 @@ class VegetableEngine:
         # Tubers
         if p.organ == StorageOrgan.TUBERS and with_roots:
             root = self.tubers(np.random.default_rng(seed + 3), bases, detail)
+        elif p.organ == StorageOrgan.TUBEROUS_ROOTS and with_roots:
+            root = self.tuberous_roots(np.random.default_rng(seed + 3), bases, detail)
         # Leaves: rosette (no stem) or spiral along each stem; brassica inner leaves curl over the head
         pos, ys, zs, sc, rnd = [], [], [], [], []
         rng_l = np.random.default_rng(seed + 4)
