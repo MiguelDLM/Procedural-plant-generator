@@ -137,6 +137,7 @@ class CactusProfile:
     taproot_share: float = 0.0
     taproot_depth_m: float = 0.5
     root_core_ratio: float = 0.25   # Vascular cylinder / stem radius (root collar)
+    fine_roots: float = 1.0         # Density of the short determinate laterals ("rain roots")
     tuber_length_cm: float = 12.0
     tuber_radius_ratio: float = 0.8 # Tuber radius relative to stem radius
 
@@ -319,7 +320,7 @@ class CactusEngine:
                 core_ratio=p.root_core_ratio, taproot_share=p.taproot_share, taproot_depth_m=p.taproot_depth_m,
                 root_radius_mm=max(0.5, 0.06 * R0 * 1000 * p.root_core_ratio * 4),
                 tuber_length_m=p.tuber_length_cm * 0.01, tuber_radius_m=p.tuber_radius_ratio * R0,
-                display_depth_m=root_display_depth, seed=seed)
+                display_depth_m=root_display_depth, seed=seed, fine_roots=p.fine_roots, rain_roots=True)
         if p.habit == CactusHabit.CLADODE:
             fpos, fdir, fw = self._margin_sites
         else:

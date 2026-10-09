@@ -33,6 +33,7 @@ class BotanicalPlantResult:
     foliage: FoliageInstances
     leaf_engine: LeafMorphologyEngine
     root_graph: BranchingGraph | None = None
+    fine_root_graph: BranchingGraph | None = None
     flute_azimuth: float | None = None   # Azimuth of the first stem flute (aligned with a main root)
 
     @property
@@ -98,7 +99,7 @@ class BotanicalPlantPipeline:
         # Root system: main laterals sit under the stem flutes so buttresses continue into roots
         rng = np.random.default_rng(seed + 31)
         flute_az = float(rng.uniform(0.0, 2.0 * np.pi))
-        root_graph = None
+        root_graph = fine_root_graph = None
         rp = self.preset.roots
         if roots:
             trunk = skeleton.axes[0]
@@ -107,9 +108,11 @@ class BotanicalPlantPipeline:
             if al.buttress_lobes > 0 and rp.system != RootSystemType.FIBROUS:
                 m = int(al.buttress_lobes)
                 azimuths = flute_az + 2.0 * np.pi * np.arange(m) / m
-            root_graph = RootSystemEngine(rp).generate(
+            root_eng = RootSystemEngine(rp)
+            root_graph = root_eng.generate(
                 dbh_m, cr, collar_r, al.pipe_exponent_delta, seed=seed,
                 display_depth_m=root_display_depth_m, azimuths=azimuths)
+            fine_root_graph = root_eng.fine_roots(root_graph, seed=seed, display_depth_m=root_display_depth_m)
 
         if shoot_leaves > 0 and self.supports_shoot_cards():
             self.leaf_morphology = LeafMorphologyEngine(
@@ -135,5 +138,5 @@ class BotanicalPlantPipeline:
         return BotanicalPlantResult(
             preset=self.preset, dbh_m=dbh_m, total_height_m=h, crown_radius_m=cr, crown_depth_m=cd,
             base_radius_m=base_radius, skeleton_graph=skeleton, leaf_mesh_data=card, foliage=foliage,
-            leaf_engine=self.leaf_morphology, root_graph=root_graph,
+            leaf_engine=self.leaf_morphology, root_graph=root_graph, fine_root_graph=fine_root_graph,
             flute_azimuth=flute_az if al.buttress_lobes > 0 else None)

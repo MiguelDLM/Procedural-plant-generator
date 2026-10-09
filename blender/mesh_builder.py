@@ -175,6 +175,17 @@ class BlenderMeshBuilder:
             roots_obj.data.clear_geometry()
             roots_obj.hide_viewport = True
             roots_obj.hide_render = True
+        # Fine lateral roots (thin tubes, never fused)
+        fine_obj = self._child(context, root_obj, "_FineRoots", f"{root_obj.name}_FineRoots")
+        fine_graph = getattr(self.result, "fine_root_graph", None) if show_roots else None
+        if fine_graph is not None and fine_graph.axes:
+            fine_eng = BotanicalMeshEngine(MeshConfig(radial_resolution=5, twig_resolution=4))
+            populate_mesh(fine_obj.data, collar_bark_age(fine_eng.build_wood_mesh(
+                fine_graph, self.result.total_height_m, None, trunk_index=-1), collar, r_collar, zone))
+            fine_obj.hide_viewport = fine_obj.hide_render = False
+        else:
+            fine_obj.data.clear_geometry()
+            fine_obj.hide_viewport = fine_obj.hide_render = True
 
         # Foliage
         foliage_obj = self._child(context, root_obj, "_Foliage", f"{root_obj.name}_Foliage")
@@ -220,7 +231,8 @@ class BlenderMeshBuilder:
         root_obj["total_height_m"] = r.total_height_m
         root_obj["crown_radius_m"] = r.crown_radius_m
         root_obj["leaf_count"] = r.leaf_count
-        return {"root": root_obj, "wood": wood_obj, "foliage": foliage_obj, "roots": roots_obj, "leaf_card": card_obj}
+        return {"root": root_obj, "wood": wood_obj, "foliage": foliage_obj, "roots": roots_obj, "leaf_card": card_obj,
+                "fine_roots": fine_obj}
 
     @staticmethod
     def _assign_vertex_groups(obj, orders):

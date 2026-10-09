@@ -1,5 +1,5 @@
 """
-Vegetable presets: root crops, potato and brassica heads.
+Vegetable presets: root crops, potato, tuberous roots (sweet potato, cassava) and brassica heads.
 
 Sizes are typical market sizes of common cultivars (cm); leaf traits use the tree leaf descriptors.
 Storage roots after Esau (1940, carrot anatomy) and crop descriptions; brassica heads after Kieffer,
@@ -117,6 +117,28 @@ VEGETABLE_CATALOG: dict[str, VegetablePreset] = {
         elevation_outer_deg=10, elevation_inner_deg=45, tuber_count=8, tuber_length_cm=8.0, tuber_diameter_cm=6.0,
         tuber_depth_cm=12.0, stolon_length_cm=15.0, eyes=9, eye_depth=0.1, tuber_color=(0.78, 0.62, 0.42),
         tuber_dots=0.3, stem_color=(0.30, 0.42, 0.18)),
+    "ipomoea_batatas": veg(
+        "Ipomoea batatas", "Sweet potato (camote)", "Convolvulaceae",
+        "Trailing vine with heart-shaped to lobed leaves; storage roots are true roots (no eyes) swollen from "
+        "the nodal roots of the planted cutting: several fusiform roots, 3-10 cm thick, with fibrous roots.",
+        leaf=dict(archetype=A.CORDATE, margin_type=MT.ENTIRE, blade_length_cm=10.0, aspect_ratio=1.05,
+                  petiole_length_ratio=1.2, adaxial_color=(0.20, 0.38, 0.14)),
+        vein=dict(pattern=V.ACTINODROMOUS, secondary_vein_pairs=4),
+        organ=O.TUBEROUS_ROOTS, stem_count=4, stem_height_cm=25.0, stem_radius_mm=4.0, leaf_count=10,
+        leaf_size=1.0, elevation_outer_deg=10, elevation_inner_deg=40, tuber_count=5, tuber_length_cm=18.0,
+        tuber_diameter_cm=6.0, tuber_depth_cm=15.0, tuber_color=(0.62, 0.22, 0.20), tuber_dots=0.1,
+        stem_color=(0.40, 0.30, 0.25)),
+    "manihot_esculenta": veg(
+        "Manihot esculenta", "Cassava (yuca, mandioca)", "Euphorbiaceae",
+        "Woody shrub 1-3 m with deeply palmately lobed leaves; 5-10 long cylindrical-tapering storage roots "
+        "radiate from the base of the stem cutting (up to 80 x 10 cm), brown corky skin.",
+        leaf=dict(archetype=A.PALMATE_LOBED, margin_type=MT.ENTIRE, blade_length_cm=14.0, aspect_ratio=1.0,
+                  lobe_count=7, lobe_depth=0.85, lobe_width=0.4, petiole_length_ratio=1.4, adaxial_color=(0.18, 0.36, 0.14)),
+        vein=dict(pattern=V.ACTINODROMOUS, secondary_vein_pairs=5),
+        organ=O.TUBEROUS_ROOTS, stem_count=2, stem_height_cm=150.0, stem_radius_mm=14.0, leaf_count=12,
+        leaf_size=1.2, elevation_outer_deg=20, elevation_inner_deg=60, tuber_count=7, tuber_length_cm=45.0,
+        tuber_diameter_cm=7.0, tuber_depth_cm=25.0, tuber_color=(0.45, 0.32, 0.20), tuber_dots=0.2,
+        stem_color=(0.55, 0.50, 0.42)),
     "brassica_oleracea_botrytis": veg(
         "Brassica oleracea var. botrytis", "Cauliflower (coliflor)", "Brassicaceae",
         "White curd of packed meristem domes in golden-angle spirals, wrapped by large glaucous leaves.",
@@ -149,7 +171,7 @@ VEGETABLE_RANGES = {
     "head_wrap": (0.0, 1.0), "root_length_cm": (0.5, 100.0), "root_diameter_cm": (0.3, 40.0),
     "widest_position": (0.02, 0.9), "shoulder": (0.05, 1.5), "taper": (0.1, 3.0), "exposure": (0.0, 0.9),
     "tail_cm": (0.0, 40.0), "rings": (0.0, 1.0), "rootlets": (0.0, 1.0), "rootlet_ranks": (1, 8),
-    "shoulder_tint": (0.0, 1.0), "tip_tint": (0.0, 1.0), "tuber_count": (0, 40), "tuber_length_cm": (0.5, 30.0),
+    "shoulder_tint": (0.0, 1.0), "tip_tint": (0.0, 1.0), "tuber_count": (0, 40), "tuber_length_cm": (0.5, 100.0),
     "tuber_diameter_cm": (0.5, 20.0), "tuber_depth_cm": (1.0, 50.0), "stolon_length_cm": (0.0, 80.0),
     "eyes": (0, 30), "eye_depth": (0.0, 0.4), "tuber_dots": (0.0, 1.0), "head_diameter_cm": (2.0, 50.0),
     "head_height_ratio": (0.1, 1.5), "head_levels": (1, 4), "florets": (3, 89), "floret_scale": (0.1, 0.7),

@@ -144,6 +144,12 @@ PROP_MAP: list[tuple[str, str]] = [
     ("root_plank", "roots.plank"),
     ("root_buttress_height", "roots.buttress_height_dbh"),
     ("root_knees", "roots.knees"),
+    ("root_deep", "roots.deep_roots"),
+    ("root_heart", "roots.heart_roots"),
+    ("root_fine", "roots.fine_roots"),
+    ("root_fine_orders", "roots.fine_orders"),
+    ("root_stilt_height", "roots.stilt_height_dbh"),
+    ("root_tubers", "roots.tuber_count"),
 ]
 
 _IS_UPDATING = False
@@ -518,6 +524,7 @@ def update_tree_geometry(context):
             bark = _ensure_bark_material(root, preset, disp)
             _assign(built["wood"], bark)
             _assign(built.get("roots"), bark)
+            _assign(built.get("fine_roots"), bark)
             for obj in (built["wood"], built.get("roots")):
                 _bark_displacement_modifier(obj, disp)
             if props.show_leaves:

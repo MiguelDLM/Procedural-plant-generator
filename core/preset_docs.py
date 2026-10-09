@@ -47,7 +47,7 @@ FIELD_DOCS = {
     "VegetablePreset.common_name": "Vernacular name(s).",
     "VegetablePreset.family": "Botanical family, e.g. 'Apiaceae', 'Brassicaceae'.",
     "VegetablePreset.notes": "Free text: distinctive features, sources of the values.",
-    "VegetableProfile.organ": "Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only).",
+    "VegetableProfile.organ": "Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Tuberous roots' (sweet potato, cassava: fasciculate storage roots), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only).",
     "VegetableProfile.stem_radius_mm": "Radius of the stems at the base, mm.",
     "VegetableProfile.root_length_cm": "Length of the swollen root from the crown to the start of the tail, cm.",
     "VegetableProfile.root_diameter_cm": "Largest diameter of the storage root, cm.",
@@ -175,7 +175,7 @@ FIELD_DOCS = {
     "BarkProfile.roughness": "Surface roughness of the bark material, 0 glossy .. 1 rough (bark is typically 0.75-0.95).",
     "BarkProfile.onset_radius_cm": "Axis radius (cm) where the mature bark pattern replaces the smooth young periderm; fissures widen beyond it.",
     # --- Roots --------------------------------------------------------------------------------------------
-    "RootProfile.system": "Root system type (Köstler et al. 1968): Taproot, Heart, Plate (shallow), Fibrous, Buttress, Tuberous.",
+    "RootProfile.system": "Root system type (Köstler et al. 1968; Cannon 1949): Taproot, Heart, Plate (shallow), Buttress, Stilt (prop roots), Fibrous (fasciculate), Tuberous (napiform storage taproot), Tuberous cluster (fasciculate storage roots).",
     "RootProfile.tortuosity": "Winding of the roots through the soil, 0 straight .. 1 very tortuous.",
     "RootProfile.fibrous_radius_m": "Radius of the fine fibrous roots, metres.",
     "RootProfile.tuber_radius_m": "Radius of a storage tuber (Tuberous system), metres.",

@@ -39,7 +39,7 @@ LAYOUT = [
     ("Storage Root", VEG, ["root_length_cm", "root_diameter_cm", "widest_position", "shoulder", "taper", "exposure",
                            "tail_cm", "rings", "rootlets", "rootlet_ranks", "root_color", "shoulder_color",
                            "shoulder_tint", "tip_color", "tip_tint"]),
-    ("Tubers", VEG, ["tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm", "stolon_length_cm",
+    ("Tubers / Tuberous Roots", VEG, ["tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm", "stolon_length_cm",
                      "eyes", "eye_depth", "tuber_color", "tuber_dots"]),
     ("Head", VEG, ["head_type", "head_diameter_cm", "head_height_ratio", "head_levels", "florets", "floret_scale",
                    "bud_size_mm", "head_color", "branch_color"]),
@@ -142,7 +142,7 @@ def root_material(name, p: VegetableProfile):
         n.location = loc
         n.outputs[0].default_value = _srgb_to_linear(c)
         return n.outputs[0]
-    tubers = p.organ.value == "Tubers"
+    tubers = p.organ.value in ("Tubers", "Tuberous roots")
     t = _attr(nt, "veg_t", (-1400, 300)).outputs['Fac']
     above = _attr(nt, "veg_above", (-1400, 100)).outputs['Fac']
     ring = _attr(nt, "veg_ring", (-1400, -100)).outputs['Fac']

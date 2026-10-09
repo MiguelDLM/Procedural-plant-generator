@@ -53,7 +53,8 @@ LAYOUT = {
                         "barking_color", "scars", "scar_color", "areole_stain", "crest_light", "groove_dust",
                         "streaks"]),
         ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "taproot_share",
-                   "taproot_depth_m", "root_core_ratio", "tuber_length_cm", "tuber_radius_ratio"]),
+                   "taproot_depth_m", "root_core_ratio", "tuber_length_cm", "tuber_radius_ratio",
+                   "fine_roots"]),
     ],
     GrowthForm.ROSETTE: [
         ("Rosette", ["phyllotaxis", "leaf_count", "stem_height_m", "stem_radius_m", "rosette_height_m",
@@ -66,7 +67,8 @@ LAYOUT = {
                                 "terminal_spine_cm", "teeth_count", "teeth_size_cm", "teeth_hook"]),
         ("Colour", ["leaf_color", "blush_color", "blush_amount", "blush_tip", "glaucous", "spots", "bands",
                     "armature_color", "margin_band", "striation", "imprints", "dead_color", "stem_color"]),
-        ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "root_radius_mm"]),
+        ("Roots", ["root_system", "root_count", "root_spread_ratio", "root_depth_m", "root_radius_mm",
+                   "fine_roots"]),
     ],
 }
 
@@ -654,7 +656,8 @@ def update_succulent_geometry(context, props, find_root):
     root = find_root(context, f"PPG_{preset.scientific_name.replace(' ', '_').replace(chr(39), '')}")
     # Objects of other growth forms (if this root was a tree before) are hidden
     for c in root.children:
-        if c.name.endswith(("_Wood", "_Foliage", "_Roots", "_VineStem", "_Tendrils", "_VineLeaves", "_VineFruits",
+        if c.name.endswith(("_Wood", "_Foliage", "_Roots", "_FineRoots", "_VineStem", "_Tendrils", "_VineLeaves",
+                            "_VineFruits",
                             "_VineRoots", "_Fruits", "_FruitProto", "_FruitBody", "_VegRoot", "_VegStems", "_VegHead",
                             "_VegLeaves", "_GrassLeaves", "_GrassCulms", "_GrassHeads", "_GrassEars",
                             "_GrassRoots", "_OrchidLeaves", "_OrchidStems", "_OrchidRoots", "_OrchidFlowers",

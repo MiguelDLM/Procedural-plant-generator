@@ -289,33 +289,39 @@ BarkProfile(pattern: core.bark.BarkPattern = <BarkPattern.FISSURED: 'Fissured'>,
 
 ## RootProfile
 
-RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03)
+RootProfile(system: core.roots.RootSystemType = <RootSystemType.HEART: 'Heart'>, lateral_count: int = 6, spread_crown_ratio: float = 1.4, max_depth_m: float = 3.0, beta: float = 0.966, taproot_share: float = 0.15, zrt_dbh_ratio: float = 2.2, sinker_spacing_m: float = 1.2, branch_spacing_m: float = 0.9, surface_exposure: float = 0.15, plank: float = 0.5, buttress_height_dbh: float = 0.6, tortuosity: float = 0.25, knees: int = 0, fibrous_count: int = 60, fibrous_radius_m: float = 0.006, fibrous_spread_m: float = 0.0, tuber_length_m: float = 0.12, tuber_radius_m: float = 0.03, deep_roots: float = 0.6, heart_roots: int = 7, fine_roots: float = 1.0, fine_orders: int = 2, stilt_height_dbh: float = 3.0, tuber_count: int = 6)
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
-| `system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous` |  |  | Heart | Root system type (Köstler et al. 1968): Taproot, Heart, Plate (shallow), Fibrous, Buttress, Tuberous. |
-| `lateral_count` | integer |  | 1 – 16 | 6 | Main structural laterals (= buttress count when buttressed) Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `spread_crown_ratio` | number |  | 0.3 – 4.0 | 1.4 | Lateral reach / crown radius Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `max_depth_m` | number | m | 0.3 – 60.0 | 3.0 | Species/biome maximum rooting depth Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `beta` | number |  | 0.9 – 0.99 | 0.966 | Jackson vertical distribution coefficient Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `taproot_share` | number |  | 0.0 – 0.8 | 0.15 | Fraction of the collar pipe flow taken by the taproot / obliques Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `zrt_dbh_ratio` | number |  |  | 2.2 | Zone of rapid taper radius / DBH Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `sinker_spacing_m` | number | m |  | 1.2 | Mean distance between sinkers along laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `branch_spacing_m` | number | m |  | 0.9 | Mean distance between second-order laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `surface_exposure` | number |  | 0.0 – 1.0 | 0.15 | 0 buried .. 1 laterals ride on the soil surface near the stem Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `plank` | number |  | 0.0 – 5.0 | 0.5 | Vertical elongation of lateral cross-sections near the stem Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `buttress_height_dbh` | number |  | 0.0 – 4.0 | 0.6 | Height on the stem where laterals/buttresses merge (x DBH) Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `tortuosity` | number |  |  | 0.25 | Winding of the roots through the soil, 0 straight .. 1 very tortuous. Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `knees` | integer |  |  | 0 | Pneumatophores ("cypress knees") on shallow laterals Applies when: system not in ('Fibrous', 'Tuberous'). |
-| `fibrous_count` | integer |  |  | 60 | Adventitious roots (FIBROUS) Applies when: system == 'Fibrous'. |
-| `fibrous_radius_m` | number | m |  | 0.006 | Radius of the fine fibrous roots, metres. Applies when: system == 'Fibrous'. |
-| `fibrous_spread_m` | number | m |  | 0.0 | Horizontal reach of fibrous roots (0 = 1-3 m, palms) Applies when: system == 'Fibrous'. |
-| `tuber_length_m` | number | m |  | 0.12 | TUBEROUS storage root Applies when: system == 'Tuberous'. |
-| `tuber_radius_m` | number | m |  | 0.03 | Radius of a storage tuber (Tuberous system), metres. Applies when: system == 'Tuberous'. |
+| `system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous`, `Tuberous cluster`, `Stilt` |  |  | Heart | Root system type (Köstler et al. 1968; Cannon 1949): Taproot, Heart, Plate (shallow), Buttress, Stilt (prop roots), Fibrous (fasciculate), Tuberous (napiform storage taproot), Tuberous cluster (fasciculate storage roots). |
+| `lateral_count` | integer |  | 1 – 16 | 6 | Main structural laterals (= buttress count when buttressed) Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `spread_crown_ratio` | number |  | 0.3 – 4.0 | 1.4 | Lateral reach / crown radius Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `max_depth_m` | number | m | 0.3 – 60.0 | 3.0 | Species/biome maximum rooting depth Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `beta` | number |  | 0.9 – 0.99 | 0.966 | Jackson vertical distribution coefficient Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `taproot_share` | number |  | 0.0 – 0.8 | 0.15 | Fraction of the collar pipe flow taken by the taproot / obliques Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `zrt_dbh_ratio` | number |  |  | 2.2 | Zone of rapid taper radius / DBH Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `sinker_spacing_m` | number | m |  | 1.2 | Mean distance between sinkers along laterals Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `branch_spacing_m` | number | m |  | 0.9 | Mean distance between second-order laterals Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `surface_exposure` | number |  | 0.0 – 1.0 | 0.15 | 0 buried .. 1 laterals ride on the soil surface near the stem Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `plank` | number |  | 0.0 – 5.0 | 0.5 | Vertical elongation of lateral cross-sections near the stem Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `buttress_height_dbh` | number |  | 0.0 – 4.0 | 0.6 | Height on the stem where laterals/buttresses merge (x DBH) Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `tortuosity` | number |  |  | 0.25 | Winding of the roots through the soil, 0 straight .. 1 very tortuous. Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `knees` | integer |  |  | 0 | Pneumatophores ("cypress knees") on shallow laterals Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `fibrous_count` | integer |  |  | 60 | Adventitious roots (FIBROUS) Applies when: system in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `fibrous_radius_m` | number | m |  | 0.006 | Radius of the fine fibrous roots, metres. Applies when: system in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `fibrous_spread_m` | number | m |  | 0.0 | Horizontal reach of fibrous roots (0 = 1-3 m, palms) Applies when: system in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `tuber_length_m` | number | m |  | 0.12 | TUBEROUS storage root Applies when: system in ('Tuberous', 'Tuberous cluster'). |
+| `tuber_radius_m` | number | m |  | 0.03 | Radius of a storage tuber (Tuberous system), metres. Applies when: system in ('Tuberous', 'Tuberous cluster'). |
+| `deep_roots` | number |  | 0.0 – 1.0 | 0.6 | Depth of sinkers and obliques near the stem, share of max_depth_m (cage) Applies when: system not in ('Fibrous', 'Tuberous', 'Tuberous cluster'). |
+| `heart_roots` | integer |  | 3 – 16 | 7 | Oblique roots of a heart system Applies when: system == 'Heart' and taproot_share > 0. |
+| `fine_roots` | number |  | 0.0 – 3.0 | 1.0 | Density of fine lateral roots on the frame (0 = coarse frame only) |
+| `fine_orders` | integer |  | 0 – 3 | 2 | Orders of fine laterals Applies when: fine_roots > 0. |
+| `stilt_height_dbh` | number |  | 0.5 – 10.0 | 3.0 | Height on the stem of the highest stilt roots (x DBH) Applies when: system == 'Stilt'. |
+| `tuber_count` | integer |  | 1 – 20 | 6 | Storage roots of a tuberous cluster Applies when: system == 'Tuberous cluster'. |
 
 ## CactusProfile
 
-CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'>, arrangement: core.cactus.AreoleArrangement = <AreoleArrangement.RIBS: 'Ribs'>, height_m: float = 3.0, diameter_m: float = 0.35, base_taper: float = 0.15, apex_dome: float = 1.0, apex_roundness: float = 2.0, apex_depression: float = 0.0, rib_count: int = 13, rib_depth: float = 0.18, rib_sharpness: float = 0.7, rib_twist_deg_per_m: float = 0.0, tubercle_height: float = 0.0, areole_spacing_cm: float = 2.5, radial_spines: int = 10, radial_length_cm: float = 1.5, central_spines: int = 3, central_length_cm: float = 4.0, spine_thickness_mm: float = 0.8, spine_curvature: float = 0.1, central_hook: float = 0.0, radial_lift_deg: float = 15.0, spine_jitter: float = 0.25, wool: float = 0.3, apical_wool: float = 0.0, arm_count: int = 0, arm_height_min: float = 0.35, arm_height_max: float = 0.65, arm_radius_ratio: float = 0.8, arm_reach_m: float = 0.5, arm_length_ratio: float = 0.5, arm_lean_deg: float = 3.0, arm_branching: float = 0.0, crown_fill: float = 0.0, offsets: int = 0, offset_scale: float = 0.7, pad_length_cm: float = 30.0, pad_width_ratio: float = 0.65, pad_thickness_ratio: float = 0.08, pad_levels: int = 4, pad_branching: float = 1.6, stem_color: tuple = (0.24, 0.4, 0.2), groove_color: tuple = (0.15, 0.28, 0.13), spine_color: tuple = (0.85, 0.8, 0.62), spine_tip_color: tuple = (0.35, 0.25, 0.18), wool_color: tuple = (0.92, 0.9, 0.85), glaucous: float = 0.2, flecks: float = 0.0, browning_height_m: float = 0.0, equator_bias: float = 0.6, equator_azimuth_deg: float = 270.0, scaling_color: tuple = (0.62, 0.44, 0.3), barking_color: tuple = (0.27, 0.22, 0.18), scars: float = 0.15, scar_color: tuple = (0.64, 0.55, 0.41), areole_stain: float = 0.4, crest_light: float = 0.25, groove_dust: float = 0.3, streaks: float = 0.3, root_system: core.roots.RootSystemType = <RootSystemType.PLATE: 'Plate'>, root_count: int = 10, root_spread_ratio: float = 1.0, root_depth_m: float = 0.3, taproot_share: float = 0.0, taproot_depth_m: float = 0.5, root_core_ratio: float = 0.25, tuber_length_cm: float = 12.0, tuber_radius_ratio: float = 0.8)
+CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'>, arrangement: core.cactus.AreoleArrangement = <AreoleArrangement.RIBS: 'Ribs'>, height_m: float = 3.0, diameter_m: float = 0.35, base_taper: float = 0.15, apex_dome: float = 1.0, apex_roundness: float = 2.0, apex_depression: float = 0.0, rib_count: int = 13, rib_depth: float = 0.18, rib_sharpness: float = 0.7, rib_twist_deg_per_m: float = 0.0, tubercle_height: float = 0.0, areole_spacing_cm: float = 2.5, radial_spines: int = 10, radial_length_cm: float = 1.5, central_spines: int = 3, central_length_cm: float = 4.0, spine_thickness_mm: float = 0.8, spine_curvature: float = 0.1, central_hook: float = 0.0, radial_lift_deg: float = 15.0, spine_jitter: float = 0.25, wool: float = 0.3, apical_wool: float = 0.0, arm_count: int = 0, arm_height_min: float = 0.35, arm_height_max: float = 0.65, arm_radius_ratio: float = 0.8, arm_reach_m: float = 0.5, arm_length_ratio: float = 0.5, arm_lean_deg: float = 3.0, arm_branching: float = 0.0, crown_fill: float = 0.0, offsets: int = 0, offset_scale: float = 0.7, pad_length_cm: float = 30.0, pad_width_ratio: float = 0.65, pad_thickness_ratio: float = 0.08, pad_levels: int = 4, pad_branching: float = 1.6, stem_color: tuple = (0.24, 0.4, 0.2), groove_color: tuple = (0.15, 0.28, 0.13), spine_color: tuple = (0.85, 0.8, 0.62), spine_tip_color: tuple = (0.35, 0.25, 0.18), wool_color: tuple = (0.92, 0.9, 0.85), glaucous: float = 0.2, flecks: float = 0.0, browning_height_m: float = 0.0, equator_bias: float = 0.6, equator_azimuth_deg: float = 270.0, scaling_color: tuple = (0.62, 0.44, 0.3), barking_color: tuple = (0.27, 0.22, 0.18), scars: float = 0.15, scar_color: tuple = (0.64, 0.55, 0.41), areole_stain: float = 0.4, crest_light: float = 0.25, groove_dust: float = 0.3, streaks: float = 0.3, root_system: core.roots.RootSystemType = <RootSystemType.PLATE: 'Plate'>, root_count: int = 10, root_spread_ratio: float = 1.0, root_depth_m: float = 0.3, taproot_share: float = 0.0, taproot_depth_m: float = 0.5, root_core_ratio: float = 0.25, fine_roots: float = 1.0, tuber_length_cm: float = 12.0, tuber_radius_ratio: float = 0.8)
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
@@ -378,19 +384,20 @@ CactusProfile(habit: core.cactus.CactusHabit = <CactusHabit.COLUMNAR: 'Columnar'
 | `crest_light` | number |  | 0.0 – 1.0 | 0.25 | Paler, yellower rib crests |
 | `groove_dust` | number |  | 0.0 – 1.0 | 0.3 | Soil and dust in the grooves and near the ground |
 | `streaks` | number |  | 0.0 – 1.0 | 0.3 | Vertical tone streaks |
-| `root_system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous` |  |  | Plate | Roots (Cannon 1911; Snyman 2005): shallow laterals, optional taproot or napiform tuber |
+| `root_system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous`, `Tuberous cluster`, `Stilt` |  |  | Plate | Roots (Cannon 1911; Snyman 2005): shallow laterals, optional taproot or napiform tuber |
 | `root_count` | integer |  | 1 – 40 | 10 | Number of main lateral roots. |
 | `root_spread_ratio` | number |  | 0.1 – 5.0 | 1.0 | Lateral reach relative to plant height |
 | `root_depth_m` | number | m | 0.02 – 2.0 | 0.3 | 90% of roots above this depth |
 | `taproot_share` | number |  | 0.0 – 0.8 | 0.0 | Fraction of the root collar taken by a taproot (0 none .. 0.8 dominant taproot). |
 | `taproot_depth_m` | number | m | 0.05 – 3.0 | 0.5 | Taproot depth, metres. |
 | `root_core_ratio` | number |  | 0.05 – 0.6 | 0.25 | Vascular cylinder / stem radius (root collar) |
-| `tuber_length_cm` | number | cm | 1.0 – 60.0 | 12.0 | Length of a napiform storage tuber (peyote), cm. Applies when: root_system == 'Tuberous'. |
-| `tuber_radius_ratio` | number |  | 0.1 – 1.5 | 0.8 | Tuber radius relative to stem radius Applies when: root_system == 'Tuberous'. |
+| `fine_roots` | number |  | 0.0 – 3.0 | 1.0 | Density of the short determinate laterals ("rain roots") |
+| `tuber_length_cm` | number | cm | 1.0 – 60.0 | 12.0 | Length of a napiform storage tuber (peyote), cm. Applies when: root_system in ('Tuberous', 'Tuberous cluster'). |
+| `tuber_radius_ratio` | number |  | 0.1 – 1.5 | 0.8 | Tuber radius relative to stem radius Applies when: root_system in ('Tuberous', 'Tuberous cluster'). |
 
 ## RosetteProfile
 
-RosetteProfile(phyllotaxis: core.rosette.RosettePhyllotaxis = <RosettePhyllotaxis.SPIRAL: 'Spiral'>, leaf_count: int = 40, stem_height_m: float = 0.0, stem_radius_m: float = 0.012, rosette_height_m: float = 0.02, leaf_length_cm: float = 5.0, leaf_aspect: float = 2.0, leaf_thickness: float = 0.35, thickness_taper: float = 0.6, size_gradient: float = 0.55, elevation_outer_deg: float = 15.0, elevation_inner_deg: float = 75.0, elevation_power: float = 1.5, curvature_deg: float = 10.0, widest_position: float = 0.6, base_angle_deg: float = 50.0, apex_angle_deg: float = 70.0, base_curvature: float = 0.0, apex_curvature: float = 0.3, channel: float = 0.15, keel: float = 0.3, section_exponent: float = 2.2, base_width: float = 0.3, clasp: float = 0.0, base_swell: float = 0.0, furl: float = 0.0, dead_leaves: int = 0, dead_color: tuple = (0.55, 0.46, 0.34), stem_color: tuple = (0.5, 0.45, 0.36), stem_scars: float = 0.0, scar_spacing_mm: float = 6.0, terminal_spine_cm: float = 0.0, teeth_count: int = 0, teeth_size_cm: float = 0.0, teeth_hook: float = 0.4, offsets: int = 0, offset_scale: float = 0.45, leaf_color: tuple = (0.45, 0.58, 0.55), blush_color: tuple = (0.75, 0.35, 0.4), blush_amount: float = 0.0, glaucous: float = 0.6, spots: float = 0.0, bands: float = 0.0, armature_color: tuple = (0.3, 0.2, 0.15), blush_tip: float = 1.0, margin_band: float = 0.0, striation: float = 0.0, imprints: float = 0.0, root_system: core.roots.RootSystemType = <RootSystemType.FIBROUS: 'Fibrous'>, root_count: int = 25, root_spread_ratio: float = 1.0, root_depth_m: float = 0.2, root_radius_mm: float = 1.5)
+RosetteProfile(phyllotaxis: core.rosette.RosettePhyllotaxis = <RosettePhyllotaxis.SPIRAL: 'Spiral'>, leaf_count: int = 40, stem_height_m: float = 0.0, stem_radius_m: float = 0.012, rosette_height_m: float = 0.02, leaf_length_cm: float = 5.0, leaf_aspect: float = 2.0, leaf_thickness: float = 0.35, thickness_taper: float = 0.6, size_gradient: float = 0.55, elevation_outer_deg: float = 15.0, elevation_inner_deg: float = 75.0, elevation_power: float = 1.5, curvature_deg: float = 10.0, widest_position: float = 0.6, base_angle_deg: float = 50.0, apex_angle_deg: float = 70.0, base_curvature: float = 0.0, apex_curvature: float = 0.3, channel: float = 0.15, keel: float = 0.3, section_exponent: float = 2.2, base_width: float = 0.3, clasp: float = 0.0, base_swell: float = 0.0, furl: float = 0.0, dead_leaves: int = 0, dead_color: tuple = (0.55, 0.46, 0.34), stem_color: tuple = (0.5, 0.45, 0.36), stem_scars: float = 0.0, scar_spacing_mm: float = 6.0, terminal_spine_cm: float = 0.0, teeth_count: int = 0, teeth_size_cm: float = 0.0, teeth_hook: float = 0.4, offsets: int = 0, offset_scale: float = 0.45, leaf_color: tuple = (0.45, 0.58, 0.55), blush_color: tuple = (0.75, 0.35, 0.4), blush_amount: float = 0.0, glaucous: float = 0.6, spots: float = 0.0, bands: float = 0.0, armature_color: tuple = (0.3, 0.2, 0.15), blush_tip: float = 1.0, margin_band: float = 0.0, striation: float = 0.0, imprints: float = 0.0, root_system: core.roots.RootSystemType = <RootSystemType.FIBROUS: 'Fibrous'>, root_count: int = 25, root_spread_ratio: float = 1.0, root_depth_m: float = 0.2, root_radius_mm: float = 1.5, fine_roots: float = 1.0)
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
@@ -442,11 +449,12 @@ RosetteProfile(phyllotaxis: core.rosette.RosettePhyllotaxis = <RosettePhyllotaxi
 | `margin_band` | number |  | 0.0 – 1.0 | 0.0 | Horny dark margin (Agave) |
 | `striation` | number |  | 0.0 – 1.0 | 0.0 | Fine longitudinal lines |
 | `imprints` | number |  | 0.0 – 1.0 | 0.0 | Bud imprints of neighbouring leaves' teeth and outline (Agave) |
-| `root_system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous` |  |  | Fibrous | Root system type (rosettes: usually Fibrous). |
+| `root_system` | enum: `Taproot`, `Heart`, `Plate`, `Buttress`, `Fibrous`, `Tuberous`, `Tuberous cluster`, `Stilt` |  |  | Fibrous | Root system type (rosettes: usually Fibrous). |
 | `root_count` | integer |  | 1 – 150 | 25 | Number of roots. |
 | `root_spread_ratio` | number |  | 0.1 – 4.0 | 1.0 | Reach relative to rosette diameter |
 | `root_depth_m` | number | m | 0.02 – 2.0 | 0.2 | Rooting depth holding 90% of the roots, metres. |
 | `root_radius_mm` | number | mm | 0.2 – 10.0 | 1.5 | Root radius at the collar, mm. |
+| `fine_roots` | number |  | 0.0 – 3.0 | 1.0 | Density of fine lateral roots on the fibrous roots |
 
 ## FlowerProfile
 
@@ -645,7 +653,7 @@ Habit and storage organ of a vegetable. Sizes in cm unless noted.
 
 | Field | Type | Unit | Range | Default | Meaning |
 |---|---|---|---|---|---|
-| `organ` | enum: `Taproot`, `Tubers`, `Head`, `None` |  |  | Taproot | Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only). |
+| `organ` | enum: `Taproot`, `Tubers`, `Tuberous roots`, `Head`, `None` |  |  | Taproot | Storage or harvested organ: 'Taproot' (carrot, radish, beet, turnip), 'Tubers' (potato), 'Tuberous roots' (sweet potato, cassava: fasciculate storage roots), 'Head' (cauliflower, broccoli, Romanesco) or 'None' (leaves only). |
 | `stem_count` | integer |  | 1 – 12 | 1 | Erect stems (potato 3-6); 1 for rosettes |
 | `stem_height_cm` | number | cm | 0.0 – 300.0 | 0.0 | 0 = basal rosette |
 | `stem_radius_mm` | number | mm | 0.5 – 60.0 | 4.0 | Radius of the stems at the base, mm. Applies when: stem_height_cm > 0. |
@@ -670,15 +678,15 @@ Habit and storage organ of a vegetable. Sizes in cm unless noted.
 | `shoulder_tint` | number |  | 0.0 – 1.0 | 0.4 | Applies when: organ == 'Taproot'. |
 | `tip_color` | colour (sRGB 0..1) |  |  | [0.95, 0.9, 0.8] | Lower part (white-tipped radish) Applies when: organ == 'Taproot'. |
 | `tip_tint` | number |  | 0.0 – 1.0 | 0.0 | Applies when: organ == 'Taproot'. |
-| `tuber_count` | integer |  | 0 – 40 | 8 | Number of tubers per plant. Applies when: organ == 'Tubers'. |
-| `tuber_length_cm` | number | cm | 0.5 – 30.0 | 8.0 | Tuber length from the heel (stolon end) to the rose end, cm. Applies when: organ == 'Tubers'. |
-| `tuber_diameter_cm` | number | cm | 0.5 – 20.0 | 6.0 | Largest tuber diameter, cm. Applies when: organ == 'Tubers'. |
-| `tuber_depth_cm` | number | cm | 1.0 – 50.0 | 12.0 | Depth of the tubers below the soil surface, cm. Applies when: organ == 'Tubers'. |
+| `tuber_count` | integer |  | 0 – 40 | 8 | Number of tubers per plant. Applies when: organ in ('Tubers', 'Tuberous roots'). |
+| `tuber_length_cm` | number | cm | 0.5 – 100.0 | 8.0 | Tuber length from the heel (stolon end) to the rose end, cm. Applies when: organ in ('Tubers', 'Tuberous roots'). |
+| `tuber_diameter_cm` | number | cm | 0.5 – 20.0 | 6.0 | Largest tuber diameter, cm. Applies when: organ in ('Tubers', 'Tuberous roots'). |
+| `tuber_depth_cm` | number | cm | 1.0 – 50.0 | 12.0 | Depth of the tubers below the soil surface, cm. Applies when: organ in ('Tubers', 'Tuberous roots'). |
 | `stolon_length_cm` | number | cm | 0.0 – 80.0 | 15.0 | Length of the stolons that carry the tubers, cm. Applies when: organ == 'Tubers'. |
 | `eyes` | integer |  | 0 – 30 | 9 | Number of eyes (buds) per tuber, on a ~2/5 spiral crowded toward the rose end. Applies when: organ == 'Tubers'. |
 | `eye_depth` | number |  | 0.0 – 0.4 | 0.08 | Depth of the eye dimples relative to the radius. Applies when: organ == 'Tubers'. |
-| `tuber_color` | colour (sRGB 0..1) |  |  | [0.75, 0.6, 0.4] | Tuber skin colour (sRGB 0..1). Applies when: organ == 'Tubers'. |
-| `tuber_dots` | number |  | 0.0 – 1.0 | 0.3 | Density of the lenticel dots on the tuber skin. Applies when: organ == 'Tubers'. |
+| `tuber_color` | colour (sRGB 0..1) |  |  | [0.75, 0.6, 0.4] | Tuber skin colour (sRGB 0..1). Applies when: organ in ('Tubers', 'Tuberous roots'). |
+| `tuber_dots` | number |  | 0.0 – 1.0 | 0.3 | Density of the lenticel dots on the tuber skin. Applies when: organ in ('Tubers', 'Tuberous roots'). |
 | `head_type` | enum: `Curd`, `Buds`, `Cones` |  |  | Curd | 'Curd' (cauliflower: packed meristem domes), 'Buds' (broccoli: flower-bud clusters on branches) or 'Cones' (Romanesco: self-similar cones). Applies when: organ == 'Head'. |
 | `head_diameter_cm` | number | cm | 2.0 – 50.0 | 16.0 | Diameter of the head, cm. Applies when: organ == 'Head'. |
 | `head_height_ratio` | number |  | 0.1 – 1.5 | 0.45 | Dome height / diameter (Romanesco ~0.9: a cone) Applies when: organ == 'Head'. |
@@ -751,6 +759,7 @@ Habit of a grass. Lengths in cm unless noted (culm height in m).
 | `crown_roots` | integer |  | 0 – 60 | 12 | Number of crown (nodal) roots. |
 | `root_length_cm` | number | cm | 1.0 – 200.0 | 25.0 | Crown root length shown, cm. |
 | `brace_roots` | integer |  | 0 – 30 | 0 | Prop roots from the lowest nodes (maize) |
+| `fine_roots` | number |  | 0.0 – 3.0 | 1.0 | Density of the lateral roots on the crown roots |
 | `ripeness` | number |  | 0.0 – 1.0 | 0.0 | 0 green .. 1 golden, ripe |
 
 ## OrchidProfile

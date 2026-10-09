@@ -22,7 +22,10 @@ _NOT_CLADODE = ("habit != 'Cladode'", "Not used by cladodes (Opuntia)")
 _ARMS = ("habit != 'Cladode' and arm_count > 0", "Only when the stem has arms")
 _NOT_HEAD = ("not capitulum", "Not used by a capitulum (Asteraceae head)")
 _HEAD = ("capitulum", "Only for a capitulum (Asteraceae head)")
-_WOODY_ROOTS = ("system not in ('Fibrous', 'Tuberous')", "Only for woody root systems")
+_WOODY_ROOTS = ("system not in ('Fibrous', 'Tuberous', 'Tuberous cluster')", "Only for woody root systems")
+_FIBROUS_ROOTS = ("system in ('Fibrous', 'Tuberous', 'Tuberous cluster')",
+                  "Only for fibrous roots (also around storage roots)")
+_STORAGE_ROOTS = ("system in ('Tuberous', 'Tuberous cluster')", "Only for storage roots")
 _NOT_CORNER = ("model != 'Corner'", "Not used by unbranched Corner-model plants (palms)")
 
 RULES: dict = {
@@ -40,12 +43,13 @@ RULES: dict = {
             **{f: _WOODY_ROOTS for f in (
                 "lateral_count", "spread_crown_ratio", "max_depth_m", "beta", "taproot_share", "zrt_dbh_ratio",
                 "sinker_spacing_m", "branch_spacing_m", "surface_exposure", "plank", "buttress_height_dbh",
-                "tortuosity", "knees")},
-            "fibrous_count": ("system == 'Fibrous'", "Only for fibrous root systems"),
-            "fibrous_radius_m": ("system == 'Fibrous'", "Only for fibrous root systems"),
-            "fibrous_spread_m": ("system == 'Fibrous'", "Only for fibrous root systems"),
-            "tuber_length_m": ("system == 'Tuberous'", "Only for tuberous roots"),
-            "tuber_radius_m": ("system == 'Tuberous'", "Only for tuberous roots"),
+                "tortuosity", "knees", "deep_roots")},
+            **{f: _FIBROUS_ROOTS for f in ("fibrous_count", "fibrous_radius_m", "fibrous_spread_m")},
+            **{f: _STORAGE_ROOTS for f in ("tuber_length_m", "tuber_radius_m")},
+            "tuber_count": ("system == 'Tuberous cluster'", "Only for a tuberous cluster"),
+            "heart_roots": ("system == 'Heart' and taproot_share > 0", "Only for heart root systems"),
+            "stilt_height_dbh": ("system == 'Stilt'", "Only for stilt (prop) roots"),
+            "fine_orders": ("fine_roots > 0", "Only with fine roots"),
         },
         "bark": {
             "blockiness": ("pattern in ('Fissured', 'Plated', 'Annulated')", "Only for fissured, plated or annulated bark"),
@@ -78,8 +82,8 @@ RULES: dict = {
                 "pad_length_cm", "pad_width_ratio", "pad_thickness_ratio", "pad_levels", "pad_branching")},
             "central_length_cm": ("central_spines > 0", "Only when there are central spines"),
             "central_hook": ("central_spines > 0", "Only when there are central spines"),
-            "tuber_length_cm": ("root_system == 'Tuberous'", "Only for tuberous roots"),
-            "tuber_radius_ratio": ("root_system == 'Tuberous'", "Only for tuberous roots"),
+            "tuber_length_cm": ("root_system in ('Tuberous', 'Tuberous cluster')", "Only for storage roots"),
+            "tuber_radius_ratio": ("root_system in ('Tuberous', 'Tuberous cluster')", "Only for storage roots"),
             **{f: ("browning_height_m > 0", "Only when there is epidermal browning") for f in (
                 "equator_bias", "equator_azimuth_deg", "scaling_color", "barking_color")},
             "scar_color": ("scars > 0", "Only when there are scars"),
@@ -169,7 +173,8 @@ RULES["Fruit"] = {
 
 
 _ROOT = ("organ == 'Taproot'", "Only for storage roots")
-_TUBER = ("organ == 'Tubers'", "Only for tubers")
+_TUBER = ("organ in ('Tubers', 'Tuberous roots')", "Only for tubers and tuberous roots")
+_POTATO = ("organ == 'Tubers'", "Only for stem tubers (potato)")
 _HEADR = ("organ == 'Head'", "Only for inflorescence heads")
 RULES["Vegetable"] = {
     "profile": {
@@ -177,7 +182,8 @@ RULES["Vegetable"] = {
                               "exposure", "tail_cm", "rings", "rootlets", "rootlet_ranks", "root_color",
                               "shoulder_color", "shoulder_tint", "tip_color", "tip_tint")},
         **{f: _TUBER for f in ("tuber_count", "tuber_length_cm", "tuber_diameter_cm", "tuber_depth_cm",
-                               "stolon_length_cm", "eyes", "eye_depth", "tuber_color", "tuber_dots")},
+                               "tuber_color", "tuber_dots")},
+        **{f: _POTATO for f in ("stolon_length_cm", "eyes", "eye_depth")},
         **{f: _HEADR for f in ("head_type", "head_diameter_cm", "head_height_ratio", "head_levels", "florets",
                                "floret_scale", "head_color", "branch_color", "head_wrap")},
         "bud_size_mm": ("organ == 'Head' and head_type == 'Buds'", "Only for broccoli-type heads"),

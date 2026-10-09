@@ -118,6 +118,12 @@ TRAITS: list[TraitSpec] = [
     TraitSpec("roots.surface_exposure", 0.0, 1.0, cv=0.06),
     TraitSpec("roots.plank", 0.0, 5.0, cv=0.06),
     TraitSpec("roots.buttress_height_dbh", 0.0, 4.0, cv=0.06),
+    TraitSpec("roots.deep_roots", 0.0, 1.0, cv=0.06),
+    TraitSpec("roots.heart_roots", 3, 16, integer=True, cv=0.0),
+    TraitSpec("roots.fine_roots", 0.0, 3.0, cv=0.06),
+    TraitSpec("roots.fine_orders", 0, 3, integer=True, cv=0.0),
+    TraitSpec("roots.stilt_height_dbh", 0.5, 10.0, cv=0.06),
+    TraitSpec("roots.tuber_count", 1, 20, integer=True, cv=0.0),
     # Mechanics
     TraitSpec("biomechanics.wood_density_g_cm3", 0.15, 1.25, cv=0.05),
     TraitSpec("biomechanics.youngs_modulus_gpa", 3.0, 22.0, cv=0.05),

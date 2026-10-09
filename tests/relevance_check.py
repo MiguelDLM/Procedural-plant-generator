@@ -26,7 +26,7 @@ CASES = {
     "Tree": ["phoenix_canariensis", "pinus_sylvestris", "quercus_robur"],
     "Vine": ["ipomoea_purpurea", "hedera_helix", "vitis_vinifera", "cucurbita_pepo"],
     "Fruit": ["malus_domestica", "vitis_vinifera", "solanum_lycopersicum", "citrullus_lanatus"],
-    "Vegetable": ["daucus_carota", "solanum_tuberosum", "brassica_oleracea_italica"],
+    "Vegetable": ["daucus_carota", "solanum_tuberosum", "brassica_oleracea_italica", "ipomoea_batatas"],
     "Grass": ["zea_mays", "triticum_aestivum", "lolium_perenne"],
     "Orchid": ["phalaenopsis_hybrid", "paphiopedilum_insigne", "vanilla_planifolia", "oncidium_sphacelatum"],
 }

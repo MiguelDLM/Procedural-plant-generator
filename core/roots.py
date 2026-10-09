@@ -13,6 +13,17 @@ systems (Köstler, Brückner & Bibelriether 1968, "Die Wurzeln der Waldbäume"):
               aloes, crassulaceous rosettes)
     TUBEROUS  a napiform (turnip/carrot-shaped) storage taproot carrying fine laterals, as in some
               globose cacti (Lophophora, Ariocarpus)
+    TUBER_CLUSTER  fasciculate storage roots: several swollen adventitious roots radiating from the stem
+              base, each with a neck and fine roots (Dahlia, sweet potato, cassava, Peniocereus striatus)
+    STILT     shoot-borne prop roots arching from the lower stem into the soil, branching where they
+              enter it (Rhizophora, Pandanus, banyan figs)
+
+The coarse frame is completed by the 3D "cage" of mature trees (Danjon, Fourcaud & Bert 2005, New Phytol.
+167: 917): taproot or obliques, the zone of rapid taper of the surface roots and numerous sinkers and deep
+roots near the stem enclose a mass of soil, guyed by long horizontal surface roots. Sinkers near the stem
+therefore reach a large share of the maximum rooting depth (`deep_roots`), farther ones stay shallower.
+Heart systems are a hemispherical cage of several oblique roots that fork as they descend. Fine laterals of
+the next orders are grown on the frame by core.root_architecture (CRootBox / ArchiSimple rules).
 
 Succulents: most cacti are shallow-rooted, with laterals rarely deeper than 15-30 cm but extending
 up to ~10 m from a saguaro (Cannon 1911, The Root Habits of Desert Plants, Carnegie Inst. Publ. 131);
@@ -55,6 +66,8 @@ class RootSystemType(str, Enum):
     BUTTRESS = "Buttress"
     FIBROUS = "Fibrous"
     TUBEROUS = "Tuberous"   # Napiform storage taproot (Lophophora, Ariocarpus) with fine laterals
+    TUBER_CLUSTER = "Tuberous cluster"   # Fasciculate storage roots (Dahlia, sweet potato, cassava)
+    STILT = "Stilt"         # Prop roots arching from the lower stem (Rhizophora, Pandanus, banyan figs)
 
 
 # Jackson et al. (1996), Table 1: fitted depth coefficient beta per biome
@@ -93,6 +106,12 @@ class RootProfile:
     fibrous_spread_m: float = 0.0     # Horizontal reach of fibrous roots (0 = 1-3 m, palms)
     tuber_length_m: float = 0.12      # TUBEROUS storage root
     tuber_radius_m: float = 0.03
+    deep_roots: float = 0.6           # Depth of sinkers and obliques near the stem, share of max_depth_m (cage)
+    heart_roots: int = 7              # Oblique roots of a heart system
+    fine_roots: float = 1.0           # Density of fine lateral roots on the frame (0 = coarse frame only)
+    fine_orders: int = 2              # Orders of fine laterals
+    stilt_height_dbh: float = 3.0     # Height on the stem of the highest stilt roots (x DBH)
+    tuber_count: int = 6              # Storage roots of a tuberous cluster
 
 
 def sample_depth(beta: float, u: np.ndarray | float) -> np.ndarray:
@@ -124,6 +143,11 @@ class RootSystemEngine:
         if prof.system == RootSystemType.TUBEROUS:
             self._tuber(graph, R, rng)
             return graph
+        if prof.system == RootSystemType.TUBER_CLUSTER:
+            self._tuber_cluster(graph, R, rng)
+            return graph
+        self._dbh = dbh
+        self._cage = prof.zrt_dbh_ratio * dbh * 1.5 + R
 
         n = max(1, int(prof.lateral_count))
         weights = rng.lognormal(0.0, 0.35, n)
@@ -149,14 +173,54 @@ class RootSystemEngine:
 
         for i, (az, share) in enumerate(zip(azimuths, lat_shares)):
             r0 = R * share ** (1.0 / pipe_delta)
-            depth = float(np.clip(sample_depth(prof.beta, rng.uniform(0.15, 0.45)), 0.08, 0.8))
+            # Structural laterals run 10-50 cm deep (Danjon et al. 2005: horizontal surface roots)
+            depth = float(np.clip(sample_depth(prof.beta, rng.uniform(0.35, 0.8)), 0.1, 0.9))
             length = spread * rng.uniform(0.7, 1.15)
             self._lateral(graph, -1, -1, az, r0, R, length, depth, zrt, dbh, rng, order=1,
                           minor=i >= n_main)
 
         if prof.system in (RootSystemType.TAPROOT, RootSystemType.HEART) and prof.taproot_share > 0:
             self._vertical_roots(graph, R, dbh, zrt, rng)
+        if prof.system == RootSystemType.STILT:
+            self._stilts(graph, R, dbh, rng)
         return graph
+
+    # ------------------------------------------------------------------
+    def branching(self):
+        """Fine-lateral rules for this system (core.root_architecture), scaled by `fine_roots`."""
+        from .root_architecture import RootBranching
+        prof = self.profile
+        sysm = prof.system
+        # Woody laterals are mostly plagiotropic: they spread in all directions, few turn down
+        base = dict(orders=max(0, int(prof.fine_orders)), interbranch_cm=18.0, insertion_deg=60.0,
+                    length_ratio=0.3, max_length_cm=150.0, radius_ratio=0.35, gravitropism=0.04,
+                    tortuosity=0.5, min_radius_mm=1.2, budget=int(900 * prof.fine_roots))
+        if sysm == RootSystemType.PLATE:
+            base.update(gravitropism=0.02, insertion_deg=70.0)
+        elif sysm in (RootSystemType.FIBROUS, RootSystemType.TUBER_CLUSTER):
+            base.update(interbranch_cm=10.0, insertion_deg=80.0, gravitropism=0.15, radius_ratio=0.4,
+                        min_radius_mm=0.6, max_length_cm=60.0)
+        elif sysm == RootSystemType.TUBEROUS:
+            base.update(interbranch_cm=4.0, max_length_cm=25.0, min_radius_mm=0.4, radius_ratio=0.5)
+        if prof.fine_roots <= 0:
+            base["orders"] = 0
+        else:
+            base["interbranch_cm"] /= max(prof.fine_roots, 0.1) ** 0.5
+        return RootBranching(**base)
+
+    def fine_roots(self, graph: BranchingGraph, seed: int = 42, display_depth_m: float = 3.0,
+                   branching=None) -> BranchingGraph:
+        """Fine lateral roots of the next orders grown on the coarse frame (CRootBox / ArchiSimple rules)."""
+        from .root_architecture import lateral_roots
+        br = branching or self.branching()
+        out = BranchingGraph()
+        if br.orders <= 0 or not graph.axes:
+            return out
+        rng = np.random.default_rng(seed + 4049)
+        mothers = [(a.positions, a.radii) for a in graph.axes if len(a.positions) >= 3]
+        for P, R, order, _, _ in lateral_roots(mothers, br, rng, surface=0.0, floor=-max(0.2, display_depth_m)):
+            out.add_axis(Axis(P, np.maximum(R, br.min_radius_mm * 0.0005), 3 + order, -1, -1, 0.0))
+        return out
 
     # ------------------------------------------------------------------
     def _lateral(self, graph, parent_axis, parent_sample, az, r0, R, length, depth, zrt, dbh, rng, order,
@@ -196,7 +260,9 @@ class RootSystemEngine:
             aspect = None
             t = np.clip(s_h / max(1e-3, length), 0.0, 1.0)
             z = start[2] + (-depth - start[2]) * (1.0 - np.exp(-9.0 * t))
-        z = z + 0.03 * depth * np.sin(s_h * 2.1 + az)  # Soil heterogeneity
+        # Soil heterogeneity: the root dips and rises around obstacles and through soil layers
+        z = z + (0.03 + 0.12 * np.clip(s_h / max(zrt + R, 0.1) - 1.0, 0.0, 1.0)) * depth * \
+            np.sin(s_h * 1.3 + az * 3.0) + 0.06 * depth * np.sin(s_h * 3.7 + az)
         pts = np.column_stack([x, y, z])
         pts[0] = start
         keep = np.nonzero(pts[:, 2] < -self._display)[0]
@@ -216,7 +282,7 @@ class RootSystemEngine:
         # Sinkers and second-order laterals leave from the lower edge of the (plank) section
         half_height = radii * np.sqrt(axis.aspect) if axis.aspect is not None else radii
         self._sinkers(graph, aid, rng, dense_end=(prof.system == RootSystemType.BUTTRESS and primary),
-                      min_dist=(zrt + R) if primary else 0.0)
+                      min_dist=(0.45 * zrt + R) if primary else 0.0)
         n_br = int(s[-1] / max(0.2, prof.branch_spacing_m * (1.6 if order == 2 else 1.0)))
         for _ in range(n_br):
             # Branches arise beyond the zone of rapid taper, from the lower flank of the parent
@@ -244,13 +310,22 @@ class RootSystemEngine:
         f0 = float(np.clip(max(0.2, min_dist / max(1e-3, s[-1])), 0.0, 0.95))
         n = int(s[-1] * (0.95 - f0) / max(0.2, prof.sinker_spacing_m))
         positions = list(rng.uniform(f0, 0.95, n))
+        cage = getattr(self, "_cage", 0.0)
+        if min_dist > 0 and cage > min_dist:          # Extra sinkers inside the cage near the stem
+            f_cage = float(np.clip(cage / max(1e-3, s[-1]), f0, 0.95))
+            positions += list(rng.uniform(f0, f_cage, int(rng.integers(1, 3))))
         if dense_end:
             positions += [0.97, 0.99]  # Sinkers at buttress ends (Crook et al. 1997)
         for f in positions:
             j = max(1, min(len(pts) - 2, int(np.searchsorted(s, f * s[-1]))))
             top = pts[j] - np.array([0.0, 0.0, 0.85 * float(radii[j] * (np.sqrt(axis.aspect[j])
                                                                        if axis.aspect is not None else 1.0))])
-            target = float(np.clip(sample_depth(prof.beta, rng.uniform(0.7, 0.97)), 0.4, prof.max_depth_m))
+            dist = float(np.hypot(top[0], top[1]))
+            if dist < getattr(self, "_cage", 0.0):          # Cage near the stem (Danjon et al. 2005)
+                target = prof.max_depth_m * prof.deep_roots * rng.uniform(0.55, 1.15)
+            else:
+                target = sample_depth(prof.beta, rng.uniform(0.7, 0.97)) * (1.0 + prof.deep_roots)
+            target = float(np.clip(target, 0.4, prof.max_depth_m))
             depth = min(target, self._display) - (-top[2])
             if depth < 0.15:
                 continue
@@ -269,14 +344,17 @@ class RootSystemEngine:
             dirs = [(0.0, 0.0)]
             shares = [prof.taproot_share]
         else:
-            k = int(rng.integers(3, 6))
-            dirs = [(rng.uniform(0, 2 * math.pi), math.radians(rng.uniform(25, 55))) for _ in range(k)]
+            k = max(3, int(prof.heart_roots))
+            az0 = rng.uniform(0, 2 * math.pi)
+            dirs = [(az0 + 2 * math.pi * i / k + rng.normal(0, 0.25), math.radians(rng.uniform(25, 60)))
+                    for i in range(k)]
             w = rng.lognormal(0.0, 0.3, k)
             shares = list(prof.taproot_share * w / w.sum())
+        heart = prof.system != RootSystemType.TAPROOT
         for (az, tilt), share in zip(dirs, shares):
             r0 = R * share ** (1.0 / self._delta)
             depth = min(self._display, prof.max_depth_m * rng.uniform(0.6, 1.0) *
-                        (1.0 if prof.system == RootSystemType.TAPROOT else 0.6))
+                        (1.0 if not heart else prof.deep_roots * rng.uniform(0.7, 1.1)))
             length = depth / max(0.3, math.cos(tilt))
             k = max(4, int(length / 0.15))
             t = np.linspace(0.0, 1.0, k + 1)
@@ -289,6 +367,75 @@ class RootSystemEngine:
             p, r = refine_base(p, np.maximum(r, self.MIN_RADIUS), 0.5 * zrt)
             aid = graph.add_axis(Axis(p, r, 1, -1, -1, az))
             self._sinkers_from_taproot(graph, aid, rng)
+            if heart or depth > 1.2:
+                self._fork(graph, aid, az, tilt, rng)
+
+    def _fork(self, graph, aid, az, tilt, rng):
+        """Obliques and deep taproots fork as they descend (heart cage; taproot splitting at depth)."""
+        axis = graph.axes[aid]
+        n = len(axis.radii)
+        j = max(2, int(rng.uniform(0.3, 0.55) * (n - 1)))
+        top = axis.positions[j]
+        rest = max(0.2, (top[2] + self._display) * rng.uniform(0.6, 0.95))
+        a2 = az + rng.choice([-1.0, 1.0]) * math.radians(rng.uniform(30, 70))
+        t2 = min(math.radians(80), tilt + math.radians(rng.uniform(5, 25)))
+        L = rest / max(0.3, math.cos(t2))
+        k = max(4, int(L / 0.15))
+        t = np.linspace(0.0, 1.0, k + 1)
+        wob = rng.normal(0.0, self.profile.tortuosity * 0.04, (k + 1, 2)).cumsum(axis=0)
+        p = np.column_stack([top[0] + math.sin(t2) * L * t * math.cos(a2) + wob[:, 0],
+                             top[1] + math.sin(t2) * L * t * math.sin(a2) + wob[:, 1], top[2] - rest * t])
+        r = np.maximum(self.MIN_RADIUS, float(axis.radii[j]) * 0.75 * (1.0 - 0.7 * t))
+        graph.add_axis(Axis(p, r, 2, aid, j, a2))
+
+    def _stilts(self, graph, R, dbh, rng):
+        """Prop roots: leave the stem between the soil and stilt_height_dbh x DBH, arch outward and down
+        into the soil, where they branch into a few anchoring roots."""
+        prof = self.profile
+        n = max(3, int(prof.lateral_count))
+        H = prof.stilt_height_dbh * dbh
+        for i in range(n):
+            az = 2 * math.pi * i / n + rng.normal(0, 0.2)
+            h = H * rng.uniform(0.25, 1.0)
+            out = np.array([math.cos(az), math.sin(az), 0.0])
+            reach = h * rng.uniform(0.8, 1.5) + R
+            start = out * R * 0.6 + np.array([0.0, 0.0, h])
+            mid = out * (R + reach * 0.45) + np.array([0.0, 0.0, h * 1.05])
+            end = out * (R + reach) - np.array([0.0, 0.0, 0.25])
+            t = np.linspace(0.0, 1.0, 16)[:, None]
+            p = (1 - t) ** 2 * start + 2 * (1 - t) * t * mid + t ** 2 * end
+            r = np.maximum(self.MIN_RADIUS, R * rng.uniform(0.12, 0.2) * (1.0 - 0.3 * t[:, 0]))
+            aid = graph.add_axis(Axis(p, r, 1, -1, -1, az))
+            for _ in range(int(rng.integers(2, 5))):              # Anchors where it enters the soil
+                a2 = az + rng.normal(0, 0.9)
+                L = reach * rng.uniform(0.3, 0.7)
+                k = 6
+                u = np.linspace(0.0, 1.0, k + 1)
+                q = np.column_stack([end[0] + math.cos(a2) * L * u, end[1] + math.sin(a2) * L * u,
+                                     end[2] - (0.3 + 0.5 * rng.random()) * L * u])
+                graph.add_axis(Axis(q, np.maximum(self.MIN_RADIUS, r[-1] * 0.6 * (1 - 0.6 * u)), 2, aid, 15, a2))
+
+    def _tuber_cluster(self, graph, R, rng):
+        """Tuberous cluster: storage roots radiating from the stem base (neck, swollen spindle body, thin
+        tail), between thinner fibrous roots."""
+        prof = self.profile
+        n = max(1, int(prof.tuber_count))
+        for i in range(n):
+            az = 2 * math.pi * i / n + rng.normal(0, 0.35)
+            dip = math.radians(rng.uniform(25, 70))
+            L = min(self._display, prof.tuber_length_m * rng.uniform(0.7, 1.2))
+            k = 20
+            t = np.linspace(0.0, 1.0, k + 1)
+            d = np.array([math.cos(az) * math.cos(dip), math.sin(az) * math.cos(dip), -math.sin(dip)])
+            wob = rng.normal(0.0, 0.01, (k + 1, 3)).cumsum(axis=0) * L
+            p = np.array([R * 0.4 * math.cos(az), R * 0.4 * math.sin(az), -0.01]) + (L * t)[:, None] * d + \
+                wob * t[:, None] - np.column_stack([np.zeros(k + 1), np.zeros(k + 1), 0.15 * L * t ** 2])
+            # Neck, swollen body (widest about 40 % along), thin tail
+            body = np.sin(np.pi * np.clip((t - 0.08) / 0.8, 0, 1)) ** 0.8
+            r = prof.tuber_radius_m * rng.uniform(0.7, 1.15) * np.maximum(body, 0.08)
+            r = np.maximum(r, self.MIN_RADIUS)
+            graph.add_axis(Axis(p, r, 1, -1, -1, az))
+        self._fibrous(graph, R, rng)
 
     def _sinkers_from_taproot(self, graph, aid, rng):
         """Short laterals branching from the taproot at depth."""

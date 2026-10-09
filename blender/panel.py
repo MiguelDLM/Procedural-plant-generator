@@ -472,7 +472,8 @@ if BLENDER_AVAILABLE:
         show_roots: BoolProperty(name="Show Roots", default=True, update=U)
         root_display_depth: F("Display Depth (m)", 2.5, 0.2, 20.0, "Roots below this depth are not meshed")
         root_system: E("Root System", RootSystemType, "Heart",
-                       "Koestler et al. (1968) type: taproot, heart, plate; plus buttress and fibrous")
+                       "Koestler et al. (1968) type: taproot, heart, plate; plus buttress, stilt, fibrous "
+                       "(fasciculate) and storage roots")
         root_laterals: I("Main Laterals", 6, 1, 16, "Structural laterals (= stem flutes when buttressed)")
         root_spread: F("Spread / Crown", 1.4, 0.3, 4.0, "Lateral reach relative to crown radius")
         root_max_depth: F("Max Depth (m)", 3.0, 0.3, 60.0, "Maximum rooting depth (Canadell et al. 1996)")
@@ -485,6 +486,13 @@ if BLENDER_AVAILABLE:
         root_plank: F("Plank / Buttress", 0.5, 0.0, 5.0, "Vertical elongation of root sections near the stem")
         root_buttress_height: F("Collar Height (xDBH)", 0.6, 0.0, 4.0, "Where laterals merge into the stem")
         root_knees: I("Knees", 0, 0, 20, "Pneumatophores per lateral (Taxodium distichum)")
+        root_deep: F("Deep Roots (cage)", 0.6, 0.0, 1.0, "Depth reached by sinkers and obliques near the stem, "
+                     "share of the maximum depth (Danjon et al. 2005)")
+        root_heart: I("Heart Roots", 7, 3, 16, "Oblique roots of a heart system")
+        root_fine: F("Fine Roots", 1.0, 0.0, 3.0, "Density of fine lateral roots (CRootBox / ArchiSimple rules)")
+        root_fine_orders: I("Fine Root Orders", 2, 0, 3, "Branching orders of the fine laterals")
+        root_stilt_height: F("Stilt Height (xDBH)", 3.0, 0.5, 10.0, "Height of the highest prop roots")
+        root_tubers: I("Storage Roots", 6, 1, 20, "Storage roots of a tuberous cluster")
 
         # Topology
         radial_resolution: I("Trunk Sides", 12, 4, 32)
@@ -855,7 +863,8 @@ class PPG_PT_Roots(_PPGSub, Panel):
         col.separator()
         draw_tree_fields(col, p, ("root_laterals", "root_spread", "root_max_depth", "root_beta",
                                   "root_taproot_share", "root_zrt", "root_sinker_spacing", "root_exposure",
-                                  "root_plank", "root_buttress_height", "root_knees"))
+                                  "root_plank", "root_buttress_height", "root_knees", "root_deep", "root_heart",
+                                  "root_stilt_height", "root_tubers", "root_fine", "root_fine_orders"))
 
 
 class PPG_PT_Bark(_PPGSub, Panel):
