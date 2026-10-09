@@ -319,10 +319,10 @@ def update_grass_geometry(context, props, find_root):
         which = rng.integers(nvar, size=len(pts))
         for i in range(nvar):
             res = GrassEngine(prof).generate(seed=props.seed * 17 + i, detail=props.succ_detail * 0.8,
-                                             with_roots=False)
+                                             with_roots=props.show_roots)
             proto = _child_plain(context, root, f"_GrassProto{i}")
-            populate_mesh(proto.data, MeshData.concatenate([m for m in (res.leaves, res.culms, res.heads, res.ears)
-                                                            if len(m.vertices)]))
+            populate_mesh(proto.data, MeshData.concatenate([m for m in (res.leaves, res.culms, res.heads, res.ears,
+                                                                        res.roots) if len(m.vertices)]))
             _assign(proto, mat)
             proto.hide_viewport = proto.hide_render = True
             sel = pts[which == i]

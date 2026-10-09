@@ -801,17 +801,22 @@ class GrassEngine:
         from .root_architecture import RootBranching, grow_root, lateral_roots
         # Fibrous (fasciculate) system: crown (nodal) roots of similar girth leaving the base at steep
         # angles, the earliest (seminal) ones steepest; lateral roots densely spaced (CRootBox cereal
-        # parameters: inter-branch distance ~1 cm, laterals much thinner and shorter)
+        # parameters: inter-branch distance ~1 cm, laterals much thinner and shorter). Every tiller roots
+        # from its own basal nodes (Evers et al. 2005), the main shoot most.
         crown = []
-        for k in range(p.crown_roots):
+        bases = [np.asarray(C[0], float) for C in culm_paths] or [np.zeros(3)]
+        nt = len(bases)
+        n_roots = max(p.crown_roots, 2 * nt) if p.crown_roots > 0 else 0
+        for k in range(n_roots):
             a = k * GOLDEN
+            b = bases[0] if k < max(3, p.crown_roots // max(nt, 1)) else bases[k % nt]
             dip = math.radians(rng.uniform(35, 80) if k >= 3 else rng.uniform(65, 85))
             d = np.array([math.cos(a) * math.cos(dip), math.sin(a) * math.cos(dip), -math.sin(dip)])
             ln = p.root_length_cm * 0.01 * rng.uniform(0.6, 1.1)
             r0 = p.culm_radius_mm * 0.0004 + 0.0003
-            P, R = grow_root(np.array([0.0, 0.0, 0.005]), d, ln, r0, rng, gravitropism=0.2, tortuosity=0.35,
-                             surface=0.004, taper=0.3)
-            P[0] = (0.0, 0.0, 0.005)
+            start = np.array([b[0], b[1], 0.005])
+            P, R = grow_root(start, d, ln, r0, rng, gravitropism=0.2, tortuosity=0.35, surface=0.004, taper=0.3)
+            P[0] = start
             crown.append((P, R))
             parts.append(tube(P, R, 4, _attrs(len(P), 7)))
         if p.fine_roots > 0 and detail >= 0.4:
@@ -863,6 +868,15 @@ class GrassEngine:
                 H = min(H, 0.02)
             lv, cp, hd, er, C = self.shoot(base, axis, H, np.random.default_rng(seed * 101 + k), detail, main=k == 0,
                                            fertile=fertile)
+            if k > 0:
+                # A tiller grows from an axillary bud of the crown (the lowest, underground nodes of the
+                # mother shoot): a short underground stem joins its base to the crown
+                r_t = p.culm_radius_mm * 0.001 * 0.75
+                crown_pt = np.array([0.0, 0.0, -0.008])
+                low = base - UP * 0.012
+                seg = np.array([crown_pt + (low - crown_pt) * q for q in np.linspace(0, 1, 5)] +
+                               [low + (base + UP * 0.004 - low) * q for q in np.linspace(0.25, 1, 4)])
+                cp = cp + [tube(seg, np.full(len(seg), r_t), 6, _attrs(len(seg), 1))]
             leaves += lv
             culms += cp
             heads += hd

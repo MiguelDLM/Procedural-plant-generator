@@ -76,8 +76,22 @@ class TestGrasses(unittest.TestCase):
         from tests.geometry_checks import floating_islands
         for key in ("zea_mays", "lolium_perenne", "triticum_aestivum"):    # Nodes, sheaths, collars, ears
             _, r = _gen(key)
-            whole = MeshData.concatenate([m for m in (r.leaves, r.culms, r.heads, r.ears) if len(m.vertices)])
+            whole = MeshData.concatenate([m for m in (r.leaves, r.culms, r.heads, r.ears, r.roots) if len(m.vertices)])
             self.assertEqual(floating_islands(whole, 0.006), [], key)
+
+    def test_every_tiller_rooted(self):
+        """Each tiller joins the crown underground and has its own nodal roots."""
+        eng = GrassEngine(GRASS_CATALOG["triticum_aestivum"].profile)
+        r = eng.generate(seed=3, detail=0.6)
+        R = r.roots.vertices.astype(float)
+        # Tiller bases: lowest culm-surface vertices of every culm cluster near the soil
+        C = r.culms.vertices.astype(float)
+        low = C[np.abs(C[:, 2]) < 0.004]
+        for b in low[::max(1, len(low) // 40)]:
+            d = np.sqrt(((R[:, :2] - b[:2]) ** 2).sum(1)).min()
+            self.assertLess(d, 0.012)
+        under = C[C[:, 2] < -0.005]                                    # Underground tiller stems
+        self.assertGreater(len(under), 10)
 
     def test_inactive_grass_fields_do_not_change_geometry(self):
         from tests.relevance_check import check
