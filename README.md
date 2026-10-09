@@ -111,6 +111,37 @@ Wen et al. (2021) and the tillering rules of Evers et al. (2005):
 Presets: maize, bread wheat, barley, oats, rice, sorghum, sugarcane, perennial ryegrass (lawn), blue grama
 (navajita), fountain grass, pampas grass.
 
+### Orchids
+
+The **Orchid** growth form (`core/orchid.py`) follows the floral diagram of Orchidaceae and the growth habits
+described in floras and plant patents:
+
+- **Flower**: three sepals (dorsal, two lateral, or a fused **synsepal**) and three petals, the median one
+  modified into the **labellum** (its own identity: the "perianth code" of Hsu et al. 2015), plus the
+  **column** with anther cap and stigma, a **staminode** (Paphiopedilum) or **mentum** (Dendrobium). Tepals use
+  the leaf half-width model with claw, cupping, reflexion, twist and wavy margins.
+- **Labellum**: outline as a smooth union of claw, lateral lobes and mid lobe (with isthmus); the lamina bends
+  without stretching, so lateral lobes fold up around the column (Phalaenopsis), the lip rolls into a tube
+  (Cattleya, Dendrobium, Vanilla) or a **pouch** (Paphiopedilum); callus pad or keels, apical cirrhi, frilled
+  margins (sum of sine waves, McCord & Wünsche 2008).
+- **Resupination**: the ovary twists until the lip is lowermost, computed as the gravitropic angle needed
+  (Rowe et al. 2025); `resupination = 0` keeps the lip uppermost (*Prosthechea cochleata*). The six-ribbed
+  ovary shows the twist.
+- **Inflorescences** from the leaf axils (3rd–4th leaf below the apex in Phalaenopsis), the apex or base of a
+  pseudobulb, or the nodes of old canes. The axis is an elastic cantilever (dθ/ds = M/EI, EI ∝ r⁴, stiff
+  peduncle) loaded by its flowers: erect, arching or pendent. Flowers open from the base up and turn to the
+  light; capsules (vanilla beans) can replace some flowers.
+- **Pigmentation**: full colour, spots and venation (the three Phalaenopsis patterns of PeMYB2/11/12), bars,
+  coloured tips, lip throat, all drawn in organ space so spots keep their size.
+- **Habit**: monopodial stem with two-ranked fleshy leaves; sympodial growths along a zigzag rhizome with
+  pseudobulbs (widest point, fullness, compression, ridges, nodes, papery sheaths, wrinkled leafless
+  backbulbs) and leaves at the apex, in a basal fan or along canes; or a climbing vine on a post with one
+  clinging root per node opposite the leaf (Vanilla). Thick aerial roots with velamen and a green tip.
+
+Presets (measurements from USPTO plant patents, Flora of China, POWO, Flora of North America): moth orchid
+(*Phalaenopsis*), *Cattleya labiata*, *Dendrobium nobile*, *Paphiopedilum insigne*, *Oncidium sphacelatum*,
+*Cymbidium* hybrids, *Prosthechea cochleata* (clamshell orchid) and *Vanilla planifolia*.
+
 ### Vegetables: root crops, tubers and heads
 
 The **Vegetable** growth form (`core/vegetable.py`) covers the harvested organs that are not fruits:

@@ -40,6 +40,8 @@ try:
     from . import vegetables as VG
     from ..core.grass_db import GRASS_CATALOG
     from . import grasses as GR
+    from ..core.orchid_db import ORCHID_CATALOG
+    from . import orchids as OR
 except (ImportError, ValueError):
     from core.species_db import get_preset_names, get_species_preset
     from core.architecture import HalleOldemanModel, PhyllotaxisType, CrownShape
@@ -69,6 +71,8 @@ except (ImportError, ValueError):
     import blender.vegetables as VG
     from core.grass_db import GRASS_CATALOG
     import blender.grasses as GR
+    from core.orchid_db import ORCHID_CATALOG
+    import blender.orchids as OR
 
 
 # -----------------------------------------------------------------------------
@@ -168,6 +172,8 @@ def on_form_change(self, context):
         on_vegetable_species(self, context)
     elif self.growth_form == 'Grass':
         on_grass_species(self, context)
+    elif self.growth_form == 'Orchid':
+        on_orchid_species(self, context)
     else:
         _sync_flowers(self)
         apply_succulent_preset(self, context)
@@ -191,6 +197,18 @@ def on_grass_species(self, context):
     set_updating(True)
     try:
         GR.write_grass_to_props(self, self.grass_species)
+    finally:
+        set_updating(False)
+    if getattr(self, "auto_update", True):
+        schedule_update()
+
+
+def on_orchid_species(self, context):
+    if is_updating():
+        return
+    set_updating(True)
+    try:
+        OR.write_orchid_to_props(self, self.orchid_species)
     finally:
         set_updating(False)
     if getattr(self, "auto_update", True):
@@ -501,7 +519,12 @@ if BLENDER_AVAILABLE:
             ('Vegetable', "Vegetable (root / tuber / head)", "Root crops (carrot, radish, beet), potato tubers and "
              "brassica heads (cauliflower, broccoli, Romanesco)", 'OUTLINER_OB_POINTCLOUD', 6),
             ('Grass', "Grass / Cereal", "Grasses: maize, wheat, barley, oats, rice, sorghum, sugarcane, lawn and "
-             "ornamental grasses; single clump or lawn / meadow patch", 'STRANDS', 7)]),
+             "ornamental grasses; single clump or lawn / meadow patch", 'STRANDS', 7),
+            ('Orchid', "Orchid", "Orchids: Phalaenopsis, Cattleya, Dendrobium, Oncidium, Cymbidium, Paphiopedilum, "
+             "Prosthechea, Vanilla; labellum, column, resupination, pseudobulbs and aerial roots",
+             'OUTLINER_OB_LIGHTPROBE', 8)]),
+        "orchid_species": EnumProperty(name="Orchid", items=enum_items("Orchid"),
+                                       default=item_number("phalaenopsis_hybrid"), update=on_orchid_species),
         "grass_species": EnumProperty(name="Grass", items=enum_items("Grass"), default=item_number("zea_mays"),
                                       update=on_grass_species),
         "vegetable_species": EnumProperty(name="Vegetable", items=enum_items("Vegetable"),
@@ -556,6 +579,7 @@ if BLENDER_AVAILABLE:
     PPG_Properties.__annotations__.update(fruit_properties(U))
     PPG_Properties.__annotations__.update(VG.vegetable_properties(U))
     PPG_Properties.__annotations__.update(GR.grass_properties(U))
+    PPG_Properties.__annotations__.update(OR.orchid_properties(U))
     PPG_Properties.__annotations__.update(forest_properties())
 else:
     PPG_Properties = None
@@ -620,6 +644,13 @@ class PPG_PT_MainPanel(Panel):
             box.prop(props, "species_enum", text="")
             spec = get_species_preset(props.species_enum)
             family, habit, biome = spec.family, spec.growth_habit, spec.biome
+        elif props.growth_form == 'Orchid':
+            box.prop(props, "orchid_species", text="")
+            spec = ORCHID_CATALOG.get(props.orchid_species)
+            if spec is None:
+                box.label(text="Preset not found: choose one from the list", icon='ERROR')
+                return
+            family, habit, biome = spec.family, props.orc_habit, spec.common_name
         elif props.growth_form == 'Grass':
             box.prop(props, "grass_species", text="")
             spec = GRASS_CATALOG.get(props.grass_species)
@@ -846,7 +877,7 @@ class PPG_PT_Topology(_PPGSub, Panel):
     bl_label = "Topology & Shading"
     bl_idname = "PPG_PT_topology"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Vine', 'Vegetable', 'Grass')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Vine', 'Vegetable', 'Grass', 'Orchid')
 
     def draw(self, context):
         p = context.scene.ppg_properties
@@ -911,7 +942,7 @@ class PPG_PT_Presets(_PPGSub, Panel):
     bl_label = "Presets (Import / Export)"
     bl_idname = "PPG_PT_presets"
     bl_options = {'DEFAULT_CLOSED'}
-    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit', 'Vegetable', 'Grass')
+    forms = ('Tree', 'Cactus', 'Rosette', 'Flower', 'Vine', 'Fruit', 'Vegetable', 'Grass', 'Orchid')
 
     def draw(self, context):
         draw_presets(self.layout, context.scene.ppg_properties)
@@ -1150,6 +1181,26 @@ def _grass_panel(index, title, names):
         "forms": ('Grass',), "draw": draw, "poll": poll})
 
 
+def _orchid_panel(index, title, names):
+    def draw(self, context):
+        p = context.scene.ppg_properties
+        col = self.layout.column(align=True)
+        draw_fields(col, p, "Orchid", "profile", [(OR.ORC + n, n) for n in names], OR.orchid_values(p))
+
+    @classmethod
+    def poll(cls, context):
+        p = getattr(context.scene, "ppg_properties", None)
+        if p is None or p.growth_form != 'Orchid':
+            return False
+        values = OR.orchid_values(p)
+        return any(applies("Orchid", "profile", n, values) for n in names)
+    return type(f"PPG_PT_Orchid_{index}", (_PPGSub, Panel), {
+        "bl_label": title, "bl_idname": f"PPG_PT_orchid_{index}", "bl_options": {'DEFAULT_CLOSED'} if index else set(),
+        "forms": ('Orchid',), "draw": draw, "poll": poll})
+
+
+ORCHID_PANELS = tuple(_orchid_panel(i, t, n) for i, (t, n) in enumerate(OR.LAYOUT))
+
 GRASS_PANELS = (PPG_PT_GrassPatch,) + tuple(_grass_panel(i, t, n) for i, (t, n) in enumerate(GR.LAYOUT))
 
 VEG_PANELS = tuple(_veg_panel(i, t, pre, n) for i, (t, pre, n) in enumerate(VG.LAYOUT))
@@ -1161,4 +1212,5 @@ SUCCULENT_PANELS = tuple(_succulent_panel(f, i, t, n) for f in (GrowthForm.CACTU
 
 PANEL_CLASSES = (PPG_PT_MainPanel, PPG_PT_Variation, PPG_PT_Trunk, PPG_PT_Crown, PPG_PT_Leaf,
                  PPG_PT_Venation, PPG_PT_Foliage, PPG_PT_Roots, PPG_PT_Bark) + SUCCULENT_PANELS + VINE_PANELS + VEG_PANELS + GRASS_PANELS + \
+                ORCHID_PANELS + \
                 (PPG_PT_Flowers,) + FLOWER_PANELS + FRUIT_PANELS + (PPG_PT_Forest, PPG_PT_Presets, PPG_PT_Topology)

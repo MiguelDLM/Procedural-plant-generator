@@ -121,6 +121,18 @@ Trait values of a Grass preset (all optional when 'base' is given).
 | `notes` | string |  |  |  | Free text: distinctive features, sources of the values. |
 | `profile` | object | | | | see [GrassProfile](#grassprofile) |
 
+## OrchidPreset
+
+Trait values of an Orchid preset (all optional when 'base' is given).
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `scientific_name` | string |  |  |  | Binomial name, e.g. 'Phalaenopsis amabilis'. |
+| `common_name` | string |  |  |  | Vernacular name(s). |
+| `family` | string |  |  |  | Botanical family ('Orchidaceae'). |
+| `notes` | string |  |  |  | Free text: habit, distinctive features, sources of the values. |
+| `profile` | object | | | | see [OrchidProfile](#orchidprofile) |
+
 ## AllometricProfile
 
 Empirical scaling parameters for a plant or tree taxon.
@@ -740,4 +752,141 @@ Habit of a grass. Lengths in cm unless noted (culm height in m).
 | `root_length_cm` | number | cm | 1.0 – 200.0 | 25.0 | Crown root length shown, cm. |
 | `brace_roots` | integer |  | 0 – 30 | 0 | Prop roots from the lowest nodes (maize) |
 | `ripeness` | number |  | 0.0 – 1.0 | 0.0 | 0 green .. 1 golden, ripe |
+
+## OrchidProfile
+
+Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unless noted.
+
+| Field | Type | Unit | Range | Default | Meaning |
+|---|---|---|---|---|---|
+| `habit` | enum: `Monopodial`, `Sympodial`, `Climbing` |  |  | Monopodial | Habit and stems |
+| `growths` | integer |  | 1 – 12 | 4 | Sympodial growths (pseudobulbs / fans) along the rhizome Applies when: habit == 'Sympodial'. |
+| `rhizome_cm` | number | cm | 0.0 – 20.0 | 3.0 | Rhizome length between successive growths Applies when: habit == 'Sympodial'. |
+| `growth_angle_deg` | number | deg | 0.0 – 60.0 | 25.0 | The rhizome turns alternately by this angle at each growth (zigzag) Applies when: habit == 'Sympodial'. |
+| `leafless_growths` | integer |  | 0 – 10 | 0 | Oldest growths that have shed their leaves (backbulbs) Applies when: habit == 'Sympodial'. |
+| `stem_length_cm` | number | cm | 1.0 – 600.0 | 4.0 | Monopodial stem; climbing: length of the vine Applies when: habit != 'Sympodial'. |
+| `stem_radius_mm` | number | mm | 1.0 – 20.0 | 6.0 | Stem / rhizome radius |
+| `internode_cm` | number | cm | 0.3 – 20.0 | 1.0 | Between leaves along a stem or cane Applies when: habit != 'Sympodial' or leaf_placement == 'Along'. |
+| `pseudobulb_cm` | number | cm | 0.0 – 80.0 | 0.0 | Pseudobulb length (0 = none) Applies when: habit == 'Sympodial'. |
+| `pseudobulb_diameter_cm` | number | cm | 0.3 – 10.0 | 2.0 | Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `bulb_widest` | number |  | 0.1 – 0.9 | 0.4 | Position of the widest point (0.3 ovoid .. 0.8 club-shaped) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `bulb_fullness` | number |  | 0.05 – 1.5 | 0.8 | 0.2 cylindrical cane .. 1 spindle / egg Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `bulb_flatten` | number |  | 0.0 – 0.8 | 0.0 | Lateral compression (Oncidium, Prosthechea) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `bulb_ridges` | integer |  | 0 – 12 | 0 | Longitudinal ridges and furrows (sulcate pseudobulbs) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `bulb_lean_deg` | number | deg | 0.0 – 60.0 | 10.0 | Lean of the growths away from the rhizome axis Applies when: habit == 'Sympodial'. |
+| `sheath_cover` | number |  | 0.0 – 1.0 | 0.0 | Share of the pseudobulb covered by papery sheaths, from the base Applies when: habit == 'Sympodial' and pseudobulb_cm > 0. |
+| `support_height_m` | number | m | 0.3 – 4.0 | 1.5 | Climbing: height of the post the vine climbs Applies when: habit == 'Climbing'. |
+| `support_radius_cm` | number | cm | 1.0 – 30.0 | 5.0 | Applies when: habit == 'Climbing'. |
+| `stem_color` | colour (sRGB 0..1) |  |  | [0.38, 0.48, 0.2] | Colour of stems, canes, pseudobulbs and rhizome (sRGB 0..1). |
+| `sheath_color` | colour (sRGB 0..1) |  |  | [0.78, 0.72, 0.58] | Colour of the papery sheaths, dry node rings and bracts (sRGB 0..1). |
+| `leaf_placement` | enum: `Apex`, `Base`, `Along` |  |  | Along | Leaves Applies when: habit == 'Sympodial'. |
+| `leaves` | integer |  | 0 – 30 | 6 | Living leaves (per growth when sympodial) |
+| `leaf_length_cm` | number | cm | 1.0 – 120.0 | 20.0 | Length of the largest (oldest) leaves, cm. |
+| `leaf_width_cm` | number | cm | 0.2 – 20.0 | 8.0 | Width of the leaves at their widest point, cm. |
+| `leaf_thickness_mm` | number | mm | 0.2 – 8.0 | 2.0 | Fleshy leaves: Phalaenopsis ~2, Vanilla ~2, Cymbidium ~0.8 |
+| `leaf_widest` | number |  | 0.1 – 0.9 | 0.6 | Position of the widest point |
+| `leaf_apex_deg` | number | deg | 10.0 – 179.0 | 120.0 | Angle at the apex (obtuse ~120, acute ~50) |
+| `leaf_angle_deg` | number | deg | 0.0 – 110.0 | 60.0 | Insertion angle from the vertical |
+| `leaf_droop` | number |  | 0.0 – 1.0 | 0.3 | Arching of the blade under its weight |
+| `leaf_fold` | number |  | 0.0 – 1.0 | 0.3 | Conduplicate V-fold along the midrib (keel) |
+| `leaf_twist_deg` | number | deg | 0.0 – 90.0 | 10.0 | Random twist along the leaf, degrees. |
+| `leaf_size_gradient` | number |  | 0.0 – 0.9 | 0.3 | Youngest leaves smaller by this fraction |
+| `leaf_color` | colour (sRGB 0..1) |  |  | [0.12, 0.3, 0.1] | Leaf colour (sRGB 0..1). |
+| `leaf_mottle` | number |  | 0.0 – 1.0 | 0.0 | Tessellated / mottled leaves (Paphiopedilum) |
+| `mottle_color` | colour (sRGB 0..1) |  |  | [0.3, 0.45, 0.22] | Applies when: leaf_mottle > 0. |
+| `roots` | integer |  | 0 – 40 | 8 | Aerial roots (per growth when sympodial) |
+| `root_diameter_mm` | number | mm | 0.5 – 12.0 | 5.0 | Thick roots: velamen around the cortex |
+| `root_length_cm` | number | cm | 1.0 – 150.0 | 25.0 | Length of the aerial roots, cm. |
+| `root_wander` | number |  | 0.0 – 1.0 | 0.6 | Meandering of the agravitropic aerial roots |
+| `aerial_share` | number |  | 0.0 – 1.0 | 0.5 | Share of the roots growing in the air (others go into the substrate) Applies when: habit != 'Climbing'. |
+| `root_color` | colour (sRGB 0..1) |  |  | [0.78, 0.8, 0.72] | Velamen (silvery when dry) |
+| `root_tip_color` | colour (sRGB 0..1) |  |  | [0.4, 0.62, 0.25] | Green growing tip |
+| `infl_origin` | enum: `Leaf axil`, `Apex`, `Base`, `Upper nodes` |  |  | Leaf axil | Inflorescence Applies when: habit == 'Sympodial'. |
+| `inflorescences` | integer |  | 0 – 12 | 1 | Number of inflorescences (spikes, racemes, panicles or node clusters). |
+| `flowers` | integer |  | 1 – 60 | 8 | Flowers per inflorescence (per branch when branched) |
+| `peduncle_cm` | number | cm | 0.0 – 150.0 | 25.0 | Stalk below the first flower |
+| `rachis_cm` | number | cm | 0.0 – 150.0 | 25.0 | Flower-bearing part |
+| `spike_radius_mm` | number | mm | 0.5 – 8.0 | 2.5 | Radius of the inflorescence axis at its base, mm. |
+| `spike_angle_deg` | number | deg | 0.0 – 90.0 | 30.0 | Emergence angle from the vertical |
+| `spike_flex` | number |  | 0.0 – 1.0 | 0.5 | 0 stiff, erect .. 1 pendent under the weight of the flowers |
+| `branches` | integer |  | 0 – 30 | 0 | Lateral branches (panicle: Oncidium) |
+| `branch_ratio` | number |  | 0.05 – 1.0 | 0.4 | Branch length relative to the rachis Applies when: branches > 0. |
+| `divergence_deg` | number | deg | 0.0 – 180.0 | 180.0 | Between successive flowers (180 two-ranked, 137.5 spiral) |
+| `pedicel_cm` | number | cm | 0.2 – 15.0 | 4.0 | Pedicel and ovary |
+| `flower_facing` | number |  | 0.0 – 1.0 | 0.7 | 0 facing away from the axis .. 1 all turned to the light |
+| `maturation` | number |  | 0.0 – 1.0 | 0.3 | Acropetal opening: share of buds at the tip |
+| `bract_mm` | number | mm | 0.0 – 40.0 | 4.0 | Floral and peduncle bracts |
+| `spike_color` | colour (sRGB 0..1) |  |  | [0.25, 0.35, 0.18] | Colour of peduncle, rachis, pedicels and ovaries (sRGB 0..1). |
+| `fruit_set` | number |  | 0.0 – 1.0 | 0.0 | Share of flowers replaced by capsules (pods) |
+| `capsule_cm` | number | cm | 0.5 – 30.0 | 5.0 | Applies when: fruit_set > 0. |
+| `capsule_diameter_cm` | number | cm | 0.2 – 5.0 | 1.2 | Applies when: fruit_set > 0. |
+| `capsule_color` | colour (sRGB 0..1) |  |  | [0.35, 0.45, 0.15] | Applies when: fruit_set > 0. |
+| `resupination` | number |  | 0.0 – 1.0 | 1.0 | 1 lip lowermost (gravitropic twist of the ovary) .. 0 lip uppermost |
+| `flower_tilt_deg` | number | deg | -45.0 – 60.0 | 10.0 | Face tilted upward |
+| `sepal_length_cm` | number | cm | 0.2 – 50.0 | 4.5 | Dorsal sepal |
+| `sepal_width_cm` | number | cm | 0.05 – 10.0 | 3.0 | Width of the dorsal sepal, cm. |
+| `sepal_widest` | number |  | 0.1 – 0.9 | 0.5 | Position of the widest point of the sepals, 0 base .. 1 tip. |
+| `sepal_apex_deg` | number | deg | 10.0 – 179.0 | 110.0 | Angle at the sepal apex, degrees (small = acuminate, 180 = rounded). |
+| `lateral_sepal_deg` | number | deg | -90.0 – 90.0 | 35.0 | Lateral sepals below the horizontal Applies when: synsepal < 0.85. |
+| `lateral_sepal_scale` | number |  | 0.3 – 2.0 | 1.0 | Lateral / dorsal sepal size |
+| `synsepal` | number |  | 0.0 – 1.0 | 0.0 | Lateral sepals joined behind the lip (Paphiopedilum: 1) |
+| `sepal_cup` | number |  | -0.5 – 1.0 | 0.15 | Transverse concavity of the sepals (negative: margins recurved). |
+| `sepal_reflex_deg` | number | deg | -90.0 – 120.0 | 10.0 | Bending back along the sepal |
+| `sepal_twist_deg` | number | deg | 0.0 – 720.0 | 0.0 | Twist along the sepals, degrees (Prosthechea: twisted, hanging). |
+| `sepal_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy sepal margins, 0..1. |
+| `petal_length_cm` | number | cm | 0.2 – 90.0 | 5.0 | Length of the lateral petals, cm. |
+| `petal_width_cm` | number | cm | 0.05 – 10.0 | 4.0 | Width of the lateral petals, cm. |
+| `petal_widest` | number |  | 0.1 – 0.9 | 0.6 | Position of the widest point of the petals, 0 base .. 1 tip. |
+| `petal_apex_deg` | number | deg | 10.0 – 179.0 | 140.0 | Angle at the petal apex, degrees (small = acuminate, 180 = rounded). |
+| `petal_claw` | number |  | 0.0 – 0.6 | 0.2 | Narrow stalk-like base (fraction of the length) |
+| `petal_angle_deg` | number | deg | -80.0 – 80.0 | 10.0 | Above the horizontal (negative: drooping, Paphiopedilum) |
+| `petal_cup` | number |  | -0.5 – 1.0 | 0.1 | Transverse concavity of the petals (negative: margins recurved). |
+| `petal_reflex_deg` | number | deg | -90.0 – 120.0 | 5.0 | Bending back along the petals, degrees. |
+| `petal_twist_deg` | number | deg | 0.0 – 720.0 | 0.0 | Twist along the petals, degrees (Paphiopedilum, Prosthechea). |
+| `petal_wave` | number |  | 0.0 – 1.0 | 0.0 | Wavy / frilled margins (Cattleya) |
+| `perianth_forward_deg` | number | deg | -40.0 – 80.0 | 8.0 | Tepals raised forward from the floral plane (cupped flowers) |
+| `lip_length_cm` | number | cm | 0.2 – 20.0 | 2.0 | Flower: labellum (lip) |
+| `lip_width_cm` | number | cm | 0.1 – 15.0 | 2.5 | Across the spread lateral lobes (or the whole lip) |
+| `lip_angle_deg` | number | deg | -30.0 – 100.0 | 35.0 | Base direction below the floral axis (0 forward .. 90 straight down) |
+| `lip_deflex_deg` | number | deg | -60.0 – 150.0 | 30.0 | Further bending down along the lip (recurved mid lobe) |
+| `lip_claw` | number |  | 0.02 – 0.8 | 0.25 | Half-width of the narrow base, relative to the lip |
+| `side_lobes` | number |  | 0.0 – 1.5 | 0.0 | Lateral lobes, relative half-width (0 = entire lip) |
+| `side_lobe_pos` | number |  | 0.05 – 0.8 | 0.35 | Their centre along the lip Applies when: side_lobes > 0. |
+| `side_lobe_length` | number |  | 0.1 – 0.9 | 0.45 | Their extent along the lip Applies when: side_lobes > 0. |
+| `side_lobe_erect_deg` | number | deg | 0.0 – 180.0 | 0.0 | Fold of the lateral lobes up around the column Applies when: side_lobes > 0. |
+| `midlobe_width` | number |  | 0.1 – 1.5 | 0.6 | Mid lobe width relative to the lip width Applies when: side_lobes > 0. |
+| `isthmus` | number |  | 0.0 – 0.95 | 0.0 | Narrowing between lateral lobes and mid lobe (pandurate lips) Applies when: side_lobes > 0. |
+| `lip_widest` | number |  | 0.1 – 0.9 | 0.5 | Position of the widest point of the mid lobe (or entire lip), 0 base .. 1 apex. |
+| `lip_apex_deg` | number | deg | 10.0 – 179.0 | 120.0 | Angle at the lip apex, degrees (small = pointed, 180 = rounded). |
+| `lip_roll` | number |  | 0.0 – 1.2 | 0.0 | 0 flat .. 1 rolled into a tube around the column |
+| `lip_roll_extent` | number |  | 0.05 – 1.0 | 0.5 | Share of the lip that is rolled, from the base Applies when: lip_roll > 0. |
+| `lip_sac` | number |  | 0.0 – 1.0 | 0.0 | Inflated pouch (Paphiopedilum slipper) |
+| `lip_wave` | number |  | 0.0 – 1.5 | 0.0 | Undulate / crisped margin |
+| `lip_waves` | number |  | 1.0 – 12.0 | 4.0 | Waves along the margin Applies when: lip_wave > 0. |
+| `callus_mm` | number | mm | 0.0 – 10.0 | 0.0 | Height of the callus (pad or ridges) on the lip disc |
+| `callus_ridges` | integer |  | 0 – 9 | 0 | 0 one fleshy pad; >0 parallel keels (lamellae) Applies when: callus_mm > 0. |
+| `callus_pos` | number |  | 0.0 – 0.9 | 0.35 | Centre of the callus along the lip Applies when: callus_mm > 0. |
+| `cirrhi_mm` | number | mm | 0.0 – 40.0 | 0.0 | Two filiform appendages at the lip apex (Phalaenopsis) |
+| `column_length_cm` | number | cm | 0.1 – 6.0 | 1.0 | Flower: column |
+| `column_width_mm` | number | mm | 1.0 – 15.0 | 6.0 | Column (gynostemium) diameter, mm. |
+| `column_arch` | number |  | -0.5 – 1.0 | 0.3 | Arching of the column toward the lip |
+| `staminode_mm` | number | mm | 0.0 – 25.0 | 0.0 | Shield-like staminode on the column (Paphiopedilum) |
+| `mentum_mm` | number | mm | 0.0 – 30.0 | 0.0 | Chin formed by the column foot and the lateral sepals (Dendrobium) |
+| `sepal_color` | colour (sRGB 0..1) |  |  | [0.97, 0.96, 0.97] | Flower colours and pigmentation patterns (full colour, spots, venation: PeMYB2 / 11 / 12, Hsu et al. 2015) |
+| `petal_color` | colour (sRGB 0..1) |  |  | [0.97, 0.96, 0.97] | Lateral petal colour (sRGB 0..1). |
+| `lip_color` | colour (sRGB 0..1) |  |  | [0.95, 0.85, 0.4] | Labellum colour (sRGB 0..1). |
+| `lip_throat_color` | colour (sRGB 0..1) |  |  | [0.95, 0.8, 0.25] | Colour of the lip base / throat (inside a tube) (sRGB 0..1). |
+| `callus_color` | colour (sRGB 0..1) |  |  | [0.95, 0.75, 0.15] | Colour of the callus, ridges and cirrhi (sRGB 0..1). |
+| `column_color` | colour (sRGB 0..1) |  |  | [0.96, 0.95, 0.92] | Column colour (sRGB 0..1). |
+| `anther_color` | colour (sRGB 0..1) |  |  | [0.95, 0.85, 0.55] | Colour of the anther cap and staminode (sRGB 0..1). |
+| `pattern_color` | colour (sRGB 0..1) |  |  | [0.65, 0.1, 0.35] | Colour of spots, bars and venation (anthocyanin) (sRGB 0..1). |
+| `tip_color` | colour (sRGB 0..1) |  |  | [0.75, 0.3, 0.6] | Applies when: tip_amount > 0. |
+| `tip_amount` | number |  | 0.0 – 1.0 | 0.0 | Coloured tips of sepals, petals and lip (Dendrobium nobile) |
+| `spots` | number |  | 0.0 – 1.0 | 0.0 | Spots on sepals and petals |
+| `spot_size_mm` | number | mm | 0.3 – 10.0 | 2.0 | Applies when: spots > 0 or lip_spots > 0. |
+| `spot_stretch` | number |  | 1.0 – 6.0 | 1.0 | >1 transverse bars (Oncidium sepals) Applies when: spots > 0 or lip_spots > 0. |
+| `veins` | number |  | 0.0 – 1.0 | 0.0 | Coloured venation on sepals and petals |
+| `lip_spots` | number |  | 0.0 – 1.0 | 0.0 | Spots on the lip and callus, 0..1. |
+| `lip_veins` | number |  | 0.0 – 1.0 | 0.0 | Coloured venation on the lip, 0..1. |
+| `sheen` | number |  | 0.0 – 1.0 | 0.3 | Crystalline / waxy sheen of the tepals |
 

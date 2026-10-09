@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
   "title": "Procedural Plant Generator preset",
-  "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable, grass) or fruit described by measurable traits. See docs/PRESETS.md.",
+  "description": "One plant (tree, cactus, rosette succulent, flower, vine, vegetable, grass, orchid) or fruit described by measurable traits. See docs/PRESETS.md.",
   "type": "object",
   "required": [
     "format",
@@ -32,7 +32,8 @@
         "Vine",
         "Fruit",
         "Vegetable",
-        "Grass"
+        "Grass",
+        "Orchid"
       ]
     },
     "id": {
@@ -213,6 +214,22 @@
         "properties": {
           "preset": {
             "$ref": "#/$defs/GrassPreset"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "growth_form": {
+            "const": "Orchid"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preset": {
+            "$ref": "#/$defs/OrchidPreset"
           }
         }
       }
@@ -5263,6 +5280,1224 @@
         }
       },
       "description": "Trait values of a Grass preset (all optional when 'base' is given)."
+    },
+    "OrchidProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "habit": {
+          "type": "string",
+          "enum": [
+            "Monopodial",
+            "Sympodial",
+            "Climbing"
+          ],
+          "description": "Habit and stems",
+          "default": "Monopodial"
+        },
+        "growths": {
+          "type": "integer",
+          "description": "Sympodial growths (pseudobulbs / fans) along the rhizome Applies when: habit == 'Sympodial'.",
+          "minimum": 1,
+          "maximum": 12,
+          "default": 4,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "rhizome_cm": {
+          "type": "number",
+          "description": "Rhizome length between successive growths Applies when: habit == 'Sympodial'.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 20.0,
+          "default": 3.0,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "growth_angle_deg": {
+          "type": "number",
+          "description": "The rhizome turns alternately by this angle at each growth (zigzag) Applies when: habit == 'Sympodial'.",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 60.0,
+          "default": 25.0,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "leafless_growths": {
+          "type": "integer",
+          "description": "Oldest growths that have shed their leaves (backbulbs) Applies when: habit == 'Sympodial'.",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 0,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "stem_length_cm": {
+          "type": "number",
+          "description": "Monopodial stem; climbing: length of the vine Applies when: habit != 'Sympodial'.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 600.0,
+          "default": 4.0,
+          "x-applies-when": "habit != 'Sympodial'"
+        },
+        "stem_radius_mm": {
+          "type": "number",
+          "description": "Stem / rhizome radius",
+          "x-unit": "mm",
+          "minimum": 1.0,
+          "maximum": 20.0,
+          "default": 6.0
+        },
+        "internode_cm": {
+          "type": "number",
+          "description": "Between leaves along a stem or cane Applies when: habit != 'Sympodial' or leaf_placement == 'Along'.",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 20.0,
+          "default": 1.0,
+          "x-applies-when": "habit != 'Sympodial' or leaf_placement == 'Along'"
+        },
+        "pseudobulb_cm": {
+          "type": "number",
+          "description": "Pseudobulb length (0 = none) Applies when: habit == 'Sympodial'.",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 80.0,
+          "default": 0.0,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "pseudobulb_diameter_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.3,
+          "maximum": 10.0,
+          "default": 2.0,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0",
+          "description": "Applies when: habit == 'Sympodial' and pseudobulb_cm > 0."
+        },
+        "bulb_widest": {
+          "type": "number",
+          "description": "Position of the widest point (0.3 ovoid .. 0.8 club-shaped) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.4,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
+        },
+        "bulb_fullness": {
+          "type": "number",
+          "description": "0.2 cylindrical cane .. 1 spindle / egg Applies when: habit == 'Sympodial' and pseudobulb_cm > 0.",
+          "minimum": 0.05,
+          "maximum": 1.5,
+          "default": 0.8,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
+        },
+        "bulb_flatten": {
+          "type": "number",
+          "description": "Lateral compression (Oncidium, Prosthechea) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0.",
+          "minimum": 0.0,
+          "maximum": 0.8,
+          "default": 0.0,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
+        },
+        "bulb_ridges": {
+          "type": "integer",
+          "description": "Longitudinal ridges and furrows (sulcate pseudobulbs) Applies when: habit == 'Sympodial' and pseudobulb_cm > 0.",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 0,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
+        },
+        "bulb_lean_deg": {
+          "type": "number",
+          "description": "Lean of the growths away from the rhizome axis Applies when: habit == 'Sympodial'.",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 60.0,
+          "default": 10.0,
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "sheath_cover": {
+          "type": "number",
+          "description": "Share of the pseudobulb covered by papery sheaths, from the base Applies when: habit == 'Sympodial' and pseudobulb_cm > 0.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0,
+          "x-applies-when": "habit == 'Sympodial' and pseudobulb_cm > 0"
+        },
+        "support_height_m": {
+          "type": "number",
+          "description": "Climbing: height of the post the vine climbs Applies when: habit == 'Climbing'.",
+          "x-unit": "m",
+          "minimum": 0.3,
+          "maximum": 4.0,
+          "default": 1.5,
+          "x-applies-when": "habit == 'Climbing'"
+        },
+        "support_radius_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 30.0,
+          "default": 5.0,
+          "x-applies-when": "habit == 'Climbing'",
+          "description": "Applies when: habit == 'Climbing'."
+        },
+        "stem_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of stems, canes, pseudobulbs and rhizome (sRGB 0..1).",
+          "default": [
+            0.38,
+            0.48,
+            0.2
+          ]
+        },
+        "sheath_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the papery sheaths, dry node rings and bracts (sRGB 0..1).",
+          "default": [
+            0.78,
+            0.72,
+            0.58
+          ]
+        },
+        "leaf_placement": {
+          "type": "string",
+          "enum": [
+            "Apex",
+            "Base",
+            "Along"
+          ],
+          "description": "Leaves Applies when: habit == 'Sympodial'.",
+          "default": "Along",
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "leaves": {
+          "type": "integer",
+          "description": "Living leaves (per growth when sympodial)",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 6
+        },
+        "leaf_length_cm": {
+          "type": "number",
+          "description": "Length of the largest (oldest) leaves, cm.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 120.0,
+          "default": 20.0
+        },
+        "leaf_width_cm": {
+          "type": "number",
+          "description": "Width of the leaves at their widest point, cm.",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 20.0,
+          "default": 8.0
+        },
+        "leaf_thickness_mm": {
+          "type": "number",
+          "description": "Fleshy leaves: Phalaenopsis ~2, Vanilla ~2, Cymbidium ~0.8",
+          "x-unit": "mm",
+          "minimum": 0.2,
+          "maximum": 8.0,
+          "default": 2.0
+        },
+        "leaf_widest": {
+          "type": "number",
+          "description": "Position of the widest point",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.6
+        },
+        "leaf_apex_deg": {
+          "type": "number",
+          "description": "Angle at the apex (obtuse ~120, acute ~50)",
+          "x-unit": "deg",
+          "minimum": 10.0,
+          "maximum": 179.0,
+          "default": 120.0
+        },
+        "leaf_angle_deg": {
+          "type": "number",
+          "description": "Insertion angle from the vertical",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 110.0,
+          "default": 60.0
+        },
+        "leaf_droop": {
+          "type": "number",
+          "description": "Arching of the blade under its weight",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "leaf_fold": {
+          "type": "number",
+          "description": "Conduplicate V-fold along the midrib (keel)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "leaf_twist_deg": {
+          "type": "number",
+          "description": "Random twist along the leaf, degrees.",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 90.0,
+          "default": 10.0
+        },
+        "leaf_size_gradient": {
+          "type": "number",
+          "description": "Youngest leaves smaller by this fraction",
+          "minimum": 0.0,
+          "maximum": 0.9,
+          "default": 0.3
+        },
+        "leaf_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Leaf colour (sRGB 0..1).",
+          "default": [
+            0.12,
+            0.3,
+            0.1
+          ]
+        },
+        "leaf_mottle": {
+          "type": "number",
+          "description": "Tessellated / mottled leaves (Paphiopedilum)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "mottle_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "default": [
+            0.3,
+            0.45,
+            0.22
+          ],
+          "x-applies-when": "leaf_mottle > 0",
+          "description": "Applies when: leaf_mottle > 0."
+        },
+        "roots": {
+          "type": "integer",
+          "description": "Aerial roots (per growth when sympodial)",
+          "minimum": 0,
+          "maximum": 40,
+          "default": 8
+        },
+        "root_diameter_mm": {
+          "type": "number",
+          "description": "Thick roots: velamen around the cortex",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 12.0,
+          "default": 5.0
+        },
+        "root_length_cm": {
+          "type": "number",
+          "description": "Length of the aerial roots, cm.",
+          "x-unit": "cm",
+          "minimum": 1.0,
+          "maximum": 150.0,
+          "default": 25.0
+        },
+        "root_wander": {
+          "type": "number",
+          "description": "Meandering of the agravitropic aerial roots",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.6
+        },
+        "aerial_share": {
+          "type": "number",
+          "description": "Share of the roots growing in the air (others go into the substrate) Applies when: habit != 'Climbing'.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5,
+          "x-applies-when": "habit != 'Climbing'"
+        },
+        "root_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Velamen (silvery when dry)",
+          "default": [
+            0.78,
+            0.8,
+            0.72
+          ]
+        },
+        "root_tip_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Green growing tip",
+          "default": [
+            0.4,
+            0.62,
+            0.25
+          ]
+        },
+        "infl_origin": {
+          "type": "string",
+          "enum": [
+            "Leaf axil",
+            "Apex",
+            "Base",
+            "Upper nodes"
+          ],
+          "description": "Inflorescence Applies when: habit == 'Sympodial'.",
+          "default": "Leaf axil",
+          "x-applies-when": "habit == 'Sympodial'"
+        },
+        "inflorescences": {
+          "type": "integer",
+          "description": "Number of inflorescences (spikes, racemes, panicles or node clusters).",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 1
+        },
+        "flowers": {
+          "type": "integer",
+          "description": "Flowers per inflorescence (per branch when branched)",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 8
+        },
+        "peduncle_cm": {
+          "type": "number",
+          "description": "Stalk below the first flower",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 150.0,
+          "default": 25.0
+        },
+        "rachis_cm": {
+          "type": "number",
+          "description": "Flower-bearing part",
+          "x-unit": "cm",
+          "minimum": 0.0,
+          "maximum": 150.0,
+          "default": 25.0
+        },
+        "spike_radius_mm": {
+          "type": "number",
+          "description": "Radius of the inflorescence axis at its base, mm.",
+          "x-unit": "mm",
+          "minimum": 0.5,
+          "maximum": 8.0,
+          "default": 2.5
+        },
+        "spike_angle_deg": {
+          "type": "number",
+          "description": "Emergence angle from the vertical",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 90.0,
+          "default": 30.0
+        },
+        "spike_flex": {
+          "type": "number",
+          "description": "0 stiff, erect .. 1 pendent under the weight of the flowers",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5
+        },
+        "branches": {
+          "type": "integer",
+          "description": "Lateral branches (panicle: Oncidium)",
+          "minimum": 0,
+          "maximum": 30,
+          "default": 0
+        },
+        "branch_ratio": {
+          "type": "number",
+          "description": "Branch length relative to the rachis Applies when: branches > 0.",
+          "minimum": 0.05,
+          "maximum": 1.0,
+          "default": 0.4,
+          "x-applies-when": "branches > 0"
+        },
+        "divergence_deg": {
+          "type": "number",
+          "description": "Between successive flowers (180 two-ranked, 137.5 spiral)",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 180.0,
+          "default": 180.0
+        },
+        "pedicel_cm": {
+          "type": "number",
+          "description": "Pedicel and ovary",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 15.0,
+          "default": 4.0
+        },
+        "flower_facing": {
+          "type": "number",
+          "description": "0 facing away from the axis .. 1 all turned to the light",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.7
+        },
+        "maturation": {
+          "type": "number",
+          "description": "Acropetal opening: share of buds at the tip",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "bract_mm": {
+          "type": "number",
+          "description": "Floral and peduncle bracts",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 40.0,
+          "default": 4.0
+        },
+        "spike_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of peduncle, rachis, pedicels and ovaries (sRGB 0..1).",
+          "default": [
+            0.25,
+            0.35,
+            0.18
+          ]
+        },
+        "fruit_set": {
+          "type": "number",
+          "description": "Share of flowers replaced by capsules (pods)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "capsule_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.5,
+          "maximum": 30.0,
+          "default": 5.0,
+          "x-applies-when": "fruit_set > 0",
+          "description": "Applies when: fruit_set > 0."
+        },
+        "capsule_diameter_cm": {
+          "type": "number",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 5.0,
+          "default": 1.2,
+          "x-applies-when": "fruit_set > 0",
+          "description": "Applies when: fruit_set > 0."
+        },
+        "capsule_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "default": [
+            0.35,
+            0.45,
+            0.15
+          ],
+          "x-applies-when": "fruit_set > 0",
+          "description": "Applies when: fruit_set > 0."
+        },
+        "resupination": {
+          "type": "number",
+          "description": "1 lip lowermost (gravitropic twist of the ovary) .. 0 lip uppermost",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 1.0
+        },
+        "flower_tilt_deg": {
+          "type": "number",
+          "description": "Face tilted upward",
+          "x-unit": "deg",
+          "minimum": -45.0,
+          "maximum": 60.0,
+          "default": 10.0
+        },
+        "sepal_length_cm": {
+          "type": "number",
+          "description": "Dorsal sepal",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 50.0,
+          "default": 4.5
+        },
+        "sepal_width_cm": {
+          "type": "number",
+          "description": "Width of the dorsal sepal, cm.",
+          "x-unit": "cm",
+          "minimum": 0.05,
+          "maximum": 10.0,
+          "default": 3.0
+        },
+        "sepal_widest": {
+          "type": "number",
+          "description": "Position of the widest point of the sepals, 0 base .. 1 tip.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.5
+        },
+        "sepal_apex_deg": {
+          "type": "number",
+          "description": "Angle at the sepal apex, degrees (small = acuminate, 180 = rounded).",
+          "x-unit": "deg",
+          "minimum": 10.0,
+          "maximum": 179.0,
+          "default": 110.0
+        },
+        "lateral_sepal_deg": {
+          "type": "number",
+          "description": "Lateral sepals below the horizontal Applies when: synsepal < 0.85.",
+          "x-unit": "deg",
+          "minimum": -90.0,
+          "maximum": 90.0,
+          "default": 35.0,
+          "x-applies-when": "synsepal < 0.85"
+        },
+        "lateral_sepal_scale": {
+          "type": "number",
+          "description": "Lateral / dorsal sepal size",
+          "minimum": 0.3,
+          "maximum": 2.0,
+          "default": 1.0
+        },
+        "synsepal": {
+          "type": "number",
+          "description": "Lateral sepals joined behind the lip (Paphiopedilum: 1)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "sepal_cup": {
+          "type": "number",
+          "description": "Transverse concavity of the sepals (negative: margins recurved).",
+          "minimum": -0.5,
+          "maximum": 1.0,
+          "default": 0.15
+        },
+        "sepal_reflex_deg": {
+          "type": "number",
+          "description": "Bending back along the sepal",
+          "x-unit": "deg",
+          "minimum": -90.0,
+          "maximum": 120.0,
+          "default": 10.0
+        },
+        "sepal_twist_deg": {
+          "type": "number",
+          "description": "Twist along the sepals, degrees (Prosthechea: twisted, hanging).",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 720.0,
+          "default": 0.0
+        },
+        "sepal_wave": {
+          "type": "number",
+          "description": "Wavy sepal margins, 0..1.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "petal_length_cm": {
+          "type": "number",
+          "description": "Length of the lateral petals, cm.",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 90.0,
+          "default": 5.0
+        },
+        "petal_width_cm": {
+          "type": "number",
+          "description": "Width of the lateral petals, cm.",
+          "x-unit": "cm",
+          "minimum": 0.05,
+          "maximum": 10.0,
+          "default": 4.0
+        },
+        "petal_widest": {
+          "type": "number",
+          "description": "Position of the widest point of the petals, 0 base .. 1 tip.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.6
+        },
+        "petal_apex_deg": {
+          "type": "number",
+          "description": "Angle at the petal apex, degrees (small = acuminate, 180 = rounded).",
+          "x-unit": "deg",
+          "minimum": 10.0,
+          "maximum": 179.0,
+          "default": 140.0
+        },
+        "petal_claw": {
+          "type": "number",
+          "description": "Narrow stalk-like base (fraction of the length)",
+          "minimum": 0.0,
+          "maximum": 0.6,
+          "default": 0.2
+        },
+        "petal_angle_deg": {
+          "type": "number",
+          "description": "Above the horizontal (negative: drooping, Paphiopedilum)",
+          "x-unit": "deg",
+          "minimum": -80.0,
+          "maximum": 80.0,
+          "default": 10.0
+        },
+        "petal_cup": {
+          "type": "number",
+          "description": "Transverse concavity of the petals (negative: margins recurved).",
+          "minimum": -0.5,
+          "maximum": 1.0,
+          "default": 0.1
+        },
+        "petal_reflex_deg": {
+          "type": "number",
+          "description": "Bending back along the petals, degrees.",
+          "x-unit": "deg",
+          "minimum": -90.0,
+          "maximum": 120.0,
+          "default": 5.0
+        },
+        "petal_twist_deg": {
+          "type": "number",
+          "description": "Twist along the petals, degrees (Paphiopedilum, Prosthechea).",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 720.0,
+          "default": 0.0
+        },
+        "petal_wave": {
+          "type": "number",
+          "description": "Wavy / frilled margins (Cattleya)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "perianth_forward_deg": {
+          "type": "number",
+          "description": "Tepals raised forward from the floral plane (cupped flowers)",
+          "x-unit": "deg",
+          "minimum": -40.0,
+          "maximum": 80.0,
+          "default": 8.0
+        },
+        "lip_length_cm": {
+          "type": "number",
+          "description": "Flower: labellum (lip)",
+          "x-unit": "cm",
+          "minimum": 0.2,
+          "maximum": 20.0,
+          "default": 2.0
+        },
+        "lip_width_cm": {
+          "type": "number",
+          "description": "Across the spread lateral lobes (or the whole lip)",
+          "x-unit": "cm",
+          "minimum": 0.1,
+          "maximum": 15.0,
+          "default": 2.5
+        },
+        "lip_angle_deg": {
+          "type": "number",
+          "description": "Base direction below the floral axis (0 forward .. 90 straight down)",
+          "x-unit": "deg",
+          "minimum": -30.0,
+          "maximum": 100.0,
+          "default": 35.0
+        },
+        "lip_deflex_deg": {
+          "type": "number",
+          "description": "Further bending down along the lip (recurved mid lobe)",
+          "x-unit": "deg",
+          "minimum": -60.0,
+          "maximum": 150.0,
+          "default": 30.0
+        },
+        "lip_claw": {
+          "type": "number",
+          "description": "Half-width of the narrow base, relative to the lip",
+          "minimum": 0.02,
+          "maximum": 0.8,
+          "default": 0.25
+        },
+        "side_lobes": {
+          "type": "number",
+          "description": "Lateral lobes, relative half-width (0 = entire lip)",
+          "minimum": 0.0,
+          "maximum": 1.5,
+          "default": 0.0
+        },
+        "side_lobe_pos": {
+          "type": "number",
+          "description": "Their centre along the lip Applies when: side_lobes > 0.",
+          "minimum": 0.05,
+          "maximum": 0.8,
+          "default": 0.35,
+          "x-applies-when": "side_lobes > 0"
+        },
+        "side_lobe_length": {
+          "type": "number",
+          "description": "Their extent along the lip Applies when: side_lobes > 0.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.45,
+          "x-applies-when": "side_lobes > 0"
+        },
+        "side_lobe_erect_deg": {
+          "type": "number",
+          "description": "Fold of the lateral lobes up around the column Applies when: side_lobes > 0.",
+          "x-unit": "deg",
+          "minimum": 0.0,
+          "maximum": 180.0,
+          "default": 0.0,
+          "x-applies-when": "side_lobes > 0"
+        },
+        "midlobe_width": {
+          "type": "number",
+          "description": "Mid lobe width relative to the lip width Applies when: side_lobes > 0.",
+          "minimum": 0.1,
+          "maximum": 1.5,
+          "default": 0.6,
+          "x-applies-when": "side_lobes > 0"
+        },
+        "isthmus": {
+          "type": "number",
+          "description": "Narrowing between lateral lobes and mid lobe (pandurate lips) Applies when: side_lobes > 0.",
+          "minimum": 0.0,
+          "maximum": 0.95,
+          "default": 0.0,
+          "x-applies-when": "side_lobes > 0"
+        },
+        "lip_widest": {
+          "type": "number",
+          "description": "Position of the widest point of the mid lobe (or entire lip), 0 base .. 1 apex.",
+          "minimum": 0.1,
+          "maximum": 0.9,
+          "default": 0.5
+        },
+        "lip_apex_deg": {
+          "type": "number",
+          "description": "Angle at the lip apex, degrees (small = pointed, 180 = rounded).",
+          "x-unit": "deg",
+          "minimum": 10.0,
+          "maximum": 179.0,
+          "default": 120.0
+        },
+        "lip_roll": {
+          "type": "number",
+          "description": "0 flat .. 1 rolled into a tube around the column",
+          "minimum": 0.0,
+          "maximum": 1.2,
+          "default": 0.0
+        },
+        "lip_roll_extent": {
+          "type": "number",
+          "description": "Share of the lip that is rolled, from the base Applies when: lip_roll > 0.",
+          "minimum": 0.05,
+          "maximum": 1.0,
+          "default": 0.5,
+          "x-applies-when": "lip_roll > 0"
+        },
+        "lip_sac": {
+          "type": "number",
+          "description": "Inflated pouch (Paphiopedilum slipper)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "lip_wave": {
+          "type": "number",
+          "description": "Undulate / crisped margin",
+          "minimum": 0.0,
+          "maximum": 1.5,
+          "default": 0.0
+        },
+        "lip_waves": {
+          "type": "number",
+          "description": "Waves along the margin Applies when: lip_wave > 0.",
+          "minimum": 1.0,
+          "maximum": 12.0,
+          "default": 4.0,
+          "x-applies-when": "lip_wave > 0"
+        },
+        "callus_mm": {
+          "type": "number",
+          "description": "Height of the callus (pad or ridges) on the lip disc",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "default": 0.0
+        },
+        "callus_ridges": {
+          "type": "integer",
+          "description": "0 one fleshy pad; >0 parallel keels (lamellae) Applies when: callus_mm > 0.",
+          "minimum": 0,
+          "maximum": 9,
+          "default": 0,
+          "x-applies-when": "callus_mm > 0"
+        },
+        "callus_pos": {
+          "type": "number",
+          "description": "Centre of the callus along the lip Applies when: callus_mm > 0.",
+          "minimum": 0.0,
+          "maximum": 0.9,
+          "default": 0.35,
+          "x-applies-when": "callus_mm > 0"
+        },
+        "cirrhi_mm": {
+          "type": "number",
+          "description": "Two filiform appendages at the lip apex (Phalaenopsis)",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 40.0,
+          "default": 0.0
+        },
+        "column_length_cm": {
+          "type": "number",
+          "description": "Flower: column",
+          "x-unit": "cm",
+          "minimum": 0.1,
+          "maximum": 6.0,
+          "default": 1.0
+        },
+        "column_width_mm": {
+          "type": "number",
+          "description": "Column (gynostemium) diameter, mm.",
+          "x-unit": "mm",
+          "minimum": 1.0,
+          "maximum": 15.0,
+          "default": 6.0
+        },
+        "column_arch": {
+          "type": "number",
+          "description": "Arching of the column toward the lip",
+          "minimum": -0.5,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "staminode_mm": {
+          "type": "number",
+          "description": "Shield-like staminode on the column (Paphiopedilum)",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 25.0,
+          "default": 0.0
+        },
+        "mentum_mm": {
+          "type": "number",
+          "description": "Chin formed by the column foot and the lateral sepals (Dendrobium)",
+          "x-unit": "mm",
+          "minimum": 0.0,
+          "maximum": 30.0,
+          "default": 0.0
+        },
+        "sepal_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Flower colours and pigmentation patterns (full colour, spots, venation: PeMYB2 / 11 / 12, Hsu et al. 2015)",
+          "default": [
+            0.97,
+            0.96,
+            0.97
+          ]
+        },
+        "petal_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Lateral petal colour (sRGB 0..1).",
+          "default": [
+            0.97,
+            0.96,
+            0.97
+          ]
+        },
+        "lip_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Labellum colour (sRGB 0..1).",
+          "default": [
+            0.95,
+            0.85,
+            0.4
+          ]
+        },
+        "lip_throat_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the lip base / throat (inside a tube) (sRGB 0..1).",
+          "default": [
+            0.95,
+            0.8,
+            0.25
+          ]
+        },
+        "callus_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the callus, ridges and cirrhi (sRGB 0..1).",
+          "default": [
+            0.95,
+            0.75,
+            0.15
+          ]
+        },
+        "column_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Column colour (sRGB 0..1).",
+          "default": [
+            0.96,
+            0.95,
+            0.92
+          ]
+        },
+        "anther_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of the anther cap and staminode (sRGB 0..1).",
+          "default": [
+            0.95,
+            0.85,
+            0.55
+          ]
+        },
+        "pattern_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "description": "Colour of spots, bars and venation (anthocyanin) (sRGB 0..1).",
+          "default": [
+            0.65,
+            0.1,
+            0.35
+          ]
+        },
+        "tip_color": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "x-kind": "colour (sRGB 0..1)",
+          "default": [
+            0.75,
+            0.3,
+            0.6
+          ],
+          "x-applies-when": "tip_amount > 0",
+          "description": "Applies when: tip_amount > 0."
+        },
+        "tip_amount": {
+          "type": "number",
+          "description": "Coloured tips of sepals, petals and lip (Dendrobium nobile)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "spots": {
+          "type": "number",
+          "description": "Spots on sepals and petals",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "spot_size_mm": {
+          "type": "number",
+          "x-unit": "mm",
+          "minimum": 0.3,
+          "maximum": 10.0,
+          "default": 2.0,
+          "x-applies-when": "spots > 0 or lip_spots > 0",
+          "description": "Applies when: spots > 0 or lip_spots > 0."
+        },
+        "spot_stretch": {
+          "type": "number",
+          "description": ">1 transverse bars (Oncidium sepals) Applies when: spots > 0 or lip_spots > 0.",
+          "minimum": 1.0,
+          "maximum": 6.0,
+          "default": 1.0,
+          "x-applies-when": "spots > 0 or lip_spots > 0"
+        },
+        "veins": {
+          "type": "number",
+          "description": "Coloured venation on sepals and petals",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "lip_spots": {
+          "type": "number",
+          "description": "Spots on the lip and callus, 0..1.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "lip_veins": {
+          "type": "number",
+          "description": "Coloured venation on the lip, 0..1.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.0
+        },
+        "sheen": {
+          "type": "number",
+          "description": "Crystalline / waxy sheen of the tepals",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        }
+      },
+      "description": "Habit, leaves, roots, inflorescence and flower of an orchid. Lengths in cm unless noted."
+    },
+    "OrchidPreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scientific_name": {
+          "type": "string",
+          "description": "Binomial name, e.g. 'Phalaenopsis amabilis'.",
+          "default": ""
+        },
+        "common_name": {
+          "type": "string",
+          "description": "Vernacular name(s).",
+          "default": ""
+        },
+        "family": {
+          "type": "string",
+          "description": "Botanical family ('Orchidaceae').",
+          "default": ""
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free text: habit, distinctive features, sources of the values.",
+          "default": ""
+        },
+        "profile": {
+          "$ref": "#/$defs/OrchidProfile"
+        }
+      },
+      "description": "Trait values of an Orchid preset (all optional when 'base' is given)."
     }
   }
 }
