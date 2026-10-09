@@ -17,19 +17,19 @@ except ImportError:
 
 try:
     from ..core.orchid import (OrchidEngine, OrchidProfile, STEM, ROOT, SEPAL, PETAL, LIP, COLUMN, ANTHER,
-                               CALLUS, BRACT, SPIKE, BUD, SUPPORT, CAPSULE, STIGMA)
+                               CALLUS, BRACT, SPIKE, BUD, SUPPORT, CAPSULE, STIGMA, POT, SUBSTRATE)
     from ..core.orchid_db import ORCHID_CATALOG, ORCHID_RANGES
     from .flowers import _props_for
 except (ImportError, ValueError):
     from core.orchid import (OrchidEngine, OrchidProfile, STEM, ROOT, SEPAL, PETAL, LIP, COLUMN, ANTHER,
-                             CALLUS, BRACT, SPIKE, BUD, SUPPORT, CAPSULE, STIGMA)
+                             CALLUS, BRACT, SPIKE, BUD, SUPPORT, CAPSULE, STIGMA, POT, SUBSTRATE)
     from core.orchid_db import ORCHID_CATALOG, ORCHID_RANGES
     from blender.flowers import _props_for
 
 ORC = "orc_"
 SUFFIXES = ("_OrchidLeaves", "_OrchidStems", "_OrchidRoots", "_OrchidFlowers", "_OrchidSpikes", "_OrchidSupport")
 LAYOUT = [
-    ("Habit & Stems", ["habit", "growths", "rhizome_cm", "growth_angle_deg", "leafless_growths", "stem_length_cm",
+    ("Habit & Stems", ["habit", "mount", "pot_diameter_cm", "branch_diameter_cm", "growths", "rhizome_cm", "growth_angle_deg", "leafless_growths", "stem_length_cm",
                        "stem_radius_mm", "internode_cm", "support_height_m", "support_radius_cm", "stem_color",
                        "sheath_color"]),
     ("Pseudobulbs", ["pseudobulb_cm", "pseudobulb_diameter_cm", "bulb_widest", "bulb_fullness", "bulb_flatten",
@@ -41,16 +41,17 @@ LAYOUT = [
                       "root_tip_color"]),
     ("Inflorescence", ["infl_origin", "inflorescences", "flowers", "peduncle_cm", "rachis_cm", "spike_radius_mm",
                        "spike_angle_deg", "spike_flex", "branches", "branch_ratio", "divergence_deg", "pedicel_cm",
-                       "flower_facing", "maturation", "bract_mm", "spike_color", "fruit_set", "capsule_cm",
+                       "flower_facing", "umbel", "maturation", "bract_mm", "spike_color", "fruit_set", "capsule_cm",
                        "capsule_diameter_cm", "capsule_color"]),
     ("Sepals & Petals", ["resupination", "flower_tilt_deg", "sepal_length_cm", "sepal_width_cm", "sepal_widest",
                          "sepal_apex_deg", "lateral_sepal_deg", "lateral_sepal_scale", "synsepal", "sepal_cup",
-                         "sepal_reflex_deg", "sepal_twist_deg", "sepal_wave", "petal_length_cm", "petal_width_cm",
+                         "sepal_reflex_deg", "sepal_twist_deg", "sepal_wave", "sepal_fringe_mm", "petal_length_cm", "petal_width_cm",
                          "petal_widest", "petal_apex_deg", "petal_claw", "petal_angle_deg", "petal_cup",
                          "petal_reflex_deg", "petal_twist_deg", "petal_wave", "perianth_forward_deg"]),
     ("Labellum (Lip)", ["lip_length_cm", "lip_width_cm", "lip_angle_deg", "lip_deflex_deg", "lip_claw", "side_lobes",
                         "side_lobe_pos", "side_lobe_length", "side_lobe_erect_deg", "midlobe_width", "isthmus",
-                        "lip_widest", "lip_apex_deg", "lip_roll", "lip_roll_extent", "lip_sac", "lip_wave",
+                        "lip_widest", "lip_apex_deg", "lip_flare", "lip_roll", "lip_roll_extent", "lip_sac",
+                        "lip_sac_extent", "lip_horns_mm", "spur_cm", "spur_diameter_mm", "spur_curve", "lip_wave",
                         "lip_waves", "callus_mm", "callus_ridges", "callus_pos", "cirrhi_mm"]),
     ("Column", ["column_length_cm", "column_width_mm", "column_arch", "staminode_mm", "mentum_mm"]),
     ("Flower Colours", ["sepal_color", "petal_color", "lip_color", "lip_throat_color", "callus_color",
@@ -154,7 +155,8 @@ def orchid_material(name, p: OrchidProfile):
     table = [(STEM, p.stem_color), (ROOT, p.root_color), (SEPAL, p.sepal_color), (PETAL, p.petal_color),
              (LIP, p.lip_color), (COLUMN, p.column_color), (ANTHER, p.anther_color), (CALLUS, p.callus_color),
              (BRACT, p.sheath_color), (SPIKE, p.spike_color), (BUD, bud_c), (SUPPORT, (0.33, 0.25, 0.17)),
-             (CAPSULE, p.capsule_color), (STIGMA, (0.30, 0.26, 0.12))]
+             (CAPSULE, p.capsule_color), (STIGMA, (0.30, 0.26, 0.12)), (POT, (0.62, 0.33, 0.20)),
+             (SUBSTRATE, (0.20, 0.12, 0.07))]
     for i, (k, c) in enumerate(table):
         col = _mix(nt, is_part(k, (-1300, -800 - 120 * i)), col, rgb(c, (-1000, 600 - 60 * i)),
                    (-800 + 40 * i, 500 - 30 * i))

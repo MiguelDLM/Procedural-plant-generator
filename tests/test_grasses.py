@@ -74,7 +74,7 @@ class TestGrasses(unittest.TestCase):
 
     def test_connected(self):
         from tests.geometry_checks import floating_islands
-        for key in ("zea_mays", "lolium_perenne"):          # Nodes, sheaths, buds, ears; tufts
+        for key in ("zea_mays", "lolium_perenne", "triticum_aestivum"):    # Nodes, sheaths, collars, ears
             _, r = _gen(key)
             whole = MeshData.concatenate([m for m in (r.leaves, r.culms, r.heads, r.ears) if len(m.vertices)])
             self.assertEqual(floating_islands(whole, 0.006), [], key)
