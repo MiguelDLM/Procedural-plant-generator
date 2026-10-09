@@ -95,6 +95,50 @@ class PPG_OT_ApplySpeciesPreset(Operator):
             schedule_update()
             self.report({'INFO'}, "Loaded flower preset")
             return {'FINISHED'}
+        if props.growth_form == 'Grass':
+            from .grasses import write_grass_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_grass_to_props(props, props.grass_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded grass preset")
+            return {'FINISHED'}
+        if props.growth_form == 'Vegetable':
+            from .vegetables import write_vegetable_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_vegetable_to_props(props, props.vegetable_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded vegetable preset")
+            return {'FINISHED'}
+        if props.growth_form == 'Fruit':
+            from .fruits import write_fruit_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_fruit_to_props(props, props.fruit_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded fruit preset")
+            return {'FINISHED'}
+        if props.growth_form == 'Vine':
+            from .vines import write_vine_to_props
+            from .runtime import schedule_update
+            set_updating(True)
+            try:
+                write_vine_to_props(props, props.vine_species)
+            finally:
+                set_updating(False)
+            schedule_update()
+            self.report({'INFO'}, "Loaded vine preset")
+            return {'FINISHED'}
         if props.growth_form != 'Tree':
             from .runtime import apply_succulent_preset
             apply_succulent_preset(props, context)
@@ -148,11 +192,54 @@ class PPG_OT_ExportTraits(Operator):
             from .flowers import flower_from_props
             from ..core.flower_db import FLOWER_CATALOG
             f, ip = flower_from_props(props)
+            if props.flower_species not in FLOWER_CATALOG:
+                self.report({'ERROR'}, "No valid flower preset selected")
+                return {'CANCELLED'}
             sp = FLOWER_CATALOG[props.flower_species]
             data = {"growth_form": "Flower", "species": sp.scientific_name, "common_name": sp.common_name,
                     "family": sp.family, "floral_formula": sp.formula,
                     "flower": {x.name: plain(getattr(f, x.name)) for x in dc_fields(f)},
                     "inflorescence": {x.name: plain(getattr(ip, x.name)) for x in dc_fields(ip)}}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Grass':
+            from ..core import presets as P
+            from .grasses import current_grass_preset
+            data = {"growth_form": "Grass", **P.to_plain(current_grass_preset(props))}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Vegetable':
+            from ..core import presets as P
+            from .vegetables import current_vegetable_preset
+            data = {"growth_form": "Vegetable", **P.to_plain(current_vegetable_preset(props))}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Fruit':
+            from ..core import presets as P
+            from .fruits import fruit_from_props
+            data = {"growth_form": "Fruit", "id": props.fruit_species, "fruit": P.to_plain(fruit_from_props(props))}
+            target = bpy.path.abspath(self.filepath)
+            with open(target, "w") as fh:
+                json.dump(data, fh, indent=2)
+            self.report({'INFO'}, f"Saved trait report to {target}")
+            return {'FINISHED'}
+        if props.growth_form == 'Vine':
+            from ..core import presets as P
+            from .vines import current_vine_preset
+            from ..core.vine_db import VINE_CATALOG
+            if props.vine_species not in VINE_CATALOG:
+                self.report({'ERROR'}, "No valid vine preset selected")
+                return {'CANCELLED'}
+            data = {"growth_form": "Vine", **P.to_plain(current_vine_preset(props))}
             target = bpy.path.abspath(self.filepath)
             with open(target, "w") as fh:
                 json.dump(data, fh, indent=2)

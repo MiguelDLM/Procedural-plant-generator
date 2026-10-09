@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
+  "format": "ppg-preset",
+  "format_version": 1,
+  "growth_form": "Rosette",
+  "id": "agave_salmiana",
+  "base": "agave_americana",
+  "default_flower": "agave_americana",
+  "metadata": {
+    "license": "CC-BY-4.0",
+    "tags": [
+      "Mexico",
+      "example"
+    ],
+    "author": "Procedural Plant Generator (example)",
+    "description": "Pulque maguey: very large rosette of broad, thick, dark green leaves with sigmoid tips, long terminal spine.",
+    "sources": [
+      "Gentry H. S. (1982) Agaves of Continental North America"
+    ]
+  },
+  "preset": {
+    "scientific_name": "Agave salmiana",
+    "common_name": "Pulque maguey (maguey pulquero)",
+    "biome": "Central Mexican highlands",
+    "profile": {
+      "leaf_count": 40,
+      "leaf_length_cm": 180,
+      "leaf_aspect": 4.0,
+      "curvature_deg": -60,
+      "leaf_color": [
+        0.3,
+        0.42,
+        0.33
+      ],
+      "glaucous": 0.3,
+      "terminal_spine_cm": 7.0,
+      "teeth_count": 25,
+      "teeth_size_cm": 1.0
+    }
+  }
+}

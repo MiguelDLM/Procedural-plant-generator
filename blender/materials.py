@@ -106,9 +106,18 @@ def create_leaf_material(name: str, color_img, height_img, morph) -> "bpy.types.
     htex.extension = 'CLIP'
 
     # Per-leaf colour jitter
-    attr = nodes.new('ShaderNodeAttribute')
+    attr_g = nodes.new('ShaderNodeAttribute')
+    attr_g.location = (-1100, 560)
+    attr_g.attribute_name = "leaf_random"
+    attr_i = nodes.new('ShaderNodeAttribute')         # Same value on instanced leaf cards
+    attr_i.location = (-1100, 420)
+    attr_i.attribute_name = "leaf_random"
+    attr_i.attribute_type = 'INSTANCER'
+    attr = nodes.new('ShaderNodeMath')
+    attr.operation = 'ADD'
     attr.location = (-900, 500)
-    attr.attribute_name = "leaf_random"
+    links.new(attr_g.outputs['Fac'], attr.inputs[0])
+    links.new(attr_i.outputs['Fac'], attr.inputs[1])
     hue_map = nodes.new('ShaderNodeMapRange')
     hue_map.location = (-650, 600)
     _set(hue_map, 0.475, "To Min")
@@ -117,8 +126,8 @@ def create_leaf_material(name: str, color_img, height_img, morph) -> "bpy.types.
     val_map.location = (-650, 400)
     _set(val_map, 0.85, "To Min")
     _set(val_map, 1.12, "To Max")
-    links.new(attr.outputs['Fac'], hue_map.inputs['Value'])
-    links.new(attr.outputs['Fac'], val_map.inputs['Value'])
+    links.new(attr.outputs[0], hue_map.inputs['Value'])
+    links.new(attr.outputs[0], val_map.inputs['Value'])
     hsv = nodes.new('ShaderNodeHueSaturation')
     hsv.location = (-400, 300)
     links.new(hue_map.outputs['Result'], hsv.inputs['Hue'])

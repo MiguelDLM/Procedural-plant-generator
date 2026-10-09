@@ -433,7 +433,9 @@ class FlowerEngine:
                                    p.cup * (1.0 + 0.8 * wt), p.twist_deg, p.undulation, PETAL, wt, rng.random(),
                                    detail, base_min=min(base_min, 1.2),
                                    elev_start=(tube_ang if tube_ang is not None else e), pu0=frac, pu1=1.0, rng=rng,
-                                   fuse=p.limb_fusion * (1.0 if p.zygomorphy < 0.5 else 0.6), sectors=m))
+                                   # Limb fusion only exists in sympetalous corollas (with a tube)
+                                   fuse=(p.limb_fusion * (1.0 if p.zygomorphy < 0.5 else 0.6)) if Lt > 0 else 0.0,
+                                   sectors=m))
 
         # Receptacle (dome or cone)
         h_rec = p.receptacle_height_cm * 0.01

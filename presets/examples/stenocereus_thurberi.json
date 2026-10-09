@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
+  "format": "ppg-preset",
+  "format_version": 1,
+  "growth_form": "Cactus",
+  "id": "stenocereus_thurberi",
+  "base": "pachycereus_marginatus",
+  "default_flower": "pachycereus_marginatus",
+  "metadata": {
+    "license": "CC-BY-4.0",
+    "tags": [
+      "Sonoran Desert",
+      "example"
+    ],
+    "author": "Procedural Plant Generator (example)",
+    "description": "Organ pipe cactus (pitaya dulce): many erect stems from the base, 12-19 ribs, dark spines.",
+    "sources": [
+      "Anderson E. F. (2001) The Cactus Family"
+    ]
+  },
+  "preset": {
+    "scientific_name": "Stenocereus thurberi",
+    "common_name": "Organ pipe cactus (pitaya dulce)",
+    "biome": "Sonoran Desert, Mexico and Arizona",
+    "profile": {
+      "height_m": 5.0,
+      "diameter_m": 0.15,
+      "rib_count": 15,
+      "offsets": 12,
+      "offset_scale": 0.9,
+      "radial_spines": 9,
+      "central_spines": 2,
+      "central_length_cm": 3.5,
+      "spine_color": [
+        0.35,
+        0.25,
+        0.2
+      ],
+      "spine_tip_color": [
+        0.12,
+        0.1,
+        0.09
+      ],
+      "stem_color": [
+        0.25,
+        0.38,
+        0.22
+      ],
+      "browning_height_m": 0.6
+    }
+  }
+}

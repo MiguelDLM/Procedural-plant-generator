@@ -1,0 +1,74 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MiguelDLM/Procedural-plant-generator/main/schemas/ppg-preset.schema.json",
+  "format": "ppg-preset",
+  "format_version": 1,
+  "growth_form": "Tree",
+  "id": "quercus_ilex",
+  "base": "quercus_agrifolia",
+  "metadata": {
+    "license": "CC-BY-4.0",
+    "tags": [
+      "Mediterranean",
+      "evergreen",
+      "example"
+    ],
+    "author": "Procedural Plant Generator (example)",
+    "description": "Holm oak (encina): evergreen Mediterranean oak with a dense rounded crown, small dark leaves grey-felted beneath and dark bark cracked into small squarish plates.",
+    "sources": [
+      "Vaucher H. (2003) Tree Bark: A Color Guide",
+      "Flora Iberica vol. 2 (Fagaceae)"
+    ]
+  },
+  "preset": {
+    "scientific_name": "Quercus ilex",
+    "common_name": "Holm oak (encina)",
+    "biome": "Mediterranean",
+    "notes": "Evergreen sclerophyll; leaves entire to spiny-toothed (juvenile), tomentose beneath.",
+    "allometry": {
+      "height_max_m": 22.0,
+      "dbh_default_m": 0.55
+    },
+    "architecture": {
+      "crown_fullness": 1.8,
+      "crown_widest_position": 0.45,
+      "leaf_area_index": 4.5
+    },
+    "leaf_morphology": {
+      "blade_length_cm": 4.5,
+      "aspect_ratio": 2.0,
+      "adaxial_color": [
+        0.1,
+        0.2,
+        0.08
+      ],
+      "abaxial_color": [
+        0.5,
+        0.52,
+        0.44
+      ],
+      "gloss": 0.5
+    },
+    "bark": {
+      "pattern": "Fissured",
+      "base_color": [
+        0.24,
+        0.23,
+        0.22
+      ],
+      "secondary_color": [
+        0.1,
+        0.09,
+        0.08
+      ],
+      "feature_scale_m": 0.03,
+      "blockiness": 0.8,
+      "segments": 0.7,
+      "moss": 0.1,
+      "lichen": 0.35
+    },
+    "roots": {
+      "system": "Taproot",
+      "max_depth_m": 10.0
+    }
+  }
+}

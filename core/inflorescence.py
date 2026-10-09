@@ -225,8 +225,8 @@ class InflorescenceEngine:
             m = stage_mesh[st]
             # Dorsal side away from the bearing axis, toward the sky: zygomorphic flowers present their lip
             R = _frame(fa, UP + 0.3 * _normalize(dorsal_hint))
-            roll = rng.uniform(-0.25, 0.25) * (1.0 - self.f.zygomorphy) + (rng.uniform(0, 2 * math.pi)
-                                                                             if self.f.zygomorphy < 0.2 else 0.0)
+            zyg = 0.0 if self.f.capitulum else self.f.zygomorphy        # Heads are radially symmetric
+            roll = rng.uniform(-0.25, 0.25) * (1.0 - zyg) + (rng.uniform(0, 2 * math.pi) if zyg < 0.2 else 0.0)
             cr, sr = math.cos(roll), math.sin(roll)
             Rz = np.array([[cr, -sr, 0], [sr, cr, 0], [0, 0, 1.0]])
             sc = flower_scale * rng.uniform(0.92, 1.08)

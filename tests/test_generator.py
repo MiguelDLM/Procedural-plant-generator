@@ -827,5 +827,352 @@ class TestFlowers(unittest.TestCase):
         self.assertGreater(float(ts.positions[:, 2].mean()), 0.4 * res.total_height_m)
 
 
+class TestPresets(unittest.TestCase):
+    """JSON presets: exact round trip, partial (base + differences) presets, validation, ranges, schema."""
+
+    def test_builtin_values_within_declared_ranges(self):
+        from core import presets as P
+        for form in P.FORMS:
+            rng = P._ranges(form)
+            for key, obj in P._catalog(form).items():
+                plain = P.to_plain(obj)
+                for path, (lo, hi) in rng.items():
+                    v = plain
+                    for k in path.split("."):
+                        v = v.get(k) if isinstance(v, dict) else None
+                    if isinstance(v, (int, float)) and not isinstance(v, bool):
+                        self.assertTrue(lo <= v <= hi, f"{form}/{key}: {path}={v} outside [{lo}, {hi}]")
+
+    def test_round_trip_every_builtin(self):
+        import json
+        from core import presets as P
+        for form in P.FORMS:
+            for key, obj in P._catalog(form).items():
+                env = json.loads(json.dumps(P.export_preset(form, key, obj)))
+                f, pid, back, warn, _ = P.load_preset(env)
+                self.assertEqual((f, pid), (form, key))
+                self.assertEqual(P.to_plain(back), P.to_plain(obj), f"{form}/{key}")
+                self.assertEqual(warn, [], f"{form}/{key}")
+
+    def test_partial_preset_and_validation(self):
+        import copy
+        import json
+        from core import presets as P
+        from core.species_db import SPECIES_CATALOG
+        oak = copy.deepcopy(SPECIES_CATALOG["quercus_robur"])
+        oak.bark.moss = 0.8
+        env = P.export_preset("Tree", "mossy_oak", oak, base="quercus_robur", diff=True)
+        self.assertEqual(env["preset"], {"bark": {"moss": 0.8}})
+        _, _, back, warn, _ = P.load_preset(json.loads(json.dumps(env)))
+        self.assertEqual(P.to_plain(back), P.to_plain(oak))
+        bad = {"format": "ppg-preset", "format_version": 1, "growth_form": "Cactus", "id": "t_cactus",
+               "base": "carnegiea_gigantea",
+               "preset": {"profile": {"rib_count": 999, "habit": "barrel", "stem_color": [60, 120, 60],
+                                      "spine_lenght_cm": 3, "glaucous": "high"}}}
+        _, _, obj, warn, _ = P.load_preset(bad)
+        self.assertEqual(obj.profile.rib_count, 60)                       # Clamped
+        self.assertEqual(obj.profile.habit.value, "Barrel")              # Case-insensitive enum
+        self.assertAlmostEqual(obj.profile.stem_color[1], 120 / 255)     # 0..255 colour rescaled
+        self.assertTrue(any("unknown field" in w for w in warn))
+        self.assertTrue(any("expected a number" in w for w in warn))
+        for broken in ({"format": "x"}, dict(bad, id="Bad Id"), dict(bad, growth_form="Moss"), dict(bad, base="nope")):
+            with self.assertRaises(P.PresetError):
+                P.load_preset(broken)
+
+    def test_float_traits_keep_decimals(self):
+        """A float trait whose built-in value happens to be an int (5) still accepts 4.5."""
+        from core import presets as P
+        env = {"format": "ppg-preset", "format_version": 1, "growth_form": "Tree", "id": "t_ilex",
+               "base": "quercus_agrifolia", "preset": {"leaf_morphology": {"blade_length_cm": 4.5}}}
+        _, _, obj, warn, _ = P.load_preset(env)
+        self.assertEqual(obj.leaf_morphology.blade_length_cm, 4.5)
+
+    def test_menu_numbers_exact_and_unique(self):
+        """Enum numbers must survive Blender's float32 storage (< 2**24) and be unique per menu."""
+        from core import presets as P
+        _numbers, ENUM_BITS = P.enum_numbers, P.ENUM_BITS
+        import glob
+        import json
+        for form in P.FORMS:
+            keys = list(P._catalog(form))
+            keys += [json.load(open(f))["id"] for f in glob.glob("presets/examples/*.json")
+                     if json.load(open(f))["growth_form"] == form]
+            nums = _numbers(keys)
+            self.assertEqual(len(set(nums.values())), len(keys), form)
+            for k, n in nums.items():
+                self.assertLess(n, 2 ** 24, k)
+                self.assertEqual(int(np.float32(n)), n, k)      # Exact in float32
+            self.assertLessEqual(ENUM_BITS, 23)
+
+    def test_schema_documents_every_field(self):
+        from core import presets as P
+        sch = P.json_schema()
+        self.assertEqual(sch["required"], ["format", "format_version", "growth_form", "id", "preset"])
+        for name, d in sch["$defs"].items():
+            for field, p in d["properties"].items():
+                if "$ref" not in p:
+                    self.assertTrue(p.get("description"), f"{name}.{field} has no description")
+
+
+class TestRelevance(unittest.TestCase):
+    """Fields marked as not applicable (core.relevance) must not change the geometry when perturbed."""
+
+    def test_inactive_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for form, key in (("Cactus", "opuntia_ficus_indica"), ("Cactus", "mammillaria_hahniana"),
+                          ("Flower", "helianthus_annuus"), ("Flower", "rosa_canina"),
+                          ("Tree", "phoenix_canariensis"), ("Rosette", "echeveria_elegans")):
+            self.assertEqual(check(form, key, report=lambda m: None), [], f"{form}/{key}")
+
+    def test_rules_examples(self):
+        from core.relevance import applies, inactive_fields
+        from core.succulent_db import CACTUS_CATALOG
+        nopal = CACTUS_CATALOG["opuntia_ficus_indica"].profile
+        self.assertFalse(applies("Cactus", "profile", "rib_depth", nopal))
+        self.assertTrue(applies("Cactus", "profile", "pad_levels", nopal))
+        saguaro = CACTUS_CATALOG["carnegiea_gigantea"]
+        self.assertIn("profile.pad_length_cm", inactive_fields("Cactus", saguaro))
+        self.assertNotIn("profile.rib_depth", inactive_fields("Cactus", saguaro))
+
+
+class TestVines(unittest.TestCase):
+    """Climbing and trailing plants grown along guide paths (core.vine)."""
+
+    def _gen(self, key, guides=None, **kw):
+        from core.vine import VineEngine, guide_shape
+        from core.vine_db import VINE_CATALOG
+        sp = VINE_CATALOG[key]
+        shape = {"Twining": "Pole", "Tendril": "Arch", "Clinging": "Wall", "Trailing": "Ground"}
+        from core.fruit_db import FRUIT_CATALOG, VINE_FRUITS
+        g = guides if guides is not None else guide_shape(shape[sp.profile.mode.value], 2.0, 2.0)
+        fr = FRUIT_CATALOG[VINE_FRUITS[key]].fruit if key in VINE_FRUITS else None
+        return VineEngine(sp.profile, sp.leaf, sp.venation).generate(g, seed=4, detail=0.6, fruit=fr, **kw)
+
+    def test_every_preset_generates_valid_meshes(self):
+        from core.vine_db import VINE_CATALOG
+        for key in VINE_CATALOG:
+            r = self._gen(key)
+            self.assertGreater(r.leaf_count, 5, key)
+            for m in (r.stem, r.tendrils, r.leaves, r.fruits, r.roots):
+                self.assertTrue(np.isfinite(m.vertices).all(), key)
+                if len(m.loop_vertex):
+                    self.assertLess(int(m.loop_vertex.max()), len(m.vertices), key)
+            sp = VINE_CATALOG[key].profile
+            if sp.tendril_mode.value != "None":
+                self.assertGreater(r.tendril_count, 0, key)
+            from core.fruit_db import VINE_FRUITS
+            if sp.fruit_count and key in VINE_FRUITS:
+                self.assertGreater(r.fruit_count, 0, key)
+
+    def test_twining_handedness(self):
+        """Right-handed twiners turn counter-clockwise seen from above while climbing a vertical pole."""
+        import copy
+        from core.vine import VineEngine, guide_shape, Chirality
+        from core.vine_db import VINE_CATALOG
+        for chir, sign in ((Chirality.RIGHT, 1), (Chirality.LEFT, -1)):
+            sp = copy.deepcopy(VINE_CATALOG["ipomoea_purpurea"])
+            sp.profile.chirality = chir
+            sp.profile.tip_length_cm = 0.0
+            sp.profile.wander_cm = 0.0
+            eng = VineEngine(sp.profile, sp.leaf, sp.venation)
+            sh = eng._main_shoot(guide_shape("Pole", 2.0)[0], 1.0, np.random.default_rng(0), None)
+            ang = np.unwrap(np.arctan2(sh.P[:, 1], sh.P[:, 0]))
+            k = len(ang) // 4
+            self.assertEqual(np.sign(ang[-1] - ang[k]), sign)
+            turns = abs(ang[-1] - ang[k]) / (2 * np.pi)
+            expected = (sh.P[-1, 2] - sh.P[k, 2]) / (sp.profile.coil_pitch_cm * 0.01)
+            self.assertAlmostEqual(turns, expected, delta=0.3)
+
+    def test_growth_and_multiple_guides(self):
+        from core.vine import guide_shape
+        g = guide_shape("Pole", 2.0)
+        r0 = self._gen("ipomoea_purpurea", g, growth=0.3)
+        r1 = self._gen("ipomoea_purpurea", g, growth=1.0)
+        self.assertLess(r0.stats["stem_length_m"], r1.stats["stem_length_m"])
+        two = [g[0], g[0] + np.array([1.0, 0.0, 0.0])]
+        r2 = self._gen("ipomoea_purpurea", two)
+        self.assertEqual(r2.stem_count, 2)
+        self.assertGreater(r2.stem.vertices[:, 0].max(), 0.9)
+
+    def test_trailing_stays_on_the_ground(self):
+        r = self._gen("cucurbita_pepo")
+        # Runners and leaves lie low; only fruit stalks climb to the top of the (22 cm tall) pumpkins
+        self.assertLess(float(r.stem.vertices[:, 2].max()), 0.25)
+        self.assertLess(float(np.percentile(r.stem.vertices[:, 2], 90)), 0.05)
+        self.assertGreater(r.fruit_count, 0)
+        self.assertGreater(float(r.fruits.vertices[:, 2].min()), -0.05)
+
+    def test_fruits_connected_and_resting(self):
+        """Every fruit hangs from, or rests at the end of, a stalk that reaches into it; fruits on the soil
+        touch it; stalks stay short even when a runner climbs a vertical guide."""
+        from core.vine import VineEngine, guide_shape
+        from core.vine_db import VINE_CATALOG
+        from core.fruit_db import FRUIT_CATALOG
+        for key, shape in (("citrullus_lanatus", "Pole"), ("citrullus_lanatus", "Ground"),
+                           ("cucurbita_pepo", "Ground"), ("cucumis_sativus", "Arch")):
+            sp = VINE_CATALOG[key]
+            fr = FRUIT_CATALOG[key].fruit
+            eng = VineEngine(sp.profile, sp.leaf, sp.venation)
+            seen = []
+            orig = eng._fruit
+
+            def spy(sh, s0, proto, rng, f, orig=orig, seen=seen):
+                parts = orig(sh, s0, proto, rng, f)
+                seen.append((sh.soil, parts))
+                return parts
+            eng._fruit = spy
+            eng.generate(guide_shape(shape, 2.0, 3.0), seed=1, fruit=fr)
+            self.assertTrue(seen, key)
+            size = max(fr.length_cm, fr.diameter_cm) * 0.01
+            for soil, (stalk, body) in seen:
+                tip = stalk.vertices[-1].astype(float)
+                gap = np.linalg.norm(body.vertices - tip, axis=1).min()
+                self.assertLess(gap, 0.02, f"{key}/{shape}: stalk does not reach the fruit")
+                length = np.linalg.norm(np.diff(stalk.vertices[::7].astype(float), axis=0), axis=1).sum()
+                self.assertLess(length, fr.stalk_length_cm * 0.01 + size, f"{key}/{shape}: stalk too long")
+                zmin = float(body.vertices[:, 2].min())
+                self.assertGreater(zmin, soil - 0.01, f"{key}/{shape}: fruit below the soil")
+
+    def test_inactive_vine_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for key in ("ipomoea_purpurea", "cucurbita_pepo"):
+            self.assertEqual(check("Vine", key, report=lambda m: None), [], key)
+
+    def test_vine_presets_roundtrip(self):
+        from core import presets as P
+        from core.vine_db import VINE_CATALOG
+        env = P.export_preset("Vine", "my_bean", VINE_CATALOG["phaseolus_coccineus"], base="phaseolus_coccineus")
+        form, pid, obj, warn, _ = P.load_preset(env)
+        self.assertEqual((form, pid, warn), ("Vine", "my_bean", []))
+        self.assertEqual(obj.profile.coil_pitch_cm, VINE_CATALOG["phaseolus_coccineus"].profile.coil_pitch_cm)
+
+
+class TestFruits(unittest.TestCase):
+    """Fleshy fruits and bunches (core.fruit)."""
+
+    def test_every_fruit_hangs_from_its_stalk(self):
+        from core.fruit import hanging_fruit
+        from core.fruit_db import FRUIT_CATALOG
+        for key, sp in FRUIT_CATALOG.items():
+            m = hanging_fruit(sp.fruit, 0.6, 2)
+            V = m.vertices.astype(float)
+            self.assertTrue(np.isfinite(V).all(), key)
+            self.assertLess(int(m.loop_vertex.max()), len(V), key)
+            self.assertLess(V[:, 2].max(), 0.012, key)             # Nothing above the stalk top
+            body = V[(m.point_attributes["fruit_stalk"] < 0.5) & (m.point_attributes["fruit_crown"] < 0.5)]
+            stalk = V[m.point_attributes["fruit_stalk"] > 0.5]
+            gap = min(np.linalg.norm(body - q, axis=1).min() for q in stalk[::5])
+            self.assertLess(gap, 0.006 + sp.fruit.stalk_radius_mm * 0.001, f"{key}: stalk not connected to the fruit")
+
+    def test_sizes_and_dimples(self):
+        from core.fruit import body_mesh
+        from core.fruit_db import FRUIT_CATALOG
+        apple = FRUIT_CATALOG["malus_domestica"].fruit
+        m = body_mesh(apple, 1.0, 0)
+        V = m.vertices[m.point_attributes["fruit_crown"] < 0.5].astype(float)
+        self.assertAlmostEqual(np.ptp(V[:, 0]), apple.diameter_cm * 0.01, delta=0.008)
+        axis = np.linalg.norm(V[:, :2], axis=1) < 0.004
+        rim = V[np.linalg.norm(V[:, :2], axis=1) > 0.02]
+        self.assertGreater(V[axis][:, 2].min(), rim[:, 2].min() + 0.007)     # Stalk cavity below the shoulders
+
+    def test_bunch(self):
+        from core.fruit import bunch
+        from core.fruit_db import FRUIT_CATALOG
+        g = FRUIT_CATALOG["vitis_vinifera"].fruit
+        m = bunch(g, 0.5, 1)
+        R = m.point_attributes["fruit_random"]
+        berries = len(np.unique(R[R > 0]))
+        self.assertGreater(berries, 0.8 * g.cluster_berries)
+        V = m.vertices.astype(float)
+        self.assertLess(V[:, 2].min(), -(g.peduncle_cm + 0.6 * g.cluster_length_cm) * 0.01)
+
+    def test_default_fruit_roundtrip(self):
+        from core import presets as P
+        from core.species_db import SPECIES_CATALOG
+        env = P.export_preset("Tree", "my_pear", SPECIES_CATALOG["pyrus_communis"], default_fruit="pyrus_communis")
+        form, pid, obj, warn, extras = P.load_preset(env)
+        self.assertEqual((warn, extras["default_fruit"]), ([], "pyrus_communis"))
+        env = P.export_preset("Fruit", "my_apple", P._catalog("Fruit")["malus_domestica"], base="malus_domestica")
+        self.assertEqual(P.load_preset(env)[3], [])
+
+
+class TestVegetables(unittest.TestCase):
+    """Root crops, tubers and brassica heads (core.vegetable)."""
+
+    def _gen(self, key, **kw):
+        from core.vegetable import VegetableEngine
+        from core.vegetable_db import VEGETABLE_CATALOG
+        sp = VEGETABLE_CATALOG[key]
+        return sp, VegetableEngine(sp.profile, sp.leaf, sp.venation).generate(seed=2, detail=0.6, **kw)
+
+    def test_every_preset_generates_valid_meshes(self):
+        from core.vegetable_db import VEGETABLE_CATALOG
+        for key in VEGETABLE_CATALOG:
+            sp, r = self._gen(key)
+            self.assertGreater(len(r.foliage), 3, key)
+            for m in (r.root, r.stems, r.head, r.leaves):
+                self.assertTrue(np.isfinite(m.vertices).all(), key)
+                if len(m.loop_vertex):
+                    self.assertLess(int(m.loop_vertex.max()), len(m.vertices), key)
+
+    def test_storage_roots_sit_in_the_soil(self):
+        for key in ("daucus_carota", "beta_vulgaris"):
+            sp, r = self._gen(key)
+            p = sp.profile
+            body = r.root.vertices[r.root.point_attributes["veg_part"] < 0.5]
+            self.assertAlmostEqual(float(body[:, 2].max()), p.exposure * p.root_length_cm * 0.01, delta=0.006)
+            self.assertLess(float(body[:, 2].min()), -0.6 * p.root_length_cm * 0.01 * (1 - p.exposure))
+            self.assertAlmostEqual(float(np.ptp(body[:, 0])), p.root_diameter_cm * 0.01, delta=0.25 * p.root_diameter_cm * 0.01)
+
+    def test_tubers_underground_and_lift(self):
+        sp, r = self._gen("solanum_tuberosum")
+        self.assertLess(float(np.median(r.root.vertices[:, 2])), -0.05)      # Tubers, stolons, roots underground
+        self.assertLess(float(r.root.vertices[:, 2].max()), 0.01)        # Underground stems reach the soil
+        sp, r2 = self._gen("solanum_tuberosum", lift=0.3)
+        self.assertAlmostEqual(float(r2.root.vertices[:, 2].max() - r.root.vertices[:, 2].max()), 0.3, places=4)
+
+    def test_heads(self):
+        for key in ("brassica_oleracea_botrytis", "brassica_oleracea_italica", "brassica_oleracea_romanesco"):
+            sp, r = self._gen(key)
+            p = sp.profile
+            H = r.head.vertices[r.head.point_attributes["veg_branch"] < 0.5]
+            self.assertAlmostEqual(float(np.ptp(H[:, 0])), p.head_diameter_cm * 0.01, delta=0.35 * p.head_diameter_cm * 0.01)
+            self.assertGreater(float(np.ptp(r.head.point_attributes["veg_h"])), 0.5, key)   # Lobes and crevices
+
+    def test_inactive_vegetable_fields_do_not_change_geometry(self):
+        from tests.relevance_check import check
+        for key in ("daucus_carota", "solanum_tuberosum"):
+            self.assertEqual(check("Vegetable", key, report=lambda m: None), [], key)
+
+
+class TestConnectedParts(unittest.TestCase):
+    """No part floats apart: stalks reach their fruits, bunches hang from their rachis, aerial and
+    underground parts of vegetables meet, leaves start on a stem or crown."""
+
+    def test_fruits(self):
+        from tests.geometry_checks import floating_islands
+        from core.fruit import hanging_fruit
+        from core.fruit_db import FRUIT_CATALOG
+        for key, sp in FRUIT_CATALOG.items():
+            tol = 0.005 + 0.5 * sp.fruit.stalk_radius_mm * 0.001
+            self.assertEqual(floating_islands(hanging_fruit(sp.fruit, 0.5, 2), tol), [], key)
+
+    def test_vegetables(self):
+        from tests.geometry_checks import floating_islands
+        from core.mesh_engine import MeshData
+        from core.spatial import nearest_points
+        from core.vegetable import VegetableEngine
+        from core.vegetable_db import VEGETABLE_CATALOG
+        for key, sp in VEGETABLE_CATALOG.items():
+            r = VegetableEngine(sp.profile, sp.leaf, sp.venation).generate(seed=2, detail=0.5)
+            parts = [m for m in (r.root, r.stems, r.head) if len(m.vertices)]
+            for m in parts:
+                m.point_attributes = {}
+            whole = MeshData.concatenate(parts)
+            self.assertEqual(floating_islands(whole, 0.006), [], key)
+            d, _ = nearest_points(r.foliage.positions, whole.vertices.astype(float), 0.05)
+            self.assertLess(float(np.max(d)), 0.012, f"{key}: a leaf does not start on the plant")
+
+
 if __name__ == "__main__":
     unittest.main()
